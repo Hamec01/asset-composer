@@ -79,7 +79,7 @@ interface AppStore {
 
   addEntityVisual:        (entityId: string, visual: EntityVisual) => void;
   removeEntityVisual:     (entityId: string, visualId: string) => void;
-  setAttachmentOverride:  (entityId: string, slotId: string, override: AttachmentOverride) => void;
+  setAttachmentOverride:  (entityId: string, slotId: string, override: Partial<AttachmentOverride>) => void;
 
   setAppState:    (state: "dashboard" | "ide") => void;
   setSelectedSlot:(slotId: string | null) => void;
@@ -421,7 +421,7 @@ export const useStore = create<AppStore>()(
       if (!entity) return;
       const before = [...(entity.visuals ?? [])];
       const after  = [...before, visual];
-      get().pushCommand(makeAddEntityVisualCommand(entityId, before, after, visual.name ?? visual.id));
+      get().pushCommand(makeAddEntityVisualCommand(entityId, before, after, visual.id));
     },
 
     removeEntityVisual: (entityId, visualId) => {
@@ -429,8 +429,7 @@ export const useStore = create<AppStore>()(
       if (!entity) return;
       const before = [...(entity.visuals ?? [])];
       const after  = before.filter(v => v.id !== visualId);
-      const name   = before.find(v => v.id === visualId)?.name ?? visualId;
-      get().pushCommand(makeRemoveEntityVisualCommand(entityId, before, after, name));
+      get().pushCommand(makeRemoveEntityVisualCommand(entityId, before, after, visualId));
     },
 
     setAttachmentOverride: (entityId, slotId, override) => {

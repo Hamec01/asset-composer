@@ -163,6 +163,7 @@ export class CanvasEngine {
     this.mode = mode;
     this.canvas.discardActiveObject();
     this._applyModeSelectability();
+    this._sortCanvasObjects();
     this.canvas.requestRenderAll();
   }
 
@@ -171,15 +172,22 @@ export class CanvasEngine {
   private _applyModeSelectability(): void {
     const isEditAttachment    = this.mode === "edit-attachment";
     const isEditTemplateSlots = this.mode === "edit-template-slots";
+    const isSelectMode        = this.mode === "select";
 
     for (const img of this.fabricImages.values()) {
       const isItemPart = img.__sourceKind === "item-part";
-      const sel = isEditAttachment && isItemPart;
+      const isEntityVisual = img.__sourceKind === "entity-visual";
+      const canSelect = isEditAttachment
+        ? isItemPart
+        : isSelectMode
+          ? isItemPart || isEntityVisual
+          : false;
+      const canTransform = isEditAttachment && isItemPart;
       img.set({
-        selectable:     sel,
-        evented:        sel,
-        hasControls:    sel,
-        hasBorders:     sel,
+        selectable:     canSelect,
+        evented:        canSelect,
+        hasControls:    canTransform,
+        hasBorders:     canTransform,
         lockUniScaling: true,
         lockScalingFlip: false,
       });
@@ -188,8 +196,8 @@ export class CanvasEngine {
     for (const zone of this.slotZones.values()) {
       const movable = isEditTemplateSlots;
       zone.set({
-        selectable:    isEditTemplateSlots || this.mode === "select",
-        evented:       true,
+        selectable:    isEditTemplateSlots || isSelectMode,
+        evented:       isEditTemplateSlots || isSelectMode,
         lockMovementX: !movable,
         lockMovementY: !movable,
         hasControls:   false,
@@ -249,9 +257,6 @@ export class CanvasEngine {
     await Promise.all(loads);
 
     // ── 3. Sort canvas objects by zIndex (bottom → top) ───────────────────────
-    (this.canvas as any)._objects = (this.canvas.getObjects() as TaggedFabricImage[]).sort(
-      (a, b) => (a.__zIndex ?? 0) - (b.__zIndex ?? 0),
-    );
 
     // ── 4. Rebuild slot zones ─────────────────────────────────────────────────
     this._rebuildSlotZones(scene.skeleton, template, highlightedSlotId);
@@ -266,6 +271,12 @@ export class CanvasEngine {
     this.updateSceneTransforms(scene);
   }
 
+  private _sortCanvasObjects(): void {
+    (this.canvas as any)._objects = this.canvas
+      .getObjects()
+      .sort((a: any, b: any) => (a.__zIndex ?? 0) - (b.__zIndex ?? 0));
+  }
+
   private async _loadVisual(visual: EvaluatedVisual): Promise<void> {
     const vW   = visual.localBounds.maxX - visual.localBounds.minX;
     const vH   = visual.localBounds.maxY - visual.localBounds.minY;
@@ -277,9 +288,6 @@ export class CanvasEngine {
       const imgEl  = await FabricImage.fromURL(svgToDataUrl(sized));
       const d      = decompose(visual.worldMatrix);
 
-      const isItemPart = visual.sourceKind === "item-part";
-      const sel        = this.mode === "edit-attachment" && isItemPart;
-
       imgEl.set({
         left:      d.tx,
         top:       d.ty,
@@ -288,10 +296,10 @@ export class CanvasEngine {
         scaleY:    d.scaleY,
         originX:   "center",
         originY:   "center",
-        selectable:     sel,
-        evented:        sel,
-        hasControls:    sel,
-        hasBorders:     sel,
+        selectable:     false,
+        evented:        false,
+        hasControls:    false,
+        hasBorders:     false,
         lockUniScaling: true,
         lockScalingFlip: false,
       });
@@ -397,7 +405,7 @@ export class CanvasEngine {
         strokeDashArray: isHigh ? undefined : [4, 3],
         rx: 2, ry: 2,
         selectable:    isEditSlots || this.mode === "select",
-        evented:       true,
+        evented:       isEditSlots || this.mode === "select",
         hoverCursor:   isEditSlots ? "move" : "grab",
         moveCursor:    "grabbing",
         hasControls:   false,
@@ -409,7 +417,7 @@ export class CanvasEngine {
         lockMovementY: !isEditSlots,
       }) as TaggedRect;
       zone.__slotId      = slotDef.id;
-      zone.__zIndex      = 90000 + slotDef.zIndex;
+      zone.__zIndex      = slotDef.zIndex - 0.25;
       zone.__defaultLeft = cx;
       zone.__defaultTop  = cy;
 
@@ -425,7 +433,7 @@ export class CanvasEngine {
           originX: "center",
           selectable: false, evented: false,
         });
-        (lbl as any).__zIndex = 90001 + slotDef.zIndex;
+        (lbl as any).__zIndex = slotDef.zIndex - 0.2;
         this.labelTexts.push(lbl);
         this.canvas.add(lbl);
       }
@@ -478,7 +486,6 @@ export class CanvasEngine {
     if (!img.__slotId || !img.__itemId || !img.__partId || !this.currentEntityId) return;
     if (!this.currentScene || !this.currentTemplate) return;
 
-    const { slotId = img.__slotId!, itemId = img.__itemId!, partId = img.__partId! } = img;
     const entityId = this.currentEntityId;
 
     const slotDef = this.currentTemplate.slots.find(s => s.id === img.__slotId);
@@ -531,8 +538,6 @@ export class CanvasEngine {
       scaleX:   d.scaleX,
       scaleY:   d.scaleY,
     });
-
-    void slotId; void itemId; void partId; // used via img.__* aliases
   }
 
   // ── Slot zone drag for Edit Template Slots mode ───────────────────────────
@@ -576,6 +581,15 @@ export class CanvasEngine {
         slotId:   target.__slotId,
         itemId:   target.__itemId,
         partId:   target.__partId,
+      });
+      return;
+    }
+
+    if (target.__sourceKind === "entity-visual" && target.__visualId && this.currentEntityId) {
+      this.opts.onSelectionChange({
+        kind: "entity-visual",
+        entityId: this.currentEntityId,
+        visualId: target.__visualId,
       });
       return;
     }

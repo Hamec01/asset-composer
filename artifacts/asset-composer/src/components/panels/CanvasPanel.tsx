@@ -7,6 +7,12 @@ import {
 } from "@/lib/evaluationPipeline";
 import { animController } from "@/core-v2/AnimationController";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ZoomIn, ZoomOut, Maximize2, MousePointer2, Move, LayoutGrid } from "lucide-react";
 import type { CanvasMode } from "@/domain/types";
 
@@ -14,14 +20,42 @@ interface Viewport { zoom: number; panX: number; panY: number }
 const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 12;
 
+const MODE_BUTTONS: Array<{
+  mode: CanvasMode;
+  label: string;
+  title: string;
+  icon: typeof MousePointer2;
+}> = [
+  {
+    mode: "select",
+    label: "Select",
+    title: "Select visuals and slots without transforming them",
+    icon: MousePointer2,
+  },
+  {
+    mode: "edit-attachment",
+    label: "Attachment",
+    title: "Edit the equipped item part for the selected slot",
+    icon: Move,
+  },
+  {
+    mode: "edit-template-slots",
+    label: "Slots",
+    title: "Edit template slot positions for the active template",
+    icon: LayoutGrid,
+  },
+];
+
 export function CanvasPanel() {
   const project         = useStore(s => s.project);
   const editor          = useStore(s => s.editor);
+  const animPlayback    = useStore(s => s.animPlayback);
   const setSelectedSlot           = useStore(s => s.setSelectedSlot);
   const setAttachmentOverride     = useStore(s => s.setAttachmentOverride);
   const setCanvasMode             = useStore(s => s.setCanvasMode);
   const setEditorSelection        = useStore(s => s.setEditorSelection);
   const updateTemplateSlotTransform = useStore(s => s.updateTemplateSlotTransform);
+  const setPlaybackPlaying        = useStore(s => s.setPlaybackPlaying);
 
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -72,7 +106,7 @@ export function CanvasPanel() {
       onSlotClick: (slotId) => setSelectedSlot(slotId),
       onSelectionChange: (sel) => setEditorSelection(sel),
       onItemModified: (entityId, slotId, override) => {
-        setAttachmentOverride(entityId, slotId, override as any);
+        setAttachmentOverride(entityId, slotId, override);
       },
       onSlotTransformChanged: (slotId, transform) => {
         const st = useStore.getState();
@@ -85,6 +119,20 @@ export function CanvasPanel() {
     return () => { engineRef.current?.destroy(); engineRef.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!initialized || !engineRef.current) {
+      return;
+    }
+
+    engineRef.current.setMode(editor.canvasMode);
+  }, [initialized, editor.canvasMode]);
+
+  useEffect(() => {
+    if (editor.canvasMode !== "select" && animPlayback.playing) {
+      setPlaybackPlaying(false);
+    }
+  }, [animPlayback.playing, editor.canvasMode, setPlaybackPlaying]);
 
   // Ref to latest reconcile fn for ResizeObserver
   const rerenderRef = useRef<(() => void) | null>(null);
@@ -272,6 +320,38 @@ export function CanvasPanel() {
     >
       {/* Canvas — no CSS transform; Fabric viewport handles zoom/pan */}
       <canvas ref={canvasRef} className="absolute inset-0" />
+
+      <TooltipProvider delayDuration={150}>
+        <div className="absolute top-3 left-3 z-10 flex items-center gap-1 rounded-lg border border-border bg-card/85 p-1 backdrop-blur">
+          {MODE_BUTTONS.map(({ mode, label, title, icon: Icon }) => {
+            const active = editor.canvasMode === mode;
+            return (
+              <Tooltip key={mode}>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={active ? "default" : "secondary"}
+                    className={[
+                      "h-8 gap-1.5 px-2.5 text-xs",
+                      active ? "shadow-sm" : "bg-card/70",
+                    ].join(" ")}
+                    onClick={() => setCanvasMode(mode)}
+                    aria-pressed={active}
+                    data-testid={`canvas-mode-${mode}`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span>{label}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {title}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </TooltipProvider>
 
       {/* Zoom controls */}
       <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10">
