@@ -1690,3 +1690,123 @@ STATUS:
 
 Не добавляй новый массовый контент, пока hair_test_v2 не пройдёт Definition of Done.
 ```
+
+---
+
+# 13. Progress Update — T006 completed on 2026-06-17
+
+Ниже зафиксирован фактический результат выполнения T006 в локальном репозитории.
+Этот блок предназначен для следующего агента, который продолжит работу на другом ПК.
+
+## T006 status
+
+```text
+Task: T006 — wire canvas editing modes
+Status: completed
+Commit: 836b1b4ce2dafe95f41693d5f3577e66274d1707
+Branch: main
+```
+
+## Что было сделано в T006
+
+1. `CanvasPanel.tsx` теперь синхронизирует `editor.canvasMode` из Zustand с `CanvasEngine.setMode(...)` через `useEffect`.
+2. На Canvas добавлен toolbar режимов:
+   - `Select`
+   - `Attachment`
+   - `Slots`
+3. Кнопки toolbar:
+   - визуально подсвечивают активный режим;
+   - показывают tooltip;
+   - вызывают `setCanvasMode(...)`.
+4. При входе в edit-mode playback ставится на pause, чтобы authoring pose не двигалась под курсором.
+5. `canvasEngine.ts` теперь реально применяет mode к selectability/event handling:
+   - `select` позволяет выбирать visual и slot без transform controls;
+   - `edit-attachment` оставляет transformable только `item-part`;
+   - `edit-template-slots` оставляет draggable только slot zones.
+6. Слоты переставлены ниже visual-объектов по `zIndex`, чтобы slot gizmo behind item не крал click.
+7. Убраны минимальные сопутствующие type issues, мешавшие T006:
+   - `override as any` в `CanvasPanel.tsx`;
+   - устаревшая форма `VectorAssetMetrics` в `ImportWizard.tsx`;
+   - обращения к несуществующему `visual.name` в store;
+   - сигнатура `setAttachmentOverride` приведена к `Partial<AttachmentOverride>`.
+
+## Фактический baseline, найденный при выполнении T006
+
+На момент выполнения T006 фактический `HEAD` не совпадал с commit, указанным выше в старом handoff-блоке.
+
+Также были найдены Windows-specific toolchain issues:
+
+1. `pnpm install` в PowerShell падал из-за root `preinstall`, который вызывает `sh`.
+2. После install отсутствовали optional native packages для Windows:
+   - `@rollup/rollup-win32-x64-msvc`
+   - `@esbuild/win32-x64`
+   - `lightningcss-win32-x64-msvc`
+   - `@tailwindcss/oxide-win32-x64-msvc`
+3. Из-за этого `pnpm --filter @workspace/asset-composer build` нельзя было честно прогнать сразу после стандартного install.
+
+## Что реально прошло
+
+```text
+Typecheck: passed
+Build: passed
+Tests: no existing test script in @workspace/asset-composer
+Push: done to origin/main
+```
+
+Typecheck запускался напрямую через:
+
+```powershell
+tsc -p artifacts/asset-composer/tsconfig.json --noEmit
+```
+
+Build запускался напрямую через:
+
+```powershell
+vite build --config artifacts/asset-composer/vite.config.ts
+```
+
+## Что не было завершено в T006
+
+1. Не добавлена полноценная test infrastructure для automated regression tests.
+2. Не выполнен T007.
+3. Не сделан `hair_test_v2`.
+4. Не завершён selection-aware Inspector.
+
+## Что делать следующему агенту
+
+Следующий агент должен продолжать **с T007**, а не возвращаться к T006.
+
+Порядок работы:
+
+1. Прочитать этот документ полностью.
+2. Подтянуть `main` и убедиться, что commit `836b1b4ce2dafe95f41693d5f3577e66274d1707` уже присутствует локально.
+3. Сначала заново сделать baseline audit на своей машине:
+   - `git status`
+   - `git branch --show-current`
+   - `git rev-parse HEAD`
+   - `pnpm install`
+   - `pnpm --filter @workspace/asset-composer typecheck`
+   - `pnpm --filter @workspace/asset-composer build`
+4. Если на другом ПК повторятся Windows optional-dependency проблемы, сначала починить toolchain, не переписывая архитектуру приложения.
+5. После baseline выполнять только T007:
+   - перевести `InspectorPanel.tsx` на `editor.selection`;
+   - сделать отдельные панели для `item-part`, `template-slot`, `entity-visual`;
+   - связать numeric transform editing с теми же store actions, что и canvas editing.
+6. После T007:
+   - снова запустить typecheck/build;
+   - сделать отдельный commit;
+   - не переходить автоматически к T008 без короткого отчёта.
+
+## Важно для следующего агента
+
+Не откатывать пользовательские файлы, которые не относятся к T007.
+
+На моей машине после T006 в working tree уже были замечены дополнительные локальные изменения вне этой задачи:
+
+```text
+pnpm-lock.yaml
+REPAIR_AND_START_ASSET_COMPOSER.bat
+START_ASSET_COMPOSER.bat
+```
+
+Их нужно считать внешними по отношению к T006/T007, если только пользователь отдельно не попросит с ними работать.
