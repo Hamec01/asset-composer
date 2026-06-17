@@ -1,0 +1,46 @@
+﻿# Dependencies
+node_modules/
+.local/
+.pnpm-store/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Build output
+dist/
+build/
+coverage/
+out/
+release/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Windows and macOS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
+.cache/
+*.tmp
+
+# Old Git repository backup
+.git_old/
+.git_old/

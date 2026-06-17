@@ -1,0 +1,631 @@
+# ASSET COMPOSER — RUNTIME V2 ARCHITECTURE RECOVERY
+
+Ты выступаешь в роли ведущего инженера графических редакторов, TypeScript-приложений, 2D skeletal animation runtime, Fabric.js, PixiJS и desktop-приложений.
+
+Текущий Asset Composer нельзя продолжать исправлять отдельными визуальными патчами. В проекте обнаружено фундаментальное расхождение между domain model, Fabric Canvas, PixiJS preview и export worker.
+
+Твоя задача — сначала составить технический план, затем построить единое ядро Runtime V2. Не добавляй новый контент, новые расы, новые предметы и новые панели, пока один top-down humanoid не будет полностью работать от сборки персонажа до экспортированного spritesheet.
+
+## Обязательный порядок работы
+
+1. Сначала исследуй текущие файлы и представь письменный аудит.
+2. До начала изменений покажи список причин каждой неисправности.
+3. Покажи схему текущего data flow.
+4. Покажи схему нового data flow.
+5. Перечисли файлы, которые будут изменены, добавлены или выведены из использования.
+6. Создай отдельную ветку или изолированный каталог `src/core-v2`.
+7. Не удаляй старую реализацию, пока новый vertical slice не пройдёт тесты.
+8. Делай небольшие проверяемые коммиты.
+9. После каждого этапа запускай unit tests, integration tests и UI tests.
+10. Не называй этап завершённым без работающей демонстрации и результатов тестирования.
+
+## Подтверждённые неисправности
+
+### Animation clock
+
+`TimelinePanel.tsx` меняет только значение `playing`. В приложении отсутствует работающий clock, который увеличивает `timeMs`.
+
+`PixiPreviewPanel.tsx` читает `timeMs`, но не увеличивает его.
+
+Следствие: кнопка Play меняет визуальное состояние, однако animation playhead и pose не движутся.
+
+### Main canvas
+
+`CanvasPanel.tsx` не подписан на playback time и active clip.
+
+`CanvasEngine.renderEntity()` не получает evaluated pose.
+
+Следствие: основной canvas не способен отображать анимацию.
+
+### Flat body SVG
+
+В `templates.ts` базовый персонаж хранится как единый full-frame SVG.
+
+Кости не управляют отдельными визуальными частями тела.
+
+Следствие: debug bones могут двигаться, но видимые голова, торс, руки и ноги остаются статичными.
+
+### Incompatible item coordinates
+
+SVG-предметы имеют локальный `viewBox 0 0 64 64`.
+
+Fabric renderer растягивает предметы до полного frame сущности.
+
+Pixi renderer одновременно воспринимает те же предметы как небольшие bone-local sprites приблизительно 56×56.
+
+Следствие: экипировка обрезается, смещается и имеет разные размеры в разных renderer-ах.
+
+### Rig and artwork coordinates
+
+Skeleton root расположен около `(0, 0)`, а SVG artwork находится в положительных координатах frame.
+
+Отсутствует единый `rootPivot` и rig-to-canvas transform.
+
+Следствие: slots, anchors и debug zones появляются выше и левее персонажа.
+
+### Side-view rig
+
+`humanoid_side_v1` использует top-down skeleton.
+
+Это запрещено. Side-view шаблон должен иметь отдельный rig, отдельные pivots, отдельные body parts и отдельный z-order.
+
+### Attachment overrides
+
+Типы anchors и attachment overrides существуют, но не применяются единообразно в Fabric, Pixi и export.
+
+### SVG layers
+
+Pixi preview использует только первый SVG layer предмета.
+
+### Export
+
+`frameRenderer.ts` принимает pose, но не применяет её к визуальным частям.
+
+`export.worker.ts` вычисляет pose и затем фактически игнорирует её.
+
+Следствие: экспортированные animation frames являются повторениями rest pose.
+
+### Camera
+
+Reset View сбрасывает CSS zoom и pan, но не рассчитывает scene bounds.
+
+CSS-transform холста не должен являться основной камерой Fabric.
+
+### Canvas labels
+
+Entity name и служебные slot labels не должны рисоваться внутри artboard.
+
+### Async render race
+
+Если render уже выполняется, следующий render request не должен отбрасываться. Необходимо сохранять latest requested state и выполнять его после завершения текущего рендера.
+
+---
+
+# Архитектура Runtime V2
+
+Создай следующую структуру:
+
+```text
+src/core-v2/
+  domain/
+    project.ts
+    entity.ts
+    rig.ts
+    slot.ts
+    vectorAsset.ts
+    animation.ts
+    scene.ts
+    export.ts
+
+  math/
+    vec2.ts
+    matrix2d.ts
+    transform2d.ts
+    bounds.ts
+
+  rig/
+    validateRig.ts
+    buildBoneOrder.ts
+    evaluateSkeleton.ts
+
+  animation/
+    animationController.ts
+    evaluateClip.ts
+    interpolateTrack.ts
+    stateMachine.ts
+
+  scene/
+    evaluateScene.ts
+    resolveSkin.ts
+    resolveSlots.ts
+    resolveAttachments.ts
+    resolveZOrder.ts
+
+  render/
+    pixiSceneAdapter.ts
+    fabricAuthoringAdapter.ts
+    svgRasterizer.ts
+
+  export/
+    renderFrame.ts
+    packAtlas.ts
+    exportManifest.ts
+
+  migration/
+    migrateV1ToV2.ts
+
+  schemas/
+    project.schema.ts
+```
+
+## Единственный источник истины
+
+Fabric objects и Pixi display objects не являются проектными данными.
+
+Каноническая TypeScript model должна хранить:
+
+* vector assets;
+* editable SVG documents;
+* rigs;
+* bones;
+* slots;
+* anchors;
+* part instances;
+* local transforms;
+* pivots;
+* skins;
+* palettes;
+* animation clips;
+* animation state machines;
+* export profiles.
+
+## Единый evaluation pipeline
+
+Для любого времени анимации используй только следующую последовательность:
+
+```ts
+const pose = evaluateClip(activeClip, timeMs);
+const skeleton = evaluateSkeleton(rigTemplate, pose);
+const scene = evaluateScene(project, entity, skeleton);
+```
+
+Полученный `EvaluatedScene` должны использовать:
+
+* Fabric editor;
+* Pixi preview;
+* thumbnail preview;
+* selection;
+* hit-testing;
+* scene bounds;
+* export renderer;
+* runtime package.
+
+Запрещено создавать отдельную интерпретацию координат для каждого renderer-а.
+
+---
+
+# Milestone 1 — Complete Top-Down Humanoid Pipeline
+
+До завершения этого milestone не создавай новые семьи существ и не расширяй библиотеку предметов.
+
+## Разделённое тело
+
+Замени единый SVG тела на bone-local части:
+
+```text
+pelvis
+torso
+neck
+head
+
+upperArmL
+lowerArmL
+handL
+
+upperArmR
+lowerArmR
+handR
+
+upperLegL
+lowerLegL
+footL
+
+upperLegR
+lowerLegR
+footR
+```
+
+Каждая часть должна хранить:
+
+```ts
+interface VectorPartAsset {
+  id: string;
+  name: string;
+  nativeSize: Vec2;
+  pivot: Vec2;
+  assignedBoneId: string;
+  svgDocument: EditableSvgDocument;
+  anchors: AnchorDefinition[];
+}
+```
+
+Экземпляр части должен хранить:
+
+```ts
+interface PartInstance {
+  id: string;
+  assetId: string;
+  boneId: string;
+  slotId: string;
+  localTransform: Transform2D;
+  zIndex: number;
+  visible: boolean;
+}
+```
+
+Не используй full-frame overlays для bone-local предметов.
+
+## Rig
+
+Добавь в шаблон:
+
+```ts
+interface RigTemplate {
+  id: string;
+  canvasSize: Vec2;
+  rootPivot: Vec2;
+  bones: BoneDefinition[];
+  slots: SlotDefinition[];
+}
+```
+
+Все bone transforms должны быть локальными относительно parent bone.
+
+World matrices вычисляй топологически:
+
+```text
+worldMatrix(child) =
+worldMatrix(parent) × localMatrix(child)
+```
+
+Создай rig validation:
+
+* duplicate bone id;
+* missing parent;
+* cyclic hierarchy;
+* invalid slot bone;
+* missing pivot;
+* invalid scale;
+* non-finite values.
+
+## AnimationController
+
+Создай реальный `AnimationController`.
+
+Он должен поддерживать:
+
+* play;
+* pause;
+* restart;
+* seek;
+* scrub;
+* loop;
+* non-loop finish;
+* playback speed;
+* step forward;
+* step backward;
+* previous keyframe;
+* next keyframe.
+
+Используй `requestAnimationFrame` либо Pixi ticker.
+
+Не полагайся на React-render как на animation clock.
+
+Не записывай состояние в Zustand на каждом display tick без необходимости. Внутреннее точное время может находиться в controller, а UI синхронизироваться с ограниченной частотой.
+
+## Main Canvas
+
+Удалить CSS-transform как основную camera system.
+
+Реализовать через Fabric viewport:
+
+* wheel zoom around cursor;
+* middle mouse pan;
+* Alt + ЛКМ pan;
+* Fit Entity;
+* Fit Selection;
+* 100%;
+* Center Root;
+* автоматический fit после открытия шаблона;
+* повторный fit после resize viewport.
+
+Reset View должен вычислять реальные bounds всех видимых parts и помещать сущность по центру с безопасным padding.
+
+Удалить entity name из artboard.
+
+Slot names показывать только в debug mode или Inspector.
+
+## Slot and Anchor Editor
+
+Создай отдельный режим редактирования креплений.
+
+Пользователь должен иметь возможность:
+
+* выбрать slot;
+* выбрать anchor;
+* перемещать X/Y мышью;
+* менять rotation;
+* менять scale X/Y;
+* mirror X/Y;
+* менять assigned bone;
+* менять z-index;
+* reset local transform;
+* сохранить override;
+* отменить действие через undo;
+* повторить через redo.
+
+Позиции должны сохраняться в JSON и одинаково применяться:
+
+* в Fabric;
+* в Pixi;
+* в export;
+* после повторного открытия проекта.
+
+## Pixi Preview
+
+Pixi adapter получает готовый `EvaluatedScene`.
+
+Он не должен самостоятельно заново вычислять:
+
+* размер предмета;
+* положение slot;
+* pivot;
+* bone transform;
+* z-order.
+
+Поддержать все SVG layers.
+
+Не использовать только `svgLayers[0]`.
+
+Основной Canvas и Pixi Preview при одинаковом `timeMs` должны показывать одинаковую позу.
+
+## Export
+
+Для каждого animation frame:
+
+```ts
+const pose = evaluateClip(clip, frameTime);
+const skeleton = evaluateSkeleton(rig, pose);
+const scene = evaluateScene(project, entity, skeleton);
+const frame = renderEvaluatedScene(scene);
+```
+
+Экспорт обязан учитывать:
+
+* position;
+* rotation;
+* scale;
+* pivot;
+* z-index;
+* visibility;
+* palette;
+* all SVG layers;
+* attachment overrides;
+* anchor transforms.
+
+Добавить проверку хэшей кадров.
+
+Если клип содержит движение, экспорт нельзя считать успешным, если все frame hashes одинаковые.
+
+Atlas должен содержать:
+
+* frame rectangles;
+* source sizes;
+* trimmed bounds;
+* pivots;
+* animation names;
+* frame duration;
+* loop flags;
+* direction tags при наличии.
+
+---
+
+# Face Studio
+
+После того как тело действительно анимируется, добавить отдельные parts/slots:
+
+```text
+faceBase
+eyeL
+eyeR
+pupilL
+pupilR
+browL
+browR
+nose
+mouth
+earL
+earR
+hairBack
+hairFront
+beard
+scar
+tattoo
+makeup
+```
+
+Пользователь должен настраивать:
+
+* position;
+* spacing;
+* width;
+* height;
+* scale;
+* rotation;
+* symmetry;
+* asymmetry;
+* skin color;
+* eye color;
+* hair color;
+* beard color.
+
+Добавить выражения:
+
+* neutral;
+* smile;
+* laugh;
+* angry;
+* sad;
+* frightened;
+* hurt;
+* sleeping;
+* shouting.
+
+Randomize обязан поддерживать seed, чтобы результат можно было воспроизвести.
+
+---
+
+# Запрещённые обходные решения
+
+Не делай следующее:
+
+1. Не добавляй случайные offsets отдельно в CanvasPanel, PixiPreviewPanel и export worker.
+2. Не исправляй clipping только увеличением canvas.
+3. Не оставляй тело единым SVG, двигая только debug bones.
+4. Не растягивай каждый предмет на полный frame.
+5. Не объявляй animation working, если меняется только кнопка Play.
+6. Не выдавай одинаковые кадры за spritesheet animation.
+7. Не создавай отдельные slot coordinates для каждого renderer-а.
+8. Не скрывай проблемные части тела через `overflow: hidden`.
+9. Не добавляй новые mock-шаблоны до завершения milestone.
+10. Не называй задачу законченной без тестов и визуальной демонстрации.
+
+---
+
+# Обязательные Unit Tests
+
+Добавить Vitest-тесты:
+
+1. AnimationController увеличивает time во время Play.
+2. Pause прекращает увеличение и сохраняет позицию.
+3. Loop правильно выполняет modulo duration.
+4. Non-loop останавливается на duration.
+5. Playback speed влияет на время.
+6. Child bone world matrix учитывает parent matrix.
+7. Scene bounds включают все видимые части.
+8. Attachment override изменяет world transform предмета.
+9. Один project и один timeMs дают одинаковые transforms для Fabric, Pixi и export input.
+10. Animated export создаёт минимум два различных frame hashes.
+11. Project JSON V2 проходит schema validation.
+12. V1 migration не теряет entity, palette, equipment и animation clips.
+13. Invalid rig выдаёт понятное validation error.
+14. Быстрые изменения состояния не теряются из-за active render.
+
+# Обязательные Playwright Tests
+
+1. Открыть приложение.
+2. Выбрать top-down humanoid.
+3. Нажать Play.
+4. Проверить, что playhead изменяется.
+5. Сделать два screenshots с временным интервалом.
+6. Подтвердить визуальное изменение body parts.
+7. Нажать Reset/Fit.
+8. Убедиться, что голова, обе руки и обе ноги находятся внутри viewport.
+9. Надеть комплект одежды.
+10. Проверить отсутствие clipping.
+11. Переместить weapon anchor.
+12. Сохранить проект.
+13. Перезапустить приложение.
+14. Проверить сохранённое положение.
+15. Экспортировать spritesheet.
+16. Проверить наличие различных кадров.
+
+---
+
+# Desktop Application
+
+После прохождения Runtime V2 tests заверши standalone workflow.
+
+Используй Electron с:
+
+```text
+contextIsolation: true
+nodeIntegration: false
+secure preload bridge
+```
+
+Либо обоснованно перейди на Tauri.
+
+Убери `webSecurity: false`, если нет конкретной документированной причины.
+
+Добавь:
+
+* New Project;
+* Open Project;
+* Save;
+* Save As;
+* native file dialogs;
+* recent projects;
+* autosave;
+* crash recovery;
+* export folder picker;
+* diagnostic logs;
+* project backup;
+* portable Windows build;
+* Windows installer;
+* Linux AppImage;
+* macOS DMG при наличии signing environment.
+
+Готовые desktop-файлы должны быть реально созданы. Наличие конфигурации electron-builder не считается готовой сборкой.
+
+Покажи точные пути:
+
+```text
+dist/desktop/*.exe
+dist/desktop/*.AppImage
+dist/desktop/*.dmg
+```
+
+---
+
+# Definition of Done
+
+Milestone 1 запрещено считать завершённым, пока одновременно не выполнено всё:
+
+* персонаж полностью виден;
+* голова не обрезана;
+* обе руки полностью видны;
+* обе ноги полностью видны;
+* Reset View центрирует персонажа;
+* Play реально увеличивает время;
+* visible body parts двигаются;
+* idle визуально работает;
+* walk визуально работает;
+* Canvas и Pixi показывают одну позу;
+* одежда следует за костями;
+* оружие следует за hand anchor;
+* slot можно переместить;
+* slot сохраняется после перезапуска;
+* export frames различаются;
+* atlas содержит правильные pivots;
+* JSON импортируется обратно;
+* migration старого проекта работает;
+* unit tests зелёные;
+* Playwright tests зелёные;
+* создан рабочий Windows `.exe`.
+
+После каждого этапа предоставляй отчёт:
+
+```text
+1. Что было сломано.
+2. Почему это происходило.
+3. Какие файлы изменены.
+4. Как теперь проходит data flow.
+5. Какие тесты добавлены.
+6. Результаты тестов.
+7. Скриншоты до и после.
+8. Известные ограничения.
+9. Следующий конкретный этап.
+```
+
+Сначала покажи полный план Milestone 1. Не начинай расширение функциональности, пока весь vertical slice одного top-down humanoid не пройдет Definition of Done.

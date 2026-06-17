@@ -1,0 +1,56 @@
+appId: com.assetcomposer.ide
+productName: Asset Composer
+executableName: AssetComposer
+copyright: Asset Composer IDE
+
+directories:
+  output: dist/desktop
+  buildResources: build-resources
+
+files:
+  - electron/**
+  - dist/public/**
+  - "!dist/public/**/*.map"
+
+extraMetadata:
+  main: electron/main.cjs
+  name: asset-composer
+  description: 2D game asset editor for indie developers
+  author: Asset Composer
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  artifactName: "${productName}-${version}-Setup.${ext}"
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Asset Composer
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  artifactName: "${productName}-${version}.${ext}"
+  category: Graphics
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  artifactName: "${productName}-${version}.${ext}"
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications

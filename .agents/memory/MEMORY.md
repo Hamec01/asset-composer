@@ -1,0 +1,9 @@
+- [Radix Dialog + overlays](radix-dialog-overlay.md) — never render a focus-trapping overlay outside a Radix Dialog; always inline progress/modals inside DialogContent.
+- [SVG in Web Workers](svg-worker-rasterize.md) — createImageBitmap(svgBlob) fails in workers; pre-rasterize SVGs to PNG on the main thread and send ArrayBuffers to the worker.
+- [Zustand selectors](zustand-selectors.md) — always use individual selectors; never object selectors or zustand/react/shallow.
+- [Asset Composer domain types](asset-composer-types.md) — SvgLayer has zOffset (not zIndex); SlotDef has zIndex; scale=frameSz/220; fittingScale=frameSz/max(previewW,previewH).
+- [Runtime V2 animation clock](runtime-v2-arch.md) — animController singleton (core-v2/AnimationController.ts) is the single source of truth; tick listeners at 60fps for renderers; sync listeners at ~12fps for store/UI. Store has NO RAF ticker.
+- [Fabric viewport vs CSS transform](runtime-v2-arch.md) — CanvasPanel uses engine.setViewport(zoom,panX,panY) → canvas.setViewportTransform; objects render in screen-space at entity-centre; viewport handles zoom/pan. Never use CSS transform on the canvas element.
+- [M1-E3A engine architecture](m1-e3a-engine.md) — scene-space coords (objects in template units), new viewport [zoom,0,0,zoom,cw/2+panX,ch/2+panY], persistent FabricImage registry; reconcileSceneStructure (async) on content change, updateSceneTransforms (sync) on anim tick — no canvas.clear() in tick.
+- [EvaluatedScene pipeline](evaluation-pipeline.md) — canonical 3-step pipeline: buildMultiClipPose → evaluateSkeleton → evaluateScene; ALL renderers (Pixi, canvas engine, frameRenderer, export) must consume this.
+- [Export Worker clip scope](export-worker-clips.md) — exportEntity() takes selectedClipIds? param; exportCombined() reads job.selectedClipIds; ExportWorkerJob.selectedClipIds undefined means all clips.

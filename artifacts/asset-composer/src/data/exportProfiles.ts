@@ -1,0 +1,40 @@
+import type { ExportProfile } from "@/domain/types";
+
+export const DEFAULT_EXPORT_PROFILES: ExportProfile[] = [
+  {
+    id: "game_ready_64",
+    name: "Game Ready (64px)",
+    frameSizeKey: "64",
+    formats: ["png_sheet"],
+    pivotPolicy: "feet",
+    outlinePadding: 2,
+    bgColor: null,
+    antiAlias: true,
+    namingTemplate: "{entity}_{animation}_{frame:03d}",
+    atlasMode: "per_entity",
+  },
+  {
+    id: "hires_256",
+    name: "Hi-Res (256px)",
+    frameSizeKey: "256",
+    formats: ["png_sheet", "webp_sheet"],
+    pivotPolicy: "center",
+    outlinePadding: 4,
+    bgColor: null,
+    antiAlias: true,
+    namingTemplate: "{entity}_{animation}_{frame:04d}",
+    atlasMode: "per_entity",
+  },
+  {
+    id: "svg_source_pack",
+    name: "SVG Source Pack",
+    frameSizeKey: "128",
+    formats: ["svg_parts", "entity_json"],
+    pivotPolicy: "center",
+    outlinePadding: 0,
+    bgColor: null,
+    antiAlias: false,
+    namingTemplate: "{entity}_{slot}",
+    atlasMode: "per_entity",
+  },
+];

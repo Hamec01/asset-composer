@@ -1,0 +1,493 @@
+# M1-E3B — INTERACTIVE SLOT, ANCHOR AND EQUIPPED ITEM EDITING
+
+Текущий результат не позволяет пользователю полноценно перемещать слоты, менять размер волос и закреплять предметы на персонаже.
+
+На Canvas отображаются синие slot rectangles, но они пока работают преимущественно как временные debug/select zones. Пользователь может попытаться переместить их, однако положение не сохраняется либо сбрасывается после следующего render.
+
+Также пользователь не может выбрать непосредственно волосы, броню или другой предмет, изменить его размер и сохранить позицию относительно персонажа.
+
+Не переходи к новым функциям, пока не будет завершён интерактивный attachment editor.
+
+## 1. Разделить выбор слота и выбор предмета
+
+В редакторе существуют разные объекты:
+
+```text
+Template Slot
+Anchor
+Equipped Item
+Item Part
+Bone
+Entity Visual
+```
+
+Не используй одну синюю рамку одновременно как slot selector и item transform object.
+
+Добавь типизированную selection model:
+
+```ts
+type EditorSelection =
+  | { kind: "none" }
+  | {
+      kind: "template-slot";
+      templateId: string;
+      slotId: string;
+    }
+  | {
+      kind: "anchor";
+      templateId: string;
+      boneId: string;
+      anchorId: string;
+    }
+  | {
+      kind: "equipped-item";
+      entityId: string;
+      slotId: string;
+      itemId: string;
+    }
+  | {
+      kind: "item-part";
+      entityId: string;
+      slotId: string;
+      itemId: string;
+      partId: string;
+    }
+  | {
+      kind: "bone";
+      entityId: string;
+      boneId: string;
+    }
+  | {
+      kind: "entity-visual";
+      entityId: string;
+      visualId: string;
+    };
+```
+
+Inspector и Canvas должны использовать одну и ту же selection model.
+
+## 2. Добавить режимы Canvas
+
+Добавь явный toolbar:
+
+```text
+Select
+Move
+Scale
+Rotate
+Edit Attachment
+Edit Template Slots
+Edit Rig
+Edit Vector
+```
+
+Минимально рабочими сейчас должны быть:
+
+```text
+Select
+Edit Attachment
+Edit Template Slots
+```
+
+### Edit Template Slots
+
+Перемещает базовое положение SlotDef или AnchorDef.
+
+Изменения записываются в Template и влияют на все entity, использующие этот template.
+
+### Edit Attachment
+
+Перемещает, масштабирует и вращает конкретный надетый предмет.
+
+Изменения записываются только в:
+
+```text
+Entity
+→ SlotAssignment
+→ attachmentOverride
+```
+
+Не изменяй Template Slot при перемещении конкретных волос или брони.
+
+## 3. Сделать вещи выбираемыми
+
+Каждый видимый ItemPart должен иметь собственный Fabric object с metadata:
+
+```ts
+object.set({
+  data: {
+    kind: "item-part",
+    entityId,
+    slotId,
+    itemId,
+    partId,
+    visualId,
+  },
+});
+```
+
+В режиме Edit Attachment предмет должен быть:
+
+```ts
+selectable: true
+evented: true
+hasControls: true
+hasBorders: true
+```
+
+В обычном режиме Preview он может быть невыбираемым.
+
+Клик по видимой части волос или брони должен выбирать именно ItemPart, а не расположенный за ним slot rectangle.
+
+Настрой правильный порядок hit testing:
+
+```text
+selected item controls
+item parts
+anchors
+slots
+bones
+background
+```
+
+## 4. Добавить нормальные controls
+
+Для выбранного предмета должны работать:
+
+* drag за центр — перемещение;
+* corner controls — равномерное масштабирование;
+* side controls — изменение scaleX или scaleY;
+* rotation control — вращение;
+* Flip X;
+* Flip Y;
+* Reset Transform;
+* Lock Aspect Ratio.
+
+По умолчанию пропорции должны быть заблокированы.
+
+Для волос пользователь должен иметь возможность изменить размер, не деформируя SVG.
+
+## 5. Переводить world transform в bone-local transform
+
+При завершении перемещения, вращения или масштабирования не сохраняй Fabric `left/top` напрямую.
+
+Используй матрицы:
+
+```text
+editedObjectWorldMatrix
+parentAnchorWorldMatrix
+
+localMatrix =
+inverse(parentAnchorWorldMatrix)
+× editedObjectWorldMatrix
+```
+
+После decomposition сохрани:
+
+```ts
+attachmentOverride: {
+  anchorId,
+  offsetX,
+  offsetY,
+  rotation,
+  scaleX,
+  scaleY,
+}
+```
+
+Добавь функции:
+
+```ts
+getFabricObjectWorldMatrix(object): Matrix2D
+getParentAnchorWorldMatrix(scene, slotId): Matrix2D
+invertMatrix(matrix): Matrix2D
+multiplyMatrices(a, b): Matrix2D
+decomposeMatrix(matrix): LocalTransform
+```
+
+После сохранения и повторного `evaluateScene()` world transform предмета должен остаться визуально тем же.
+
+## 6. Сохранять Template Slot position отдельно
+
+Для режима Edit Template Slots добавь store action:
+
+```ts
+updateTemplateSlotTransform(
+  templateId: string,
+  slotId: string,
+  transform: LocalTransform,
+): void
+```
+
+SlotDef должен иметь:
+
+```ts
+interface SlotDef {
+  id: string;
+  name: string;
+  boneId: string;
+  defaultAnchorId: string | null;
+  defaultTransform: LocalTransform;
+}
+```
+
+Перемещение синей slot zone обновляет `defaultTransform`.
+
+Изменение должно сохраняться:
+
+* после render;
+* после переключения вкладки;
+* после смены entity;
+* после Save/Open Project.
+
+## 7. Добавить Item Fit Profile
+
+Один Item может по-разному сидеть на разных templates.
+
+Добавь:
+
+```ts
+interface ItemFitProfile {
+  templateId: string;
+  family: string;
+  slotId: string;
+  partTransforms: Record<string, LocalTransform>;
+}
+```
+
+Порядок разрешения:
+
+```text
+Entity attachmentOverride
+→ ItemFitProfile для текущего template
+→ ItemPart default transform
+```
+
+Для волос можно один раз отрегулировать стандартную посадку на `humanoid_topdown_v1`, после чего они будут правильно появляться на других персонажах этого шаблона.
+
+## 8. Исправить размеры предметов
+
+Не растягивай волосы, броню или другие items на полный template frame.
+
+Не используй:
+
+```text
+preserveAspectRatio="none"
+```
+
+Новые ItemPart должны сохранять исходные пропорции.
+
+Для каждого ItemPart храни:
+
+```ts
+naturalWidth
+naturalHeight
+contentBounds
+pivot
+localTransform
+```
+
+Волосы должны прикрепляться к head/hair anchor и отображаться в собственном natural size.
+
+## 9. Добавить anchors для головы
+
+Для humanoid templates добавь минимум:
+
+```text
+head_center
+hair_top
+forehead
+face_center
+ear_l
+ear_r
+beard
+neck
+```
+
+Пример волос:
+
+```ts
+{
+  slotId: "hair",
+  parentBoneId: "head",
+  anchorId: "hair_top",
+}
+```
+
+Пример бороды:
+
+```ts
+{
+  slotId: "beard",
+  parentBoneId: "head",
+  anchorId: "beard",
+}
+```
+
+## 10. Не уничтожать выбранный объект при animation tick
+
+Fabric authoring objects должны быть persistent.
+
+Не выполняй `canvas.clear()` и повторную загрузку SVG при каждом animation sync.
+
+Используй registry:
+
+```ts
+visualId → FabricObject
+```
+
+При animation tick обновляй только:
+
+```text
+left
+top
+angle
+scaleX
+scaleY
+```
+
+Если пользователь начал drag/scale/rotate:
+
+```ts
+isTransforming = true
+```
+
+Во время transform нельзя уничтожать или заменять выбранный Fabric object.
+
+После `object:modified`:
+
+1. Сохрани transform.
+2. Обнови Zustand.
+3. Создай undo command.
+4. Повтори scene evaluation.
+5. Проверь, что объект остался на той же позиции.
+
+## 11. Inspector для выбранного предмета
+
+При выборе волос Inspector должен показывать:
+
+```text
+Selected Item:
+Hair — [item name]
+
+Slot:
+Hair
+
+Bone:
+Head
+
+Anchor:
+Hair Top
+
+Position:
+X
+Y
+
+Rotation:
+degrees
+
+Scale:
+X
+Y
+
+Lock Proportions:
+On/Off
+
+Z-index
+
+Buttons:
+Reset Position
+Reset Scale
+Reset Rotation
+Reset All
+Edit Default Fit
+```
+
+Изменение чисел в Inspector и drag на Canvas должны обновлять одни и те же данные.
+
+## 12. Визуальное различие gizmos
+
+Используй разные обозначения:
+
+```text
+Template Slot: синяя пунктирная рамка
+Anchor: маленький крест или круг
+Selected Item: сплошная рамка с controls
+Bone: линия и joint
+Pivot: отдельная точка
+```
+
+Не показывай десятки slot zones поверх персонажа постоянно.
+
+По умолчанию показывай только:
+
+* выбранный slot;
+* выбранный anchor;
+* выбранный item.
+
+Добавь переключатели:
+
+```text
+Show Slots
+Show Anchors
+Show Bones
+```
+
+## 13. Required workflow
+
+Пользователь должен выполнить:
+
+1. Выбрать Hair slot.
+2. Выбрать причёску в Library.
+3. Причёска появляется около головы, а не в центре тела и не в левом верхнем углу.
+4. Переключиться в Edit Attachment.
+5. Кликнуть непосредственно по волосам.
+6. Переместить их.
+7. Изменить размер угловым control.
+8. Повернуть.
+9. Отпустить мышь.
+10. Запустить анимацию.
+11. Волосы следуют за head bone.
+12. Остановить анимацию.
+13. Переключить вкладку.
+14. Вернуться.
+15. Положение и размер сохранены.
+16. Сохранить JSON.
+17. Повторно открыть проект.
+18. Положение, масштаб, rotation и anchor не изменились.
+
+## 14. Tests
+
+Добавь тесты:
+
+```text
+slot transform persists after render
+attachment transform persists after render
+attachment survives animation update
+attachment survives Save/Open
+uniform scale preserves aspect ratio
+item follows parent bone animation
+clicking item selects item instead of slot behind it
+slot centre is clickable
+selected Fabric object is not replaced during drag
+```
+
+## Definition of Done
+
+Этап завершён только когда:
+
+* базовый слот можно перемещать в режиме Edit Template Slots;
+* новая позиция слота сохраняется;
+* конкретную вещь можно выбрать кликом по её графике;
+* волосы можно перемещать;
+* волосы можно масштабировать;
+* волосы можно вращать;
+* пропорции не ломаются;
+* волосы можно привязать к head/hair_top;
+* волосы следуют за головой во время анимации;
+* броня аналогично следует за chest;
+* изменения не сбрасываются после render;
+* изменения не сбрасываются после Save/Open;
+* Canvas, Pixi и Export показывают одинаковый transform.
+
+Сначала покажи текущий selection flow, затем план persistent Fabric object registry и только после этого начинай кодирование.

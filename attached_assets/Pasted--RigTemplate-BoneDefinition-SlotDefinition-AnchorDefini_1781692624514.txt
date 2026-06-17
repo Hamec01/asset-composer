@@ -1,0 +1,129 @@
+Необходимо ввести:
+
+RigTemplate
+BoneDefinition
+SlotDefinition
+AnchorDefinition
+VectorPartAsset
+PartInstance
+SkinDefinition
+AnimationClip
+EvaluatedPose
+EvaluatedScene
+
+Основной принцип:
+
+const pose = evaluateClip(clip, timeMs);
+const skeleton = evaluateSkeleton(rig, pose);
+const scene = evaluateScene(project, entity, skeleton);
+
+scene затем используют абсолютно все:
+
+Fabric;
+PixiJS;
+thumbnails;
+export;
+selection;
+bounds;
+slots;
+anchors.
+Этап 3. Разрезать тело на части
+
+Нельзя анимировать цельную плоскую картинку персонажа при помощи skeletal rig.
+
+Потребуются отдельные SVG:
+
+pelvis;
+torso;
+head;
+upper/lower arms;
+hands;
+upper/lower legs;
+feet.
+
+Для лица:
+
+глаза;
+зрачки;
+брови;
+нос;
+рот;
+уши;
+волосы спереди;
+волосы сзади;
+борода;
+шрамы;
+татуировки.
+
+После этого редактор действительно сможет менять лицо и воспроизводить анимации.
+
+Этап 4. Создать настоящий Animation Controller
+
+Он должен поддерживать:
+
+Play;
+Pause;
+Restart;
+Loop;
+Non-loop;
+Scrub;
+playback speed;
+previous frame;
+next frame;
+frame stepping;
+переходы между состояниями.
+
+Время должно обновляться через requestAnimationFrame или Pixi ticker, а не через случайные React-render.
+
+Этап 5. Исправить камеру
+
+Нужны:
+
+средняя кнопка мыши — перемещение;
+Alt + ЛКМ — перемещение;
+колесо — zoom относительно курсора;
+Fit Entity;
+Fit Selection;
+100%;
+Center Pivot;
+автоматическое центрирование после смены шаблона.
+
+CSS-transform для основной камеры нужно убрать.
+
+Этап 6. Реализовать Slot/Anchor Editor
+
+Каждый слот должен позволять:
+
+двигать X/Y;
+вращать;
+менять scale X/Y;
+отражать;
+выбирать кость;
+выбирать anchor;
+менять z-index;
+сбрасывать transform;
+сохранять изменения;
+видеть результат во всех renderer-ах.
+Этап 7. Переделать экспорт
+
+Экспорт должен получать тот же EvaluatedScene, который отображает PixiJS.
+
+Не должно быть отдельной упрощённой логики, которая заново гадает:
+
+где находится предмет;
+какой у него размер;
+как вращается кость;
+какой у него pivot.
+Этап 8. Только после этого возвращаться к расширению продукта
+
+После первого рабочего humanoid:
+
+Side-view humanoid.
+Четвероногие животные.
+Птицы.
+Монстры.
+Большие существа.
+Транспорт и осадные машины.
+Настоящий редактор SVG-путей.
+Генератор StyleSet.
+Плагины и marketplace.

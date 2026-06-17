@@ -1,0 +1,752 @@
+# ASSET COMPOSER — M1-E3A
+
+# IMPORT, SCENE FIT, PERSISTENT ATTACHMENTS AND BONE-LOCAL EQUIPMENT
+
+Останови дальнейшее расширение Animation Runtime после завершённых M1-E1 и M1-E2.
+
+Не переходи к новым сущностям, анимациям, библиотекам предметов или декоративным функциям.
+
+В текущем проекте подтверждены критические проблемы импорта и attachment pipeline. Сначала исправь их системно.
+
+## Подтверждённые проблемы
+
+### 1. Imported full vector is treated as equipment
+
+Импортированная цельная курица отображается в Inspector как:
+
+```text
+Equipped:
+Chicken Full Vector
+Slot: Back
+```
+
+Это неправильно.
+
+Полная графика сущности не должна импортироваться как предмет экипировки в `bird_back`.
+
+Необходимо разделить:
+
+```text
+Open Project JSON
+Import Vector Asset
+Import Entity
+Import Item
+```
+
+Полноценный персонаж или животное должны импортироваться как body/entity visual, а не как slot item.
+
+### 2. Imported entity is not fitted to viewport
+
+После загрузки JSON импортированная сущность отображается смещённой влево и вверх.
+
+Текущий Reset View лишь устанавливает:
+
+```ts
+zoom = 1
+panX = 0
+panY = 0
+```
+
+Это не является Fit.
+
+Реализуй вычисление фактических visual bounds и настоящий `fitSceneToViewport`.
+
+### 3. Slot drag is not persisted
+
+Slot zones являются перемещаемыми Fabric Rect, но изменение координат не записывается в Zustand и JSON.
+
+После следующего `renderEntity()` выполняется `canvas.clear()`, зона пересоздаётся и возвращается назад.
+
+`attachmentOverride` существует в domain model, но сейчас фактически не применяется.
+
+### 4. Animation redraw destroys editing objects
+
+CanvasPanel вызывает renderEntity приблизительно 12 раз в секунду.
+
+Каждый вызов очищает Fabric canvas.
+
+Во время drag выбранный slot или item может быть уничтожен и пересоздан.
+
+### 5. Equipment still uses full-frame rendering
+
+В `canvasEngine.ts` и `evaluationPipeline.ts` slot items всё ещё создаются как full-frame:
+
+```ts
+boneId: null
+localX: 0
+localY: 0
+naturalWidth: template.previewWidth
+naturalHeight: template.previewHeight
+```
+
+Это необходимо убрать из основного pipeline.
+
+Не откладывай bone-local equipment до M2.
+
+Full-frame items являются текущей причиной неправильного положения и масштаба брони.
+
+### 6. Built-in item SVGs are stretched incorrectly
+
+Большинство item SVG используют:
+
+```xml
+viewBox="0 0 64 64"
+```
+
+`scaleSvgToFit` устанавливает:
+
+```xml
+preserveAspectRatio="none"
+```
+
+После этого предмет растягивается на полный template frame.
+
+Нельзя считать это корректной системой экипировки.
+
+### 7. Project templates are ignored
+
+`getTemplateById()` ищет только внутри статического `TEMPLATES`.
+
+Импортированные `project.templates` игнорируются Canvas, Pixi, Inspector, Timeline и Export.
+
+### 8. ProjectSchema strips boneParts
+
+В TypeScript Template содержит:
+
+```ts
+boneParts?: BonePart[]
+```
+
+Но `TemplateSchema` не содержит BonePartSchema.
+
+После save/import roundtrip boneParts могут быть потеряны.
+
+---
+
+# REQUIRED ARCHITECTURE
+
+## A. Separate project loading from asset importing
+
+Toolbar и Dashboard должны иметь разные команды:
+
+```text
+Open Project
+Import Entity
+Import SVG Asset
+Import Item
+```
+
+`Open Project` загружает полноценный Project JSON.
+
+`Import Entity` импортирует entity package.
+
+`Import SVG Asset` запускает Import Wizard.
+
+Нельзя автоматически помещать целую SVG-сущность в первый совместимый equipment slot.
+
+---
+
+## B. Add import modes
+
+Import Wizard должен предложить:
+
+```text
+1. Full Vector Entity
+2. Rigged Entity From Parts
+3. Equipment Item
+4. Static Object
+```
+
+### Full Vector Entity
+
+Цельная SVG-графика становится entity body visual и привязывается к root/body bone.
+
+Она не должна находиться в `entity.slots`.
+
+Пользователь должен иметь возможность:
+
+* перемещать её;
+* масштабировать;
+* вращать;
+* отражать;
+* задавать pivot;
+* автоматически центрировать;
+* выполнять Fit to Frame;
+* позже конвертировать в rigged entity.
+
+### Rigged Entity From Parts
+
+Пользователь назначает SVG layers или groups костям:
+
+```text
+body
+head
+wing_l
+wing_r
+tail
+leg_l
+leg_r
+```
+
+### Equipment Item
+
+Только реальная экипировка помещается в slot.
+
+---
+
+## C. Normalize imported SVG
+
+При импорте SVG:
+
+1. Безопасно распарси SVG.
+2. Прочитай исходный viewBox.
+3. Вычисли visual bounds содержимого.
+4. Удали влияние пустых областей вокруг рисунка.
+5. Сохрани aspect ratio.
+6. Нормализуй visual center в локальный origin.
+7. Сохрани исходный размер.
+8. Сохрани pivot.
+9. Не используй `preserveAspectRatio="none"` для обычных импортированных объектов.
+
+Добавь данные:
+
+```ts
+interface VectorAssetMetrics {
+  viewBoxX: number;
+  viewBoxY: number;
+  viewBoxWidth: number;
+  viewBoxHeight: number;
+
+  visualMinX: number;
+  visualMinY: number;
+  visualWidth: number;
+  visualHeight: number;
+
+  pivotX: number;
+  pivotY: number;
+}
+```
+
+---
+
+## D. Add entity-level visual transform
+
+Для full-vector импортированных сущностей добавь:
+
+```ts
+interface LocalTransform {
+  x: number;
+  y: number;
+  rotation: number;
+  scaleX: number;
+  scaleY: number;
+}
+
+interface EntityVisual {
+  id: string;
+  svgData: string;
+  boneId: string;
+  naturalWidth: number;
+  naturalHeight: number;
+  pivotX: number;
+  pivotY: number;
+  transform: LocalTransform;
+  zIndex: number;
+}
+```
+
+Entity может иметь `visuals` или эквивалентную каноническую структуру.
+
+Не храни полное тело сущности как equipment item.
+
+---
+
+## E. Implement real scene bounds and Fit
+
+Создай единый:
+
+```ts
+computeEvaluatedSceneBounds(scene)
+```
+
+Он должен учитывать:
+
+* full-vector entity visuals;
+* bone-local body parts;
+* equipment item parts;
+* local transform;
+* bone world transform;
+* rotation;
+* scale;
+* pivot;
+* visibility.
+
+Он не должен учитывать:
+
+* slot gizmos;
+* bone lines;
+* labels;
+* selection borders;
+* inspector overlays.
+
+Создай:
+
+```ts
+fitSceneToViewport(bounds, viewportWidth, viewportHeight, padding)
+```
+
+Поведение:
+
+```text
+padding: 10–15%
+zoom: автоматически
+pan: визуальный центр bounds в центре viewport
+```
+
+Автоматически вызывай Fit:
+
+* после Open Project;
+* после Import Entity;
+* после Import SVG;
+* после смены active entity;
+* после смены template;
+* при первом успешном render;
+* после resize, если пользователь ещё не изменял camera вручную.
+
+Кнопка Reset View должна вызывать Fit Entity, а не просто `{zoom: 1, pan: 0}`.
+
+Добавь отдельную кнопку `100%`.
+
+---
+
+## F. Separate slots, anchors and equipment visuals
+
+Slot zone не является самим предметом.
+
+Не используй одну синюю рамку одновременно как:
+
+* slot selector;
+* movable equipment object;
+* attachment anchor;
+* visual bounds предмета.
+
+Создай отдельные gizmos:
+
+```text
+Slot Badge
+Anchor Gizmo
+Selected Item Bounds
+Bone Gizmo
+```
+
+Режимы редактора:
+
+```text
+Select / Transform
+Edit Attachment
+Edit Rig
+Edit Vector
+```
+
+---
+
+## G. Persist attachment transforms
+
+Добавь store action:
+
+```ts
+setAttachmentOverride(
+  entityId: string,
+  slotId: string,
+  patch: Partial<AttachmentOverride>
+): void
+```
+
+Добавь Undo/Redo command:
+
+```text
+SET_ATTACHMENT_OVERRIDE
+```
+
+В CanvasEngine зарегистрируй:
+
+```ts
+canvas.on("object:moving", ...)
+canvas.on("object:scaling", ...)
+canvas.on("object:rotating", ...)
+canvas.on("object:modified", ...)
+```
+
+На `object:modified`:
+
+1. Определи `slotId` и `entityId` через metadata Fabric object.
+2. Получи текущий world transform parent bone/anchor.
+3. Преобразуй canvas-space transform в bone-local transform.
+4. Запиши:
+
+```ts
+attachmentOverride.offsetX
+attachmentOverride.offsetY
+attachmentOverride.rotation
+attachmentOverride.scaleX
+attachmentOverride.scaleY
+attachmentOverride.anchorId
+```
+
+5. Создай undo command.
+6. Не выполняй полный render во время commit.
+7. После commit проверь сохранённое состояние.
+
+Attachment transform обязан сохраняться:
+
+* после следующего render;
+* после проигрывания анимации;
+* после смены tab;
+* после смены entity;
+* после Save JSON;
+* после повторного Open Project.
+
+---
+
+## H. Prevent render loop from destroying active edits
+
+Во время активного drag/scale/rotate:
+
+```text
+isTransforming = true
+```
+
+В это время Canvas authoring surface не должен выполнять полный `canvas.clear()`.
+
+Допустимые решения:
+
+1. Приостановить authoring redraw на время transform.
+2. Отделить persistent Fabric authoring objects от transient animation preview.
+3. Использовать Pixi Preview для continuous animation, а Fabric Canvas — для редактирования текущего paused pose.
+
+Рекомендуемое поведение:
+
+* при начале drag Canvas animation preview временно ставится на pause;
+* текущая поза остаётся замороженной;
+* объект свободно редактируется;
+* после `object:modified` transform сохраняется;
+* затем animation можно продолжить.
+
+Нельзя уничтожать Fabric target каждые 83 ms во время пользовательского drag.
+
+---
+
+## I. Fix slot hit testing
+
+Не сравнивай slot objects только по identity:
+
+```ts
+opt.target === zone
+```
+
+Добавь metadata:
+
+```ts
+zone.set({
+  data: {
+    kind: "slot-anchor-gizmo",
+    slotId: slotDef.id,
+  }
+});
+```
+
+Выбор:
+
+```ts
+const data = opt.target?.get("data");
+
+if (data?.kind === "slot-anchor-gizmo") {
+  onSlotClick(data.slotId);
+}
+```
+
+Добавь:
+
+```ts
+targetFindTolerance
+```
+
+и проверь клики:
+
+* в центре;
+* возле края;
+* при zoom 25%;
+* при zoom 100%;
+* при zoom 400%;
+* после pan;
+* после Fit;
+* во время paused animation.
+
+---
+
+## J. Replace full-frame equipment with item parts
+
+Добавь item visual parts:
+
+```ts
+interface ItemPart {
+  id: string;
+  svgData: string;
+
+  boneId: string;
+  anchorId: string | null;
+
+  naturalWidth: number;
+  naturalHeight: number;
+
+  pivotX: number;
+  pivotY: number;
+
+  localX: number;
+  localY: number;
+  rotation: number;
+  scaleX: number;
+  scaleY: number;
+
+  zOffset: number;
+}
+```
+
+Item может содержать несколько частей.
+
+Примеры:
+
+```text
+boots:
+  boot_l → foot_l
+  boot_r → foot_r
+
+gloves:
+  glove_l → hand_l
+  glove_r → hand_r
+
+pants:
+  pelvis_part → pelvis
+  leg_l_part → hip_l / knee_l
+  leg_r_part → hip_r / knee_r
+
+armor:
+  chest_part → chest
+  shoulder_l_part → shoulder_l
+  shoulder_r_part → shoulder_r
+
+helmet:
+  helmet_part → head
+```
+
+В `evaluateScene()` item parts должны эмитироваться как:
+
+```ts
+boneId !== null
+```
+
+и учитывать:
+
+```text
+slot anchor
+item default transform
+assignment attachmentOverride
+bone world transform
+```
+
+Legacy full-frame items можно временно импортировать только через явно обозначенный:
+
+```text
+coordinateMode: "legacy_full_frame"
+```
+
+Они не должны быть основным поведением новых items.
+
+Не выдавай legacy full-frame за завершённую экипировку.
+
+---
+
+## K. Template resolution
+
+Замени статическое использование:
+
+```ts
+getTemplateById(id)
+```
+
+на единый resolver:
+
+```ts
+resolveTemplate(project, id)
+```
+
+Правило:
+
+```text
+1. project.templates
+2. built-in templates fallback
+```
+
+Использовать resolver во всех местах:
+
+* CanvasPanel;
+* PixiPreviewPanel;
+* TimelinePanel;
+* InspectorPanel;
+* LibraryPanel;
+* StateMachinePanel;
+* ExportDialog;
+* store;
+* thumbnail generation.
+
+---
+
+## L. Fix ProjectSchema
+
+Добавь `BonePartSchema`:
+
+```ts
+const BonePartSchema = z.object({
+  id: z.string(),
+  boneId: z.string(),
+  svgData: z.string(),
+  naturalWidth: z.number(),
+  naturalHeight: z.number(),
+  localX: z.number(),
+  localY: z.number(),
+  zOffset: z.number(),
+});
+```
+
+Добавь в TemplateSchema:
+
+```ts
+boneParts: z.array(BonePartSchema).optional()
+```
+
+Добавь схемы для:
+
+* entity visuals;
+* item parts;
+* SVG metrics;
+* local transforms;
+* coordinate mode.
+
+Увеличь project version до `2.0`.
+
+Создай migration:
+
+```ts
+migrateProjectV1ToV2()
+```
+
+Не ломай старые JSON-файлы.
+
+---
+
+# REQUIRED USER WORKFLOW FOR IMPORTED CHICKEN
+
+После исправления пользователь должен иметь возможность:
+
+1. Нажать `Import Entity`.
+2. Выбрать JSON или SVG курицы.
+3. Выбрать `Full Vector Entity`.
+4. Увидеть курицу по центру canvas.
+5. Нажать `Fit Entity`.
+6. Выбрать курицу кликом по самой графике.
+7. Переместить её.
+8. Изменить масштаб с сохранением пропорций.
+9. Повернуть.
+10. Назначить pivot.
+11. Сохранить проект.
+12. Закрыть и открыть проект.
+13. Увидеть курицу в той же позиции.
+14. Нажать `Convert to Rigged Entity`.
+15. Разделить или назначить части костям.
+16. Запустить анимацию.
+17. Увидеть, как части следуют за соответствующими костями.
+
+---
+
+# REQUIRED TESTS
+
+## Import tests
+
+1. Custom project template загружается из `project.templates`.
+2. Save → Load сохраняет `boneParts`.
+3. Full vector entity не попадает в equipment slot.
+4. Imported SVG сохраняет aspect ratio.
+5. Visual bounds корректно вычисляются.
+6. Imported entity автоматически центрируется.
+7. Reset View выполняет настоящий Fit.
+
+## Attachment tests
+
+1. Выбрать torso slot.
+2. Надеть Plate Armor.
+3. Armor появляется на chest, а не в левом верхнем углу.
+4. Armor имеет пропорциональный размер.
+5. Переместить armor.
+6. Отпустить мышь.
+7. Проверить `attachmentOverride`.
+8. Запустить animation.
+9. Проверить сохранение local offset.
+10. Сохранить JSON.
+11. Повторно открыть JSON.
+12. Проверить ту же позицию.
+
+## Hit testing tests
+
+1. Slot выбирается кликом по центру.
+2. Slot выбирается возле края.
+3. Slot выбирается после zoom.
+4. Slot выбирается после pan.
+5. Slot drag не прерывается animation redraw.
+
+## Renderer parity
+
+Для одного entity, pose и timeMs сравнить calculated transforms:
+
+```text
+Fabric
+Pixi
+Export
+```
+
+Все три должны получать одинаковый `EvaluatedScene`.
+
+---
+
+# DEFINITION OF DONE
+
+M1-E3A завершён только когда:
+
+* импортированная курица находится по центру;
+* целая курица не считается equipment item;
+* курицу можно выбрать по самой графике;
+* курицу можно переместить;
+* курицу можно масштабировать без искажения;
+* transform сохраняется;
+* Reset View делает Fit;
+* slot выбирается кликом по центру;
+* slot position или attachment position сохраняется;
+* броня появляется на торсе;
+* броня не деформируется;
+* броня следует за chest bone;
+* attachmentOverride реально применяется;
+* Save/Open сохраняет boneParts;
+* custom templates из project JSON действительно используются;
+* Fabric, Pixi и Export применяют одинаковые transforms;
+* все автоматические тесты проходят.
+
+Сначала покажи аудит текущей реализации и список файлов для изменения.
+
+Не начинай кодирование, пока не покажешь:
+
+1. Как сейчас проходит import flow.
+2. Почему full vector попадает в Back slot.
+3. Где будет храниться entity visual.
+4. Как будет рассчитываться visual bounds.
+5. Как canvas transform будет переводиться в bone-local transform.
+6. Как будет предотвращено уничтожение Fabric object во время drag.
+7. Как будет мигрирован старый Project JSON.
