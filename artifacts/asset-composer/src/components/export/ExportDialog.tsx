@@ -12,6 +12,7 @@ import { formatFrameName } from "@/lib/exportTypes";
 import type { ExportProfile, Item, Template, Entity, PaletteTokens, AnimationClip } from "@/domain/types";
 import type { ExportWorkerJob, WorkerOutputMessage } from "@/lib/exportTypes";
 import ExportWorker from "@/workers/export.worker?worker";
+import { evaluateRestSkeleton, evaluateScene } from "@/lib/evaluationPipeline";
 import {
   Download, Package, FileImage, Code, FileJson,
   ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Loader2,
@@ -69,65 +70,19 @@ async function prerasterizeAll(
   onStep:       (msg: string) => void,
 ): Promise<Record<string, ArrayBuffer>> {
   const cache: Record<string, ArrayBuffer> = {};
-  const itemsMap = new Map(items.map(i => [i.id, i]));
 
   for (const entity of entities) {
     const template = findTemplate(entity.templateId);
     if (!template) continue;
-
-    for (const layer of template.baseBodyLayers) {
-      const key = `base:${entity.id}:${layer.id}`;
-      if (!cache[key]) {
-        onStep(`Preparing textures: ${entity.name} base…`);
-        const svgData = applyPaletteToSvg(layer.svgData, template.paletteTokens, entity.palette);
-        const blob    = await renderSvgToBlob(svgData, template.previewWidth, template.previewHeight);
-        if (blob) cache[key] = await blob.arrayBuffer();
-      }
-    }
-
-    for (const slotAssign of entity.slots) {
-      if (!slotAssign.itemId) continue;
-      const item = itemsMap.get(slotAssign.itemId);
-      if (!item) continue;
-      const effectivePalette: PaletteTokens = slotAssign.paletteOverride
-        ? { ...entity.palette, ...slotAssign.paletteOverride } as PaletteTokens
-        : entity.palette;
-      for (let li = 0; li < item.svgLayers.length; li++) {
-        const svgLayer = item.svgLayers[li];
-        const key = `slot:${entity.id}:${slotAssign.slotId}:${li}`;
-        if (!cache[key]) {
-          onStep(`Preparing textures: ${entity.name} · ${slotAssign.slotId}…`);
-          const svgData = applyPaletteToSvg(svgLayer.svgData, template.paletteTokens, effectivePalette);
-          const blob    = await renderSvgToBlob(svgData, template.previewWidth, template.previewHeight);
-          if (blob) cache[key] = await blob.arrayBuffer();
-        }
-      }
-    }
-
-    // Stage 3 — bone part rasterization (8× for quality; worker resizes at render time)
-    for (const part of template.boneParts ?? []) {
-      const key = `part:${entity.id}:${part.id}`;
-      if (!cache[key]) {
-        onStep(`Preparing textures: ${entity.name} bone parts…`);
-        const svgData = applyPaletteToSvg(part.svgData, template.paletteTokens, entity.palette);
-        const partW   = Math.ceil(part.naturalWidth  * 8);
-        const partH   = Math.ceil(part.naturalHeight * 8);
-        const blob    = await renderSvgToBlob(svgData, partW, partH);
-        if (blob) cache[key] = await blob.arrayBuffer();
-      }
-    }
-
-    // v2.0 entity visuals (EntityVisual imports via Import Wizard)
-    for (const visual of entity.visuals ?? []) {
+    const scene = evaluateScene(entity, template, evaluateRestSkeleton(template.bones), items);
+    for (const visual of scene.visuals) {
       const key = `visual:${entity.id}:${visual.id}`;
-      if (!cache[key]) {
-        onStep(`Preparing textures: ${entity.name} visual…`);
-        const svgData = applyPaletteToSvg(visual.svgData, template.paletteTokens, entity.palette);
-        const pxW     = Math.max(1, Math.ceil(visual.metrics.visualWidth));
-        const pxH     = Math.max(1, Math.ceil(visual.metrics.visualHeight));
-        const blob    = await renderSvgToBlob(svgData, pxW, pxH);
-        if (blob) cache[key] = await blob.arrayBuffer();
-      }
+      if (cache[key]) continue;
+      onStep(`Preparing textures: ${entity.name} · ${visual.id}…`);
+      const width = Math.max(1, Math.ceil(visual.localBounds.maxX - visual.localBounds.minX));
+      const height = Math.max(1, Math.ceil(visual.localBounds.maxY - visual.localBounds.minY));
+      const blob = await renderSvgToBlob(visual.svgData, width, height);
+      if (blob) cache[key] = await blob.arrayBuffer();
     }
   }
 

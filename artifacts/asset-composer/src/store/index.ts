@@ -3,15 +3,15 @@ import { immer } from "zustand/middleware/immer";
 import type {
   Entity, Project, EntityType, PaletteTokens, SlotAssignment,
   AnimationClip, EntityVisual, AttachmentOverride,
-  CanvasMode, EditorSelection, LocalTransform,
+  CanvasMode, EditorSelection, LocalTransform, Template,
 } from "@/domain/types";
 import type { Command } from "./commands";
 import {
   makeSetSlotCommand, makeSetPaletteCommand, makeRenameCommand,
   makeAddEntityVisualCommand, makeRemoveEntityVisualCommand,
-  makeSetAttachmentOverrideCommand,
+  makeSetAttachmentOverrideCommand, makeSetTemplateSlotTransformCommand,
 } from "./commands";
-import { TEMPLATES, getTemplateById, resolveTemplate } from "@/data/templates";
+import { cloneTemplates, resolveTemplate } from "@/data/templates";
 import { STYLE_SETS, DEFAULT_STYLE_SET_ID, getStyleSetById } from "@/data/styleSets";
 import { DEFAULT_EXPORT_PROFILES } from "@/data/exportProfiles";
 import { ITEMS } from "@/data/items";
@@ -110,7 +110,7 @@ interface AppStore {
   setTimelineZoom:     (zoomPx: number) => void;
 
   getActiveEntity:    () => Entity | null;
-  getActiveTemplate:  () => ReturnType<typeof getTemplateById>;
+  getActiveTemplate:  () => Template | undefined;
   getActiveStyleSet:  () => ReturnType<typeof getStyleSetById>;
 }
 
@@ -122,14 +122,44 @@ function makeDefaultLicense() {
   };
 }
 
+function createId() {
+  return globalThis.crypto?.randomUUID?.() ?? `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function sameAttachmentOverride(
+  current: Partial<AttachmentOverride> | undefined,
+  next: Partial<AttachmentOverride>,
+) {
+  return (
+    (current?.anchorId ?? "") === (next.anchorId ?? current?.anchorId ?? "") &&
+    (current?.bindMode ?? "") === (next.bindMode ?? current?.bindMode ?? "") &&
+    (current?.offsetX ?? 0) === (next.offsetX ?? current?.offsetX ?? 0) &&
+    (current?.offsetY ?? 0) === (next.offsetY ?? current?.offsetY ?? 0) &&
+    (current?.rotation ?? 0) === (next.rotation ?? current?.rotation ?? 0) &&
+    (current?.scaleX ?? 1) === (next.scaleX ?? current?.scaleX ?? 1) &&
+    (current?.scaleY ?? 1) === (next.scaleY ?? current?.scaleY ?? 1)
+  );
+}
+
+function sameLocalTransform(a?: LocalTransform, b?: LocalTransform) {
+  if (!a || !b) return false;
+  return (
+    a.x === b.x &&
+    a.y === b.y &&
+    a.rotation === b.rotation &&
+    a.scaleX === b.scaleX &&
+    a.scaleY === b.scaleY
+  );
+}
+
 function makeDefaultProject(): Project {
   return {
-    id:              crypto.randomUUID(),
+    id:              createId(),
     version:         "2.0",
     name:            "New Project",
     description:     "",
     entities:        [],
-    templates:       TEMPLATES,
+    templates:       cloneTemplates(),
     items:           [...ITEMS],
     animationClips:  PRESET_ANIMATIONS,
     stateMachines:   PRESET_STATE_MACHINES,
@@ -141,11 +171,30 @@ function makeDefaultProject(): Project {
   };
 }
 
-function applyCommand(entities: Entity[], cmd: Command, direction: "do" | "undo"): Entity[] {
+function applyEntityCommand(entities: Entity[], cmd: Command, direction: "do" | "undo"): Entity[] {
+  if (!cmd.entityId) return entities;
   const patch = direction === "do" ? cmd.after : cmd.before;
   return entities.map(e =>
     e.id === cmd.entityId ? { ...e, ...patch, updatedAt: Date.now() } : e
   );
+}
+
+function applyTemplateCommand(templates: Template[], cmd: Command, direction: "do" | "undo"): Template[] {
+  if (cmd.type !== "SET_TEMPLATE_SLOT_TRANSFORM" || !cmd.templateId || !cmd.slotId) {
+    return templates;
+  }
+  const patch = direction === "do" ? cmd.after : cmd.before;
+  return templates.map(template => {
+    if (template.id !== cmd.templateId) return template;
+    return {
+      ...template,
+      slots: template.slots.map(slot =>
+        slot.id === cmd.slotId
+          ? { ...slot, defaultTransform: patch.defaultTransform }
+          : slot,
+      ),
+    };
+  });
 }
 
 function startClipPlayback(allClips: AnimationClip[], clipId: string | null, looping: boolean) {
@@ -190,11 +239,11 @@ export const useStore = create<AppStore>()(
 
     // ── Project Actions ────────────────────────────────────────────────────────
     createEntity: (entityType, templateId, name) => {
-      const template = getTemplateById(templateId);
+      const template = resolveTemplate(get().project, templateId);
       if (!template) return;
       const styleSet = STYLE_SETS.find(s => s.id === DEFAULT_STYLE_SET_ID);
       const entity: Entity = {
-        id:                   crypto.randomUUID(),
+        id:                   createId(),
         name,
         entityType,
         templateId,
@@ -262,7 +311,7 @@ export const useStore = create<AppStore>()(
         state.animPlayback.timeMs = 0;
         const entity = state.project.entities.find(e => e.id === entityId);
         if (entity) {
-          const template = getTemplateById(entity.templateId);
+          const template = resolveTemplate(state.project, entity.templateId);
           if (template) {
             const sm = PRESET_STATE_MACHINES.find(m => m.skeletonFamily === template.skeletonFamily);
             if (sm) {
@@ -435,6 +484,9 @@ export const useStore = create<AppStore>()(
     setAttachmentOverride: (entityId, slotId, override) => {
       const entity = get().project.entities.find(e => e.id === entityId);
       if (!entity) return;
+      const slot = entity.slots.find(s => s.slotId === slotId);
+      if (!slot) return;
+      if (sameAttachmentOverride(slot.attachmentOverride, override)) return;
       const before: SlotAssignment[] = entity.slots.map(s => ({ ...s }));
       const after:  SlotAssignment[] = entity.slots.map(s =>
         s.slotId === slotId
@@ -446,7 +498,23 @@ export const useStore = create<AppStore>()(
 
     // ── Editor Actions ───────────────────────────────────────────────────────
     setAppState:         (appState)  => set(state => { state.editor.appState = appState; }),
-    setSelectedSlot:     (slotId)    => set(state => { state.editor.selectedSlotId = slotId; }),
+    setSelectedSlot:     (slotId)    => set(state => {
+      state.editor.selectedSlotId = slotId;
+      const selection = state.editor.selection;
+      if (slotId === null) {
+        state.editor.selection = { kind: "none" };
+        return;
+      }
+
+      if (selection.kind === "item-part" && selection.slotId !== slotId) {
+        state.editor.selection = { kind: "none" };
+        return;
+      }
+
+      if (selection.kind === "template-slot" && selection.slotId !== slotId) {
+        state.editor.selection = { kind: "none" };
+      }
+    }),
     setActivePanel:      (panel)     => set(state => { state.editor.activePanel = panel; }),
     openWizard:          ()          => set(state => { state.editor.isWizardOpen = true; }),
     closeWizard:         ()          => set(state => { state.editor.isWizardOpen = false; }),
@@ -460,13 +528,21 @@ export const useStore = create<AppStore>()(
       const tmpl = state.project.templates.find(t => t.id === templateId);
       if (!tmpl) return;
       const slot = tmpl.slots.find(s => s.id === slotId);
-      if (slot) { slot.defaultTransform = transform; state.project.updatedAt = Date.now(); }
+      if (!slot) return;
+      if (sameLocalTransform(slot.defaultTransform, transform)) return;
+      const cmd = makeSetTemplateSlotTransformCommand(templateId, slotId, slot.defaultTransform, transform);
+      state.project.templates = applyTemplateCommand(state.project.templates as Template[], cmd, "do");
+      state.history.past.push(cmd);
+      if (state.history.past.length > state.history.maxDepth) state.history.past.shift();
+      state.history.future = [];
+      state.project.updatedAt = Date.now();
     }),
 
     // ── History Actions ──────────────────────────────────────────────────────
     pushCommand: (cmd) => {
       set(state => {
-        state.project.entities = applyCommand(state.project.entities as Entity[], cmd, "do");
+        state.project.entities = applyEntityCommand(state.project.entities as Entity[], cmd, "do");
+        state.project.templates = applyTemplateCommand(state.project.templates as Template[], cmd, "do");
         state.history.past.push(cmd);
         if (state.history.past.length > state.history.maxDepth) state.history.past.shift();
         state.history.future = [];
@@ -479,7 +555,8 @@ export const useStore = create<AppStore>()(
       if (!past.length) return;
       const cmd = past[past.length - 1];
       set(state => {
-        state.project.entities = applyCommand(state.project.entities as Entity[], cmd, "undo");
+        state.project.entities = applyEntityCommand(state.project.entities as Entity[], cmd, "undo");
+        state.project.templates = applyTemplateCommand(state.project.templates as Template[], cmd, "undo");
         state.history.past.pop();
         state.history.future.unshift(cmd);
         state.project.updatedAt = Date.now();
@@ -491,7 +568,8 @@ export const useStore = create<AppStore>()(
       if (!future.length) return;
       const cmd = future[0];
       set(state => {
-        state.project.entities = applyCommand(state.project.entities as Entity[], cmd, "do");
+        state.project.entities = applyEntityCommand(state.project.entities as Entity[], cmd, "do");
+        state.project.templates = applyTemplateCommand(state.project.templates as Template[], cmd, "do");
         state.history.future.shift();
         state.history.past.push(cmd);
         state.project.updatedAt = Date.now();
@@ -586,6 +664,10 @@ export const useStore = create<AppStore>()(
 
 // ── Keyboard shortcuts ─────────────────────────────────────────────────────────
 if (typeof window !== "undefined") {
+  if (import.meta.env.DEV) {
+    (window as typeof window & { __assetComposerStore?: typeof useStore }).__assetComposerStore = useStore;
+  }
+
   window.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
       e.preventDefault(); useStore.getState().undo();

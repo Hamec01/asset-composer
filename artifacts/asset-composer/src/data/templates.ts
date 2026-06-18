@@ -52,7 +52,7 @@ const humanoidTopdownSlots: SlotDef[] = [
   { id: "slot_hands", name: "Hands", boneId: "hand_l", zIndex: 5, allowedCategories: ["hands"], required: false, defaultItemId: null },
   { id: "slot_neck", name: "Neck", boneId: "neck", zIndex: 6, allowedCategories: ["neck", "amulet"], required: false, defaultItemId: null },
   { id: "slot_cloak", name: "Cloak", boneId: "chest", zIndex: 7, allowedCategories: ["cloak"], required: false, defaultItemId: null },
-  { id: "slot_hair", name: "Hair", boneId: "head", zIndex: 8, allowedCategories: ["hair"], required: false, defaultItemId: null },
+  { id: "slot_hair", name: "Hair", boneId: "head", zIndex: 8, allowedCategories: ["hair"], required: false, defaultItemId: null, defaultAnchorId: "hair_top" },
   { id: "slot_eyes", name: "Eyes", boneId: "head", zIndex: 9, allowedCategories: ["eyes"], required: false, defaultItemId: null },
   { id: "slot_face", name: "Face", boneId: "head", zIndex: 10, allowedCategories: ["face"], required: false, defaultItemId: null },
   { id: "slot_beard", name: "Beard", boneId: "head", zIndex: 11, allowedCategories: ["beard"], required: false, defaultItemId: null },
@@ -654,6 +654,13 @@ export const TEMPLATES: Template[] = [
     thumbnailSvg: thumbnails.siege_static_v1,
   },
 ];
+
+export function cloneTemplates(): Template[] {
+  if (typeof globalThis.structuredClone === "function") {
+    return globalThis.structuredClone(TEMPLATES);
+  }
+  return JSON.parse(JSON.stringify(TEMPLATES)) as Template[];
+}
 
 export function getTemplateById(id: string): Template | undefined {
   return TEMPLATES.find(t => t.id === id);

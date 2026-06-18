@@ -25,8 +25,9 @@ export function detectProjectVersion(raw: unknown): string {
 /** Migrate any project version to v2.0. Safe to call on already-v2.0 data. */
 export function migrateProject(raw: unknown): unknown {
   const version = detectProjectVersion(raw);
-  if (version === "2.0") return raw;
-  return migrateV1ToV2(raw);
+  const migrated = version === "2.0" ? normalizeV2Project(raw) : migrateV1ToV2(raw);
+  const parsed = ProjectSchema.safeParse(migrated);
+  return parsed.success ? parsed.data : migrated;
 }
 
 // ── v1.x → v2.0 ──────────────────────────────────────────────────────────────
@@ -41,7 +42,15 @@ function migrateV1ToV2(raw: unknown): unknown {
   if (Array.isArray(r.templates)) {
     r.templates = (r.templates as Record<string, unknown>[]).map(t => ({
       ...t,
+      anchors: t.anchors ?? {},
       boneParts: t.boneParts ?? [],
+      slots: Array.isArray(t.slots)
+        ? (t.slots as Record<string, unknown>[]).map(slot => ({
+            ...slot,
+            defaultAnchorId: slot.defaultAnchorId ?? undefined,
+            defaultTransform: slot.defaultTransform ?? undefined,
+          }))
+        : [],
     }));
   }
 
@@ -49,6 +58,7 @@ function migrateV1ToV2(raw: unknown): unknown {
   if (Array.isArray(r.items)) {
     r.items = (r.items as Record<string, unknown>[]).map(i => ({
       ...i,
+      anchorRules:    i.anchorRules    ?? {},
       parts:          i.parts          ?? [],
       coordinateMode: i.coordinateMode ?? "legacy_full_frame",
     }));
@@ -60,8 +70,63 @@ function migrateV1ToV2(raw: unknown): unknown {
       ...e,
       visuals:       e.visuals       ?? [],
       rootTransform: e.rootTransform ?? null,
+      slots: Array.isArray(e.slots)
+        ? (e.slots as Record<string, unknown>[]).map(slot => ({
+            ...slot,
+            attachmentOverride: slot.attachmentOverride ?? {},
+          }))
+        : [],
+    }));
+  }
+
+  return normalizeV2Project(r);
+}
+
+function normalizeV2Project(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const r = { ...(raw as Record<string, unknown>) };
+  r.version = "2.0";
+
+  if (Array.isArray(r.templates)) {
+    r.templates = (r.templates as Record<string, unknown>[]).map(t => ({
+      ...t,
+      anchors: t.anchors ?? {},
+      boneParts: t.boneParts ?? [],
+      slots: Array.isArray(t.slots)
+        ? (t.slots as Record<string, unknown>[]).map(slot => ({
+            ...slot,
+            defaultAnchorId: slot.defaultAnchorId ?? undefined,
+            defaultTransform: slot.defaultTransform ?? undefined,
+          }))
+        : [],
+    }));
+  }
+
+  if (Array.isArray(r.items)) {
+    r.items = (r.items as Record<string, unknown>[]).map(i => ({
+      ...i,
+      anchorRules: i.anchorRules ?? {},
+      parts: i.parts ?? [],
+      coordinateMode: i.coordinateMode ?? "legacy_full_frame",
+    }));
+  }
+
+  if (Array.isArray(r.entities)) {
+    r.entities = (r.entities as Record<string, unknown>[]).map(e => ({
+      ...e,
+      visuals: e.visuals ?? [],
+      rootTransform: e.rootTransform ?? null,
+      species: e.species ?? "",
+      slots: Array.isArray(e.slots)
+        ? (e.slots as Record<string, unknown>[]).map(slot => ({
+            ...slot,
+            paletteOverride: slot.paletteOverride ?? {},
+            attachmentOverride: slot.attachmentOverride ?? {},
+          }))
+        : [],
     }));
   }
 
   return r;
 }
+import { ProjectSchema } from "@/domain/schema";

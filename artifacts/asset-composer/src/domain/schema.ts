@@ -159,6 +159,7 @@ const SlotDefSchema = z.object({
   allowedCategories: z.array(z.string()),
   required: z.boolean(),
   defaultItemId: z.string().nullable(),
+  defaultAnchorId: z.string().optional(),
   defaultTransform: LocalTransformSchema.optional(),
 });
 

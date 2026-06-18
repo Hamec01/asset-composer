@@ -17,7 +17,7 @@
 
 import type {
   Bone, Entity, Item, Template, PaletteTokens, SkeletonFamilyId,
-  AnimationClip, EvaluatedVisual, Matrix2D, AABB,
+  AnimationClip, EvaluatedVisual, Matrix2D, AABB, ItemPart, SlotDef, SlotAssignment,
 } from "@/domain/types";
 import { resolveClipPose, blendPoses } from "./animationRuntime";
 import type { BoneTransformMap } from "./animationRuntime";
@@ -173,6 +173,19 @@ function makeLocalBounds(w: number, h: number): AABB {
   return { minX: -w / 2, minY: -h / 2, maxX: w / 2, maxY: h / 2 };
 }
 
+function makeMetricBounds(
+  metrics: { visualMinX: number; visualMinY: number; visualWidth: number; visualHeight: number },
+  pivotX: number,
+  pivotY: number,
+): AABB {
+  return {
+    minX: metrics.visualMinX - pivotX,
+    minY: metrics.visualMinY - pivotY,
+    maxX: metrics.visualMinX - pivotX + metrics.visualWidth,
+    maxY: metrics.visualMinY - pivotY + metrics.visualHeight,
+  };
+}
+
 function makeFullFrameMatrix(): Matrix2D {
   return identity();
 }
@@ -188,6 +201,66 @@ function makeAttachmentOverrideMatrix(ovr: {
     ovr.scaleX   ?? 1,
     ovr.scaleY   ?? 1,
   );
+}
+
+function makeSlotDefaultTransformMatrix(slotDef: SlotDef): Matrix2D {
+  const dt = slotDef.defaultTransform;
+  return dt
+    ? localTransformToMatrix(dt.x, dt.y, dt.rotation, dt.scaleX, dt.scaleY)
+    : identity();
+}
+
+function resolveAnchorId(
+  slotAssign: SlotAssignment,
+  slotDef: SlotDef,
+  item: Item,
+): string | null {
+  return (
+    slotAssign.attachmentOverride.anchorId ??
+    item.anchorRules?.[slotDef.id]?.anchorId ??
+    slotDef.defaultAnchorId ??
+    null
+  );
+}
+
+export function resolveItemPartBinding(
+  entity: Entity,
+  template: Template,
+  skeleton: EvaluatedSkeleton,
+  item: Item,
+  slotAssign: SlotAssignment,
+  slotDef: SlotDef,
+  part: ItemPart,
+): {
+  parentMatrix: Matrix2D;
+  anchorMatrix: Matrix2D;
+  defaultTransformMatrix: Matrix2D;
+  attachmentOverrideMatrix: Matrix2D;
+  anchorId: string | null;
+} {
+  const anchorId = resolveAnchorId(slotAssign, slotDef, item);
+  const anchor = anchorId ? template.anchors?.[anchorId] : undefined;
+
+  const fallbackBoneId = part.boneId || slotDef.boneId;
+  const parentBoneId = anchor?.boneId ?? fallbackBoneId;
+  const parentBone = skeleton.bones.get(parentBoneId);
+  const parentMatrix: Matrix2D = parentBone ? worldBoneToMatrix(parentBone) : identity();
+
+  const anchorMatrix = anchor
+    ? localTransformToMatrix(anchor.offsetX, anchor.offsetY, anchor.rotation, 1, 1)
+    : identity();
+
+  const defaultTransformMatrix = makeSlotDefaultTransformMatrix(slotDef);
+
+  const attachmentOverrideMatrix = makeAttachmentOverrideMatrix(slotAssign.attachmentOverride);
+
+  return {
+    parentMatrix,
+    anchorMatrix,
+    defaultTransformMatrix,
+    attachmentOverrideMatrix,
+    anchorId,
+  };
 }
 
 // ── evaluateScene ─────────────────────────────────────────────────────────────
@@ -216,9 +289,7 @@ export function evaluateScene(
     const localM = localTransformToMatrix(lt.x, lt.y, lt.rotation, lt.scaleX, lt.scaleY, piv.x, piv.y);
     const worldM = multiply(boneM, localM);
 
-    const vw = visual.metrics.visualWidth;
-    const vh = visual.metrics.visualHeight;
-    const localBounds = makeLocalBounds(vw, vh);
+    const localBounds = makeMetricBounds(visual.metrics, piv.x, piv.y);
     const worldBounds = transformAABB(worldM, localBounds);
 
     visuals.push({ id: `vis__${visual.id}`, svgData, zIndex: visual.zIndex, worldMatrix: worldM, localBounds, worldBounds, sourceKind: "entity-visual", entityVisualId: visual.id });
@@ -282,19 +353,6 @@ export function evaluateScene(
     if (!item || !slotDef) continue;
 
     const effectivePalette: PaletteTokens = { ...entity.palette, ...slotAssign.paletteOverride };
-    const overrideM = makeAttachmentOverrideMatrix(slotAssign.attachmentOverride);
-
-    // defaultTransform shifts the slot's base position relative to the bone.
-    const defaultTransformM: Matrix2D = slotDef.defaultTransform
-      ? localTransformToMatrix(
-          slotDef.defaultTransform.x, slotDef.defaultTransform.y,
-          slotDef.defaultTransform.rotation,
-          slotDef.defaultTransform.scaleX, slotDef.defaultTransform.scaleY,
-        )
-      : identity();
-
-    const wb = skeleton.bones.get(slotDef.boneId);
-    const boneM: Matrix2D = wb ? worldBoneToMatrix(wb) : identity();
 
     if (item.parts && item.parts.length > 0) {
       // v2.0: multi-bone item parts
@@ -304,24 +362,35 @@ export function evaluateScene(
         const vid     = `slot__${slotAssign.slotId}__${item.id}__${part.id}`;
 
         if (part.coordinateMode === "legacy_full_frame") {
-          const worldM      = makeFullFrameMatrix();
+          const worldM = multiply(
+            makeSlotDefaultTransformMatrix(slotDef),
+            makeAttachmentOverrideMatrix(slotAssign.attachmentOverride),
+          );
           const localBounds = makeLocalBounds(fw, fh);
-          visuals.push({ id: vid, svgData, zIndex, worldMatrix: worldM, localBounds, worldBounds: localBounds, sourceKind: "item-part", slotId: slotAssign.slotId, itemId: item.id, partId: part.id });
+          const worldBounds = transformAABB(worldM, localBounds);
+          visuals.push({ id: vid, svgData, zIndex, worldMatrix: worldM, localBounds, worldBounds, sourceKind: "item-part", slotId: slotAssign.slotId, itemId: item.id, partId: part.id });
           layers.push({ id: vid, svgData, zIndex, opacity: 1, boneId: null, localX: 0, localY: 0, rotation: 0, scaleX: 1, scaleY: 1, naturalWidth: fw, naturalHeight: fh });
         } else {
-          const partBoneWb  = skeleton.bones.get(part.boneId);
-          const partBoneM: Matrix2D = partBoneWb ? worldBoneToMatrix(partBoneWb) : boneM;
           const piv    = part.pivot;
           const lt     = part.localTransform;
           const partLocalM = localTransformToMatrix(lt.x, lt.y, lt.rotation, lt.scaleX, lt.scaleY, piv.x, piv.y);
-          // worldM = partBoneM × defaultTransformM × overrideM × partLocalM
-          const worldM = multiply(partBoneM, multiply(defaultTransformM, multiply(overrideM, partLocalM)));
-          const vw = part.metrics.visualWidth;
-          const vh = part.metrics.visualHeight;
-          const localBounds = makeLocalBounds(vw, vh);
+          const binding = resolveItemPartBinding(entity, template, skeleton, item, slotAssign, slotDef, part);
+          const worldM = multiply(
+            binding.parentMatrix,
+            multiply(
+              binding.anchorMatrix,
+              multiply(
+                binding.defaultTransformMatrix,
+                multiply(binding.attachmentOverrideMatrix, partLocalM),
+              ),
+            ),
+          );
+          const localBounds = makeMetricBounds(part.metrics, piv.x, piv.y);
           const worldBounds = transformAABB(worldM, localBounds);
+          const partWidth = part.metrics.visualWidth;
+          const partHeight = part.metrics.visualHeight;
           visuals.push({ id: vid, svgData, zIndex, worldMatrix: worldM, localBounds, worldBounds, sourceKind: "item-part", slotId: slotAssign.slotId, itemId: item.id, partId: part.id });
-          layers.push({ id: vid, svgData, zIndex, opacity: 1, boneId: part.boneId, localX: lt.x, localY: lt.y, rotation: lt.rotation, scaleX: lt.scaleX, scaleY: lt.scaleY, naturalWidth: vw, naturalHeight: vh });
+          layers.push({ id: vid, svgData, zIndex, opacity: 1, boneId: part.boneId, localX: lt.x, localY: lt.y, rotation: lt.rotation, scaleX: lt.scaleX, scaleY: lt.scaleY, naturalWidth: partWidth, naturalHeight: partHeight });
         }
       }
     } else {
@@ -329,10 +398,14 @@ export function evaluateScene(
       for (const svgLayer of item.svgLayers) {
         const svgData = applyPaletteToSvg(svgLayer.svgData, template.paletteTokens, effectivePalette);
         const zIndex  = slotDef.zIndex + svgLayer.zOffset;
-        const worldM  = makeFullFrameMatrix();
+        const worldM = multiply(
+          makeSlotDefaultTransformMatrix(slotDef),
+          makeAttachmentOverrideMatrix(slotAssign.attachmentOverride),
+        );
         const localBounds = makeLocalBounds(fw, fh);
+        const worldBounds = transformAABB(worldM, localBounds);
         const id = `slot__${slotAssign.slotId}__${item.id}__${svgLayer.id}`;
-        visuals.push({ id, svgData, zIndex, worldMatrix: worldM, localBounds, worldBounds: localBounds, sourceKind: "item-part", slotId: slotAssign.slotId, itemId: item.id, partId: svgLayer.id });
+        visuals.push({ id, svgData, zIndex, worldMatrix: worldM, localBounds, worldBounds, sourceKind: "item-part", slotId: slotAssign.slotId, itemId: item.id, partId: svgLayer.id });
         layers.push({ id, svgData, zIndex, opacity: 1, boneId: null, localX: 0, localY: 0, rotation: 0, scaleX: 1, scaleY: 1, naturalWidth: fw, naturalHeight: fh });
       }
     }

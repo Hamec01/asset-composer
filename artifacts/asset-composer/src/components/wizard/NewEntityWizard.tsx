@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,12 +33,16 @@ export function NewEntityWizard() {
     ? TEMPLATES.filter(t => t.entityTypes.includes(selectedType))
     : [];
 
-  function handleClose() {
-    closeWizard();
+  useEffect(() => {
+    if (editor.isWizardOpen) return;
     setStep("type");
     setSelectedType(null);
     setSelectedTemplateId(null);
     setName("");
+  }, [editor.isWizardOpen]);
+
+  function handleClose() {
+    closeWizard();
   }
 
   function handleCreate() {
@@ -47,8 +51,10 @@ export function NewEntityWizard() {
     handleClose();
   }
 
+  if (!editor.isWizardOpen) return null;
+
   return (
-    <Dialog open={editor.isWizardOpen} onOpenChange={open => { if (!open) handleClose(); }}>
+    <Dialog open onOpenChange={open => { if (!open) handleClose(); }}>
       <DialogContent className="max-w-xl bg-card border-border text-foreground">
         <DialogHeader>
           <DialogTitle className="text-base font-semibold text-foreground">

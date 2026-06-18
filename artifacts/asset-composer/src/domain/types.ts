@@ -258,6 +258,8 @@ export interface SlotDef {
   allowedCategories: ItemCategory[];
   required: boolean;
   defaultItemId: string | null;
+  /** Optional built-in anchor used when the slot has no per-item/per-entity override. */
+  defaultAnchorId?: string;
   /** Default attachment position relative to the bone. Editable in Edit Template Slots mode. */
   defaultTransform?: LocalTransform;
 }

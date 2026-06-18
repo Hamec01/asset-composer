@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useStore } from "@/store";
-import { getTemplateById } from "@/data/templates";
+import { resolveTemplate } from "@/data/templates";
 import type { Transition } from "@/domain/types";
 
 // Layout constants
@@ -51,6 +51,7 @@ const ARROW_SEL_ID = "sm-arrow-sel";
 
 export function StateMachinePanel() {
   const activeEntityId     = useStore(s => s.project.activeEntityId);
+  const project            = useStore(s => s.project);
   const entities           = useStore(s => s.project.entities);
   const stateMachines      = useStore(s => s.project.stateMachines);
   const activeSmId         = useStore(s => s.animPlayback.activeStateMachineId);
@@ -60,7 +61,7 @@ export function StateMachinePanel() {
   const [selectedTransitionId, setSelectedTransitionId] = useState<string | null>(null);
 
   const activeEntity = entities.find(e => e.id === activeEntityId) ?? null;
-  const template     = activeEntity ? getTemplateById(activeEntity.templateId) : null;
+  const template     = activeEntity ? resolveTemplate(project, activeEntity.templateId) : null;
 
   const sm = useMemo(() => {
     if (template) {

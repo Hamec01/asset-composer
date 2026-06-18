@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getTemplateById } from "@/data/templates";
+import { resolveTemplate } from "@/data/templates";
 import { getStyleSetById, STYLE_SETS } from "@/data/styleSets";
 import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import type { PaletteTokens, Item } from "@/domain/types";
@@ -47,6 +47,43 @@ interface CompatWarning {
   severity: "error" | "warning";
 }
 
+function NumericInput({
+  value,
+  step = "0.1",
+  onChange,
+  testId,
+}: {
+  value: number;
+  step?: string;
+  onChange: (value: number) => void;
+  testId: string;
+}) {
+  return (
+    <Input
+      data-testid={testId}
+      type="number"
+      step={step}
+      value={Number.isFinite(value) ? value : 0}
+      onChange={e => onChange(Number(e.target.value))}
+      className="h-6 text-[11px] bg-background border-border"
+    />
+  );
+}
+
+function toColorInputValue(hex: string): string {
+  const normalized = hex.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(normalized)) return normalized;
+  if (/^#[0-9a-fA-F]{8}$/.test(normalized)) return normalized.slice(0, 7);
+  return "#000000";
+}
+
+function mergeColorWithExistingAlpha(nextHex: string, previousHex: string): string {
+  if (/^#[0-9a-fA-F]{8}$/.test(previousHex)) {
+    return `${nextHex}${previousHex.slice(7, 9)}`;
+  }
+  return nextHex;
+}
+
 export function InspectorPanel() {
   const project              = useStore(s => s.project);
   const editor               = useStore(s => s.editor);
@@ -54,12 +91,14 @@ export function InspectorPanel() {
   const setEntityPaletteToken = useStore(s => s.setEntityPaletteToken);
   const setEntityStyleSet    = useStore(s => s.setEntityStyleSet);
   const setEntitySlot        = useStore(s => s.setEntitySlot);
+  const setAttachmentOverride = useStore(s => s.setAttachmentOverride);
+  const updateTemplateSlotTransform = useStore(s => s.updateTemplateSlotTransform);
   const getActiveEntity      = useStore(s => s.getActiveEntity);
 
   const setEntitySpecies = useStore(s => s.setEntitySpecies);
 
   const activeEntity = getActiveEntity();
-  const template     = activeEntity ? getTemplateById(activeEntity.templateId) : undefined;
+  const template     = activeEntity ? resolveTemplate(project, activeEntity.templateId) : undefined;
   const styleSet     = activeEntity ? getStyleSetById(activeEntity.styleSetId) : undefined;
   const entityFamily = template?.skeletonFamily ?? null;
 
@@ -140,13 +179,44 @@ export function InspectorPanel() {
     });
   }
 
-  // Currently selected slot item
-  const selectedSlotId   = editor.selectedSlotId;
+  // Keep slot-derived UI aligned with the actual active selection.
+  const selectedSlotId =
+    editor.selection.kind === "item-part" || editor.selection.kind === "template-slot"
+      ? editor.selection.slotId
+      : editor.selectedSlotId;
   const selectedAssign   = activeEntity.slots.find(s => s.slotId === selectedSlotId);
   const selectedItem     = selectedAssign?.itemId
     ? (project.items.find(i => i.id === selectedAssign.itemId) as Item | undefined)
     : undefined;
   const selectedSlotDef  = template?.slots.find(s => s.id === selectedSlotId);
+  const selection = editor.selection;
+  const attachmentValues = {
+    offsetX: selectedAssign?.attachmentOverride?.offsetX ?? 0,
+    offsetY: selectedAssign?.attachmentOverride?.offsetY ?? 0,
+    rotation: selectedAssign?.attachmentOverride?.rotation ?? 0,
+    scaleX: selectedAssign?.attachmentOverride?.scaleX ?? 1,
+    scaleY: selectedAssign?.attachmentOverride?.scaleY ?? 1,
+  };
+  const slotTransformValues = {
+    x: selectedSlotDef?.defaultTransform?.x ?? 0,
+    y: selectedSlotDef?.defaultTransform?.y ?? 0,
+    rotation: selectedSlotDef?.defaultTransform?.rotation ?? 0,
+    scaleX: selectedSlotDef?.defaultTransform?.scaleX ?? 1,
+    scaleY: selectedSlotDef?.defaultTransform?.scaleY ?? 1,
+  };
+
+  function patchAttachment<K extends keyof typeof attachmentValues>(key: K, value: number) {
+    if (!activeEntity || !selectedSlotDef || !selectedAssign) return;
+    setAttachmentOverride(activeEntity.id, selectedSlotDef.id, { [key]: value });
+  }
+
+  function patchSlotTransform<K extends keyof typeof slotTransformValues>(key: K, value: number) {
+    if (!template || !selectedSlotDef) return;
+    updateTemplateSlotTransform(template.id, selectedSlotDef.id, {
+      ...slotTransformValues,
+      [key]: value,
+    });
+  }
 
   return (
     <aside
@@ -346,6 +416,96 @@ export function InspectorPanel() {
             </>
           )}
 
+          {selectedSlotDef && selection.kind === "item-part" && selection.slotId === selectedSlotDef.id && selectedAssign && selectedItem && (
+            <>
+              <Separator className="bg-border" />
+              <div className="space-y-2">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Attachment Transform
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">X</label>
+                    <NumericInput testId="inspector-attach-x" value={attachmentValues.offsetX} onChange={v => patchAttachment("offsetX", v)} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Y</label>
+                    <NumericInput testId="inspector-attach-y" value={attachmentValues.offsetY} onChange={v => patchAttachment("offsetY", v)} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Rotation</label>
+                    <NumericInput testId="inspector-attach-rotation" value={attachmentValues.rotation} onChange={v => patchAttachment("rotation", v)} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Scale X</label>
+                    <NumericInput testId="inspector-attach-scale-x" value={attachmentValues.scaleX} onChange={v => patchAttachment("scaleX", v)} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Scale Y</label>
+                    <NumericInput testId="inspector-attach-scale-y" value={attachmentValues.scaleY} onChange={v => patchAttachment("scaleY", v)} />
+                  </div>
+                </div>
+                <button
+                  onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
+                    offsetX: 0,
+                    offsetY: 0,
+                    rotation: 0,
+                    scaleX: 1,
+                    scaleY: 1,
+                  })}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                >
+                  Reset attachment transform
+                </button>
+              </div>
+            </>
+          )}
+
+          {selectedSlotDef && selection.kind === "template-slot" && template && (
+            <>
+              <Separator className="bg-border" />
+              <div className="space-y-2">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Slot Transform
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">X</label>
+                    <NumericInput testId="inspector-slot-x" value={slotTransformValues.x} onChange={v => patchSlotTransform("x", v)} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Y</label>
+                    <NumericInput testId="inspector-slot-y" value={slotTransformValues.y} onChange={v => patchSlotTransform("y", v)} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Rotation</label>
+                    <NumericInput testId="inspector-slot-rotation" value={slotTransformValues.rotation} onChange={v => patchSlotTransform("rotation", v)} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Scale X</label>
+                    <NumericInput testId="inspector-slot-scale-x" value={slotTransformValues.scaleX} onChange={v => patchSlotTransform("scaleX", v)} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Scale Y</label>
+                    <NumericInput testId="inspector-slot-scale-y" value={slotTransformValues.scaleY} onChange={v => patchSlotTransform("scaleY", v)} />
+                  </div>
+                </div>
+                <button
+                  onClick={() => updateTemplateSlotTransform(template.id, selectedSlotDef.id, {
+                    x: 0,
+                    y: 0,
+                    rotation: 0,
+                    scaleX: 1,
+                    scaleY: 1,
+                  })}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                >
+                  Reset slot transform
+                </button>
+              </div>
+            </>
+          )}
+
           <Separator className="bg-border" />
 
           {/* Palette tokens */}
@@ -359,8 +519,14 @@ export function InspectorPanel() {
                     <input
                       type="color"
                       data-testid={`palette-${token}`}
-                      value={activeEntity.palette[token]}
-                      onChange={e => setEntityPaletteToken(activeEntity.id, token, e.target.value)}
+                      value={toColorInputValue(activeEntity.palette[token])}
+                      onChange={e =>
+                        setEntityPaletteToken(
+                          activeEntity.id,
+                          token,
+                          mergeColorWithExistingAlpha(e.target.value, activeEntity.palette[token]),
+                        )
+                      }
                       className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent"
                       title={PALETTE_LABELS[token]}
                     />

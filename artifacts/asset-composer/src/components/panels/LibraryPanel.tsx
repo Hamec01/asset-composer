@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useStore } from "@/store";
-import { TEMPLATES, getTemplateById } from "@/data/templates";
+import { resolveTemplate } from "@/data/templates";
 import { sanitizeSvg } from "@/lib/sanitize";
 import { SKIN_PRESETS, getPresetsByStyleSet } from "@/data/skinPresets";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -212,7 +212,7 @@ export function LibraryPanel() {
                 </div>
               )}
               {project.entities.map(entity => {
-                const tmpl = getTemplateById(entity.templateId);
+                const tmpl = resolveTemplate(project, entity.templateId);
                 const isActive = entity.id === project.activeEntityId;
                 return (
                   <div

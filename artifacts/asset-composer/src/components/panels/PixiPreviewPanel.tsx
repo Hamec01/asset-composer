@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Application, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import { useStore } from "@/store";
-import { getTemplateById } from "@/data/templates";
+import { resolveTemplate } from "@/data/templates";
 import { ITEM_ANIMATION_CLIPS } from "@/data/presetAnimations";
 import {
   buildMultiClipPose,
   evaluateSkeleton,
   evaluateScene,
-  type EvaluatedSkeleton,
 } from "@/lib/evaluationPipeline";
 import { animController } from "@/core-v2/AnimationController";
 import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { decompose, transformPoint } from "@/lib/matrixUtils";
 
 // ── Bone accent colours (debug skeleton overlay) ──────────────────────────────
 const BONE_HEX: Record<string, number> = {
@@ -61,15 +61,9 @@ async function rasterizeSvg(svgData: string, size = 256): Promise<Texture> {
 // ── Pooled sprite record ──────────────────────────────────────────────────────
 interface PooledSprite {
   sprite:        Sprite;
-  layerId:       string;
-  boneId:        string | null;
-  naturalWidth:  number;
-  naturalHeight: number;
-  localX:        number;
-  localY:        number;
-  layerRotation: number;
-  layerScaleX:   number;
-  layerScaleY:   number;
+  visualId:      string;
+  localWidth:    number;
+  localHeight:   number;
 }
 
 // ── Camera state ──────────────────────────────────────────────────────────────
@@ -208,7 +202,7 @@ export function PixiPreviewPanel() {
           const renderTime = animController.currentTimeMs;
 
           const entity   = entities.find(e => e.id === eId)          ?? null;
-          const template = entity ? getTemplateById(entity.templateId) : null;
+          const template = entity ? resolveTemplate(store.project, entity.templateId) : null;
           const { w, h } = viewRef.current;
           const cam      = cameraRef.current;
           const cc       = cameraContainerRef.current!;
@@ -247,35 +241,30 @@ export function PixiPreviewPanel() {
             ITEM_ANIMATION_CLIPS,
           );
 
-          // Step 2: FK traversal → EvaluatedSkeleton
-          const skeleton: EvaluatedSkeleton = evaluateSkeleton(template.bones, localPose);
+          // Step 2: canonical evaluated scene
+          const skeleton = evaluateSkeleton(template.bones, localPose);
+          const scene = evaluateScene(entity, template, skeleton, items);
 
-          // Step 3: Scale factors
-          // Positions inside cameraContainer are in camera-local space centred at (0,0).
-          // skelScale maps template units → camera pixels at zoom=1.
-          const skelScale    = Math.min(w, h) / 220;
-          const fittingScale = Math.min(w, h) / Math.max(template.previewWidth, template.previewHeight);
+          // Step 3: viewport scale from template units to preview pixels
+          const sceneScale = Math.min(w, h) / Math.max(template.previewWidth, template.previewHeight);
 
-          // Step 4: Position sprites (camera-local coords — cc.x/y handles screen offset)
+          // Step 4: Position sprites from canonical world matrices
           for (const ps of spritePoolRef.current) {
-            if (ps.boneId === null) {
-              ps.sprite.visible  = true;
-              ps.sprite.x        = 0;
-              ps.sprite.y        = 0;
-              ps.sprite.width    = ps.naturalWidth  * fittingScale;
-              ps.sprite.height   = ps.naturalHeight * fittingScale;
-              ps.sprite.rotation = 0;
-            } else {
-              const wb = skeleton.bones.get(ps.boneId);
-              if (!wb) { ps.sprite.visible = false; continue; }
-              ps.sprite.visible  = true;
-              ps.sprite.x        = (wb.x + ps.localX) * skelScale;
-              ps.sprite.y        = (wb.y + ps.localY) * skelScale;
-              ps.sprite.rotation = ((wb.rotation + ps.layerRotation) * Math.PI) / 180;
-              ps.sprite.width    = ps.naturalWidth  * skelScale * ps.layerScaleX;
-              ps.sprite.height   = ps.naturalHeight * skelScale * ps.layerScaleY;
-            }
+            const visual = scene.visuals.find(v => v.id === ps.visualId);
+            if (!visual) { ps.sprite.visible = false; continue; }
+            const localCenterX = (visual.localBounds.minX + visual.localBounds.maxX) / 2;
+            const localCenterY = (visual.localBounds.minY + visual.localBounds.maxY) / 2;
+            const center = transformPoint(visual.worldMatrix, localCenterX, localCenterY);
+            const d = decompose(visual.worldMatrix);
+            ps.sprite.visible  = true;
+            ps.sprite.x        = center.x * sceneScale;
+            ps.sprite.y        = center.y * sceneScale;
+            ps.sprite.rotation = (d.rotation * Math.PI) / 180;
+            ps.sprite.width    = ps.localWidth * sceneScale * d.scaleX;
+            ps.sprite.height   = ps.localHeight * sceneScale * d.scaleY;
           }
+
+          const skelScale = sceneScale;
 
           // Step 5: Skeleton lines (camera-local)
           const lg = lineGfxRef.current!;
@@ -304,7 +293,7 @@ export function PixiPreviewPanel() {
               .fill({ color, alpha: 0.35 });
           }
 
-          const visibleCount = spritePoolRef.current.filter(ps => ps.sprite.visible).length;
+          const visibleCount = scene.visuals.length;
           hudRef.current!.text =
             `PixiJS v8 · ${template.skeletonFamily} · `+
             `${visibleCount} layers · `+
@@ -345,7 +334,7 @@ export function PixiPreviewPanel() {
 
     const store    = useStore.getState();
     const entity   = store.project.entities.find(e => e.id === activeEntityId);
-    const template = entity ? getTemplateById(entity.templateId) : null;
+    const template = entity ? resolveTemplate(store.project, entity.templateId) : null;
     if (!entity || !template) return;
 
     const restSkeleton = evaluateSkeleton(template.bones, new Map());
@@ -354,14 +343,14 @@ export function PixiPreviewPanel() {
     (async () => {
       const newPool: PooledSprite[] = [];
 
-      for (const layer of scene.layers) {
+      for (const visual of scene.visuals) {
         if (!spriteLayerRef.current) return;
 
-        const cacheKey = layer.id;
+        const cacheKey = visual.id;
         let texture = textureCacheRef.current.get(cacheKey);
         if (!texture) {
           try {
-            texture = await rasterizeSvg(layer.svgData, 256);
+            texture = await rasterizeSvg(visual.svgData, 256);
             textureCacheRef.current.set(cacheKey, texture);
           } catch (e) {
             console.warn("[PixiPreviewPanel] rasterize failed:", cacheKey, e);
@@ -371,21 +360,17 @@ export function PixiPreviewPanel() {
 
         const sprite       = new Sprite(texture);
         sprite.anchor.set(0.5, 0.5);
-        sprite.zIndex      = layer.zIndex;
+        sprite.zIndex      = visual.zIndex;
         sprite.visible     = false;
         spriteLayerRef.current.addChild(sprite);
+        const localWidth = visual.localBounds.maxX - visual.localBounds.minX;
+        const localHeight = visual.localBounds.maxY - visual.localBounds.minY;
 
         newPool.push({
           sprite,
-          layerId:       layer.id,
-          boneId:        layer.boneId,
-          naturalWidth:  layer.naturalWidth,
-          naturalHeight: layer.naturalHeight,
-          localX:        layer.localX,
-          localY:        layer.localY,
-          layerRotation: layer.rotation,
-          layerScaleX:   layer.scaleX,
-          layerScaleY:   layer.scaleY,
+          visualId:      visual.id,
+          localWidth,
+          localHeight,
         });
       }
 

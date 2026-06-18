@@ -32,13 +32,12 @@ import type { EvaluatedScene, EvaluatedSkeleton } from "@/lib/evaluationPipeline
 import type { EvaluatedVisual } from "@/domain/types";
 import { svgToDataUrl, scaleSvgToFit } from "@/lib/svgUtils";
 import {
-  decompose, inverse, multiply, identity,
-  localTransformToMatrix, worldBoneToMatrix,
+  decompose, identity, inverse, multiply, localTransformToMatrix, transformPoint,
 } from "@/lib/matrixUtils";
 import { computeSceneBounds, fitSceneToViewport, type CameraState } from "@/lib/sceneUtils";
 import {
   evaluateSkeleton, evaluateScene,
-  buildMultiClipPose,
+  buildMultiClipPose, resolveItemPartBinding,
 } from "@/lib/evaluationPipeline";
 import { animController } from "@/core-v2/AnimationController";
 import type { Entity } from "@/domain/types";
@@ -66,6 +65,8 @@ interface TaggedFabricImage extends FabricImage {
   __itemId?:      string;
   __partId?:      string;
   __entityId?:    string;
+  __centerX?:     number;
+  __centerY?:     number;
 }
 
 interface TaggedRect extends Rect {
@@ -93,6 +94,7 @@ export class CanvasEngine {
   private currentScene:    EvaluatedScene | null = null;
   private currentTemplate: Template       | null = null;
   private currentItems:    Item[]                = [];
+  private currentEntity:   Entity | null         = null;
   private currentEntityId: string         | null = null;
 
   // Interaction state
@@ -221,10 +223,11 @@ export class CanvasEngine {
     template:          Template,
     highlightedSlotId: string | null,
     items:             Item[] = [],
+    entity:            Entity | null = null,
   ): Promise<void> {
     if (this.isTransforming) {
       this.pendingReconcile = () =>
-        this.reconcileSceneStructure(scene, template, highlightedSlotId, items);
+        this.reconcileSceneStructure(scene, template, highlightedSlotId, items, entity);
       return;
     }
 
@@ -232,6 +235,7 @@ export class CanvasEngine {
     this.currentScene    = scene;
     this.currentTemplate = template;
     this.currentItems    = items;
+    this.currentEntity   = entity;
     this.currentEntityId = scene.entityId;
 
     const newIds = new Set(scene.visuals.map(v => v.id));
@@ -286,11 +290,14 @@ export class CanvasEngine {
     try {
       const sized  = scaleSvgToFit(visual.svgData, pixW, pixH);
       const imgEl  = await FabricImage.fromURL(svgToDataUrl(sized));
+      const localCenterX = (visual.localBounds.minX + visual.localBounds.maxX) / 2;
+      const localCenterY = (visual.localBounds.minY + visual.localBounds.maxY) / 2;
+      const centerPoint = transformPoint(visual.worldMatrix, localCenterX, localCenterY);
       const d      = decompose(visual.worldMatrix);
 
       imgEl.set({
-        left:      d.tx,
-        top:       d.ty,
+        left:      centerPoint.x,
+        top:       centerPoint.y,
         angle:     d.rotation,
         scaleX:    d.scaleX,
         scaleY:    d.scaleY,
@@ -314,6 +321,8 @@ export class CanvasEngine {
       tagged.__itemId           = visual.itemId;
       tagged.__partId           = visual.partId;
       tagged.__entityId         = this.currentEntityId ?? undefined;
+      tagged.__centerX          = localCenterX;
+      tagged.__centerY          = localCenterY;
 
       this.fabricImages.set(visual.id, tagged);
       this.svgCache.set(visual.id, visual.svgData);
@@ -329,8 +338,13 @@ export class CanvasEngine {
     for (const visual of scene.visuals) {
       const img = this.fabricImages.get(visual.id);
       if (!img) continue;
+      const localCenterX = (visual.localBounds.minX + visual.localBounds.maxX) / 2;
+      const localCenterY = (visual.localBounds.minY + visual.localBounds.maxY) / 2;
+      const centerPoint = transformPoint(visual.worldMatrix, localCenterX, localCenterY);
       const d = decompose(visual.worldMatrix);
-      img.set({ left: d.tx, top: d.ty, angle: d.rotation, scaleX: d.scaleX, scaleY: d.scaleY });
+      img.__centerX = localCenterX;
+      img.__centerY = localCenterY;
+      img.set({ left: centerPoint.x, top: centerPoint.y, angle: d.rotation, scaleX: d.scaleX, scaleY: d.scaleY });
       img.setCoords();
     }
 
@@ -484,7 +498,7 @@ export class CanvasEngine {
 
   private _handleItemModified(img: TaggedFabricImage): void {
     if (!img.__slotId || !img.__itemId || !img.__partId || !this.currentEntityId) return;
-    if (!this.currentScene || !this.currentTemplate) return;
+    if (!this.currentScene || !this.currentTemplate || !this.currentEntity) return;
 
     const entityId = this.currentEntityId;
 
@@ -494,26 +508,9 @@ export class CanvasEngine {
     const item = this.currentItems.find(i => i.id === img.__itemId);
     if (!item) return;
 
+    const slotAssign = this.currentEntity.slots.find(s => s.slotId === img.__slotId);
+    if (!slotAssign) return;
     const part = item.parts?.find(p => p.id === img.__partId);
-    if (!part || part.coordinateMode === "legacy_full_frame") return;
-
-    // Part's bone world matrix
-    const partBoneWb = this.currentScene.skeleton.bones.get(part.boneId);
-    const slotBoneWb = this.currentScene.skeleton.bones.get(slotDef.boneId);
-    const partBoneM = partBoneWb ? worldBoneToMatrix(partBoneWb)
-                    : slotBoneWb ? worldBoneToMatrix(slotBoneWb)
-                    : identity();
-
-    // Default transform matrix from slotDef
-    const dt = slotDef.defaultTransform;
-    const defaultM = dt
-      ? localTransformToMatrix(dt.x, dt.y, dt.rotation, dt.scaleX, dt.scaleY)
-      : identity();
-
-    // Part's own local transform matrix
-    const lt  = part.localTransform;
-    const piv = part.pivot;
-    const partLocalM = localTransformToMatrix(lt.x, lt.y, lt.rotation, lt.scaleX, lt.scaleY, piv.x, piv.y);
 
     // New world matrix from current Fabric position
     const worldM_new = localTransformToMatrix(
@@ -523,11 +520,43 @@ export class CanvasEngine {
       img.scaleX ?? 1,
       img.scaleY ?? 1,
     );
+    const centerX = img.__centerX ?? 0;
+    const centerY = img.__centerY ?? 0;
+    const worldOriginM = multiply(worldM_new, localTransformToMatrix(-centerX, -centerY, 0, 1, 1));
+
+    if (!part || part.coordinateMode === "legacy_full_frame") {
+      const dt = slotDef.defaultTransform;
+      const defaultTransformMatrix = dt
+        ? localTransformToMatrix(dt.x, dt.y, dt.rotation, dt.scaleX, dt.scaleY)
+        : identity();
+      const overrideM_legacy = multiply(inverse(defaultTransformMatrix), worldOriginM);
+      const d_legacy = decompose(overrideM_legacy);
+      this.opts.onItemModified?.(entityId, img.__slotId!, {
+        offsetX:  d_legacy.tx,
+        offsetY:  d_legacy.ty,
+        rotation: d_legacy.rotation,
+        scaleX:   d_legacy.scaleX,
+        scaleY:   d_legacy.scaleY,
+      });
+      return;
+    }
 
     // overrideM = inverse(partBoneM × defaultM) × worldM_new × inverse(partLocalM)
+    const lt  = part.localTransform;
+    const piv = part.pivot;
+    const partLocalM = localTransformToMatrix(lt.x, lt.y, lt.rotation, lt.scaleX, lt.scaleY, piv.x, piv.y);
+    const binding = resolveItemPartBinding(
+      this.currentEntity,
+      this.currentTemplate,
+      this.currentScene.skeleton,
+      item,
+      slotAssign,
+      slotDef,
+      part,
+    );
     const overrideM = multiply(
-      inverse(multiply(partBoneM, defaultM)),
-      multiply(worldM_new, inverse(partLocalM)),
+      inverse(multiply(binding.parentMatrix, multiply(binding.anchorMatrix, binding.defaultTransformMatrix))),
+      multiply(worldOriginM, inverse(partLocalM)),
     );
 
     const d = decompose(overrideM);
@@ -571,8 +600,12 @@ export class CanvasEngine {
   // ── Selection events ──────────────────────────────────────────────────────
 
   private _onFabricSelection(ev: any): void {
-    const target = (ev.selected?.[0] ?? ev.target) as (TaggedFabricImage & TaggedRect) | undefined;
+      const target = (ev.selected?.[0] ?? ev.target) as (TaggedFabricImage & TaggedRect) | undefined;
     if (!target || !this.opts.onSelectionChange) return;
+
+    if (this.mode === "edit-attachment") {
+      this.commitPendingEdits();
+    }
 
     if (target.__sourceKind === "item-part" && target.__slotId && target.__itemId && target.__partId && this.currentEntityId) {
       this.opts.onSelectionChange({
@@ -627,7 +660,7 @@ export class CanvasEngine {
     if (isAnimTick) {
       this.updateSceneTransforms(scene);
     } else {
-      await this.reconcileSceneStructure(scene, template, highlightedSlotId, [...items.values()]);
+      await this.reconcileSceneStructure(scene, template, highlightedSlotId, [...items.values()], entity);
     }
   }
 
@@ -662,6 +695,7 @@ export class CanvasEngine {
     this.currentScene    = null;
     this.currentTemplate = null;
     this.currentItems    = [];
+    this.currentEntity   = null;
     this.currentEntityId = null;
 
     this.canvas.clear();
@@ -684,6 +718,20 @@ export class CanvasEngine {
   }
 
   getCanvas(): Canvas { return this.canvas; }
+
+  commitPendingEdits(): void {
+    const target = this.canvas.getActiveObject() as (TaggedFabricImage & TaggedRect) | undefined;
+    if (!target) return;
+
+    if (this.mode === "edit-attachment" && target.__sourceKind === "item-part") {
+      this._handleItemModified(target);
+      return;
+    }
+
+    if (this.mode === "edit-template-slots" && target.__slotId) {
+      this._handleSlotZoneModified(target);
+    }
+  }
 
   destroy(): void { this.canvas.dispose(); }
 }

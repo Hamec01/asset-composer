@@ -104,7 +104,16 @@ export function CanvasPanel() {
       width:    w,
       height:   h,
       onSlotClick: (slotId) => setSelectedSlot(slotId),
-      onSelectionChange: (sel) => setEditorSelection(sel),
+      onSelectionChange: (sel) => {
+        setEditorSelection(sel);
+        if (sel.kind === "item-part" || sel.kind === "template-slot") {
+          setSelectedSlot(sel.slotId);
+          return;
+        }
+        if (sel.kind === "none") {
+          setSelectedSlot(null);
+        }
+      },
       onItemModified: (entityId, slotId, override) => {
         setAttachmentOverride(entityId, slotId, override);
       },
@@ -125,6 +134,7 @@ export function CanvasPanel() {
       return;
     }
 
+    engineRef.current.commitPendingEdits();
     engineRef.current.setMode(editor.canvasMode);
   }, [initialized, editor.canvasMode]);
 
@@ -144,13 +154,19 @@ export function CanvasPanel() {
     const doReconcile = async () => {
       if (!engineRef.current) return;
 
-      if (!activeEntity || !template) {
+      engineRef.current.commitPendingEdits();
+      const store = useStore.getState();
+      const liveEntity = store.project.entities.find(e => e.id === store.project.activeEntityId);
+      const liveTemplate = liveEntity
+        ? resolveTemplate(store.project, liveEntity.templateId)
+        : undefined;
+
+      if (!liveEntity || !liveTemplate) {
         engineRef.current.renderEmpty("Select an entity to view it here");
         cameraDirtyRef.current = false;
         return;
       }
 
-      const store = useStore.getState();
       const pose  = buildMultiClipPose(
         store.project.animationClips,
         store.animPlayback.activeClipId,
@@ -158,14 +174,14 @@ export function CanvasPanel() {
         store.animPlayback.lowerClipId,
         store.animPlayback.upperBlendWeight,
         animController.currentTimeMs,
-        activeEntity,
+        liveEntity,
         store.project.items,
       );
-      const skeleton = evaluateSkeleton(template.bones, pose);
-      const scene    = evaluateScene(activeEntity, template, skeleton, store.project.items);
+      const skeleton = evaluateSkeleton(liveTemplate.bones, pose);
+      const scene    = evaluateScene(liveEntity, liveTemplate, skeleton, store.project.items);
 
       const itemsArr = store.project.items;
-      await engineRef.current.reconcileSceneStructure(scene, template, editor.selectedSlotId, itemsArr);
+      await engineRef.current.reconcileSceneStructure(scene, liveTemplate, editor.selectedSlotId, itemsArr, liveEntity);
 
       // Re-apply viewport after reconcile (new visuals reset internal state)
       engineRef.current.setViewport(vpRef.current.zoom, vpRef.current.panX, vpRef.current.panY);
@@ -173,7 +189,7 @@ export function CanvasPanel() {
       // Auto-fit on first render for this entity
       if (cameraDirtyRef.current) {
         cameraDirtyRef.current = false;
-        const cam = engineRef.current.fitScene(scene, template);
+        const cam = engineRef.current.fitScene(scene, liveTemplate);
         applyViewport(cam);
       }
     };
@@ -187,6 +203,7 @@ export function CanvasPanel() {
     JSON.stringify(activeEntity?.slots),
     JSON.stringify(activeEntity?.palette),
     JSON.stringify(activeEntity?.visuals),
+    JSON.stringify(template?.slots),
     activeEntity?.styleSetId,
     editor.selectedSlotId,
   ]);

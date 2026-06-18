@@ -9,7 +9,7 @@ import {
 import { useState, useRef, useCallback, useMemo } from "react";
 import { getClipsByFamily } from "@/data/presetAnimations";
 import { getAllBoneIds, getKeyframesForBone, timeMsToFrame, frameToTimeMs } from "@/lib/animationRuntime";
-import { getTemplateById } from "@/data/templates";
+import { resolveTemplate } from "@/data/templates";
 import type { Keyframe } from "@/domain/types";
 
 const TRACK_H = 24;
@@ -41,6 +41,7 @@ const GROUP_NAMES: Record<string, string[]> = {
 
 export function TimelinePanel() {
   const activeEntityId   = useStore(s => s.project.activeEntityId);
+  const project          = useStore(s => s.project);
   const entities         = useStore(s => s.project.entities);
   const animationClips   = useStore(s => s.project.animationClips);
   const activeClipId     = useStore(s => s.animPlayback.activeClipId);
@@ -67,7 +68,7 @@ export function TimelinePanel() {
   const setBlendWeight   = useStore(s => s.setBlendWeight);
 
   const activeEntity = entities.find(e => e.id === activeEntityId) ?? null;
-  const template = activeEntity ? getTemplateById(activeEntity.templateId) : undefined;
+  const template = activeEntity ? resolveTemplate(project, activeEntity.templateId) : undefined;
 
   const familyClips = useMemo(() => {
     if (!template) return animationClips;

@@ -11,13 +11,7 @@
  */
 
 import { resolveClipPose } from "@/lib/animationRuntime";
-import { evaluateSkeleton } from "@/lib/evaluationPipeline";
-import {
-  worldBoneToMatrix,
-  localTransformToMatrix,
-  multiply,
-  identity,
-} from "@/lib/matrixUtils";
+import { evaluateSkeleton, evaluateScene } from "@/lib/evaluationPipeline";
 import { packSprites } from "@/lib/spritePacker";
 import { buildAtlasJson, buildPhaserAtlasJson } from "@/lib/atlasGenerator";
 import { formatFrameName } from "@/lib/exportTypes";
@@ -93,6 +87,50 @@ async function renderFrame(
     ctx.fillStyle = profile.bgColor;
     ctx.fillRect(0, 0, frameSz, frameSz);
   }
+
+  const canonicalSkeleton = evaluateSkeleton(template.bones, pose);
+  const canonicalScene = evaluateScene(entity, template, canonicalSkeleton, [...itemsMap.values()]);
+  const canonicalScale = frameSz / Math.max(template.previewWidth, template.previewHeight);
+
+  for (const visual of canonicalScene.visuals) {
+    const key = `visual:${entity.id}:${visual.id}`;
+    const buf = rasterizedImages[key];
+    if (!buf) continue;
+
+    const localWidth = Math.max(1, Math.ceil(visual.localBounds.maxX - visual.localBounds.minX));
+    const localHeight = Math.max(1, Math.ceil(visual.localBounds.maxY - visual.localBounds.minY));
+    const bitmap = await loadPngBitmap(key, buf, localWidth, localHeight);
+    if (!bitmap) continue;
+
+    const [wa, wb, wc, wd, we, wf] = visual.worldMatrix;
+    ctx.save();
+    ctx.setTransform(
+      canonicalScale * wa,
+      canonicalScale * wb,
+      canonicalScale * wc,
+      canonicalScale * wd,
+      canonicalScale * we + frameSz / 2,
+      canonicalScale * wf + frameSz / 2,
+    );
+    ctx.drawImage(
+      bitmap,
+      visual.localBounds.minX,
+      visual.localBounds.minY,
+      visual.localBounds.maxX - visual.localBounds.minX,
+      visual.localBounds.maxY - visual.localBounds.minY,
+    );
+    ctx.restore();
+  }
+
+  if (profile.outlinePadding > 0) {
+    const p = profile.outlinePadding;
+    ctx.strokeStyle = "rgba(0,0,0,0.6)";
+    ctx.lineWidth   = p;
+    ctx.strokeRect(p / 2, p / 2, frameSz - p, frameSz - p);
+  }
+
+  return canvas.transferToImageBitmap();
+  /*
 
   const fittingScale = frameSz / Math.max(template.previewWidth, template.previewHeight);
   const dw = template.previewWidth  * fittingScale;
@@ -232,6 +270,7 @@ async function renderFrame(
   }
 
   return canvas.transferToImageBitmap();
+*/
 }
 
 // ── Blob helpers ──────────────────────────────────────────────────────────────

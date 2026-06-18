@@ -96,6 +96,66 @@ function item(
   };
 }
 
+function v2HairItem(
+  id: string,
+  name: string,
+  description: string,
+  svgData: string,
+  metrics: { visualMinX: number; visualMinY: number; visualWidth: number; visualHeight: number },
+  pivot: { x: number; y: number },
+  tags: string[],
+): Item {
+  return {
+    id,
+    name,
+    description,
+    category: "hair",
+    compatibility: {
+      skeletonFamilies: HUMAN,
+      species: [],
+      viewProfiles: deriveViewProfiles(HUMAN),
+    },
+    allowedSlots: ["slot_hair", "side_slot_hair"],
+    fitProfile: "standard",
+    paletteChannels: ["hair", "outline"],
+    hasOwnAnimation: false,
+    animationClipId: null,
+    anchorRules: {
+      slot_hair: { anchorId: "hair_top", bindMode: "anchor_lock" },
+      side_slot_hair: { anchorId: "hair_top", bindMode: "anchor_lock" },
+    },
+    svgLayers: [{
+      id: "thumb",
+      styleSetId: null,
+      svgData,
+      paletteChannels: ["hair", "outline"],
+      zOffset: 0,
+    }],
+    parts: [{
+      id: "main",
+      boneId: "head",
+      svgData,
+      metrics: {
+        viewBoxX: 0,
+        viewBoxY: 0,
+        viewBoxWidth: 64,
+        viewBoxHeight: 64,
+        visualMinX: metrics.visualMinX,
+        visualMinY: metrics.visualMinY,
+        visualWidth: metrics.visualWidth,
+        visualHeight: metrics.visualHeight,
+      },
+      pivot: { x: pivot.x, y: pivot.y, preset: "custom" },
+      localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+      coordinateMode: "bone_local",
+      zOffset: 0,
+    }],
+    coordinateMode: "bone_local",
+    licenseMeta: CC0,
+    tags,
+  };
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // HUMANOID CLOTHING
 // ════════════════════════════════════════════════════════════════════════════
@@ -434,18 +494,95 @@ export const ITEMS: Item[] = [
   // HAIR (4 styles)
   // ═══════════════════════════════════════════════════════════════════════
 
-  item("hair_short_dark",  "Short Dark Hair",  "Close-cropped dark hair",   "hair", ["slot_hair","side_slot_hair"], HUMAN, ["hair","outline"],
-    svg(`<ellipse cx="32" cy="20" rx="18" ry="16" fill="${C.hair}" stroke="${C.out}" stroke-width="1.5"/><rect x="14" y="20" width="36" height="8" rx="1" fill="${C.hair}" stroke="${C.out}" stroke-width="1"/>`), ["hair","short"]),
-  item("hair_long_wave",   "Long Wavy Hair",   "Long flowing wavy hair",    "hair", ["slot_hair","side_slot_hair"], HUMAN, ["hair","outline"],
-    svg(`<path d="M14 18 Q14 50 18 58" fill="none" stroke="${C.hair}" stroke-width="6" stroke-linecap="round"/><path d="M50 18 Q50 50 46 58" fill="none" stroke="${C.hair}" stroke-width="6" stroke-linecap="round"/><ellipse cx="32" cy="18" rx="18" ry="14" fill="${C.hair}" stroke="${C.out}" stroke-width="1.5"/>`), ["hair","long"]),
-  item("hair_braids",      "Braided Hair",     "Tightly braided hair",      "hair", ["slot_hair","side_slot_hair"], HUMAN, ["hair","accent"],
-    svg(`<ellipse cx="32" cy="18" rx="18" ry="14" fill="${C.hair}" stroke="${C.out}" stroke-width="1.5"/><path d="M28 32 Q24 40 26 52 Q30 56 32 52 Q34 56 38 52 Q40 40 36 32" fill="${C.hair}" stroke="${C.out}" stroke-width="1.5"/>`), ["hair","braid"]),
-  item("hair_wild",        "Wild Mane",        "Unkempt wild mane of hair", "hair", ["slot_hair","side_slot_hair"], HUMAN, ["hair","outline"],
-    svg(`<path d="M14 16 Q8 8 14 4 Q20 12 20 18" fill="${C.hair}" stroke="${C.out}" stroke-width="1"/><path d="M50 16 Q56 8 50 4 Q44 12 44 18" fill="${C.hair}" stroke="${C.out}" stroke-width="1"/><ellipse cx="32" cy="20" rx="20" ry="16" fill="${C.hair}" stroke="${C.out}" stroke-width="1.5"/>`), ["hair","wild"]),
+  v2HairItem(
+    "hair_short_dark",
+    "Short Dark Hair",
+    "Close-cropped dark hair",
+    svg(`<ellipse cx="32" cy="20" rx="18" ry="16" fill="${C.hair}" stroke="${C.out}" stroke-width="1.5"/><rect x="14" y="20" width="36" height="8" rx="1" fill="${C.hair}" stroke="${C.out}" stroke-width="1"/>`),
+    { visualMinX: 14, visualMinY: 4, visualWidth: 36, visualHeight: 24 },
+    { x: 32, y: 20 },
+    ["hair", "short"],
+  ),
+  v2HairItem(
+    "hair_long_wave",
+    "Long Wavy Hair",
+    "Long flowing wavy hair",
+    svg(`<path d="M14 18 Q14 50 18 58" fill="none" stroke="${C.hair}" stroke-width="6" stroke-linecap="round"/><path d="M50 18 Q50 50 46 58" fill="none" stroke="${C.hair}" stroke-width="6" stroke-linecap="round"/><ellipse cx="32" cy="18" rx="18" ry="14" fill="${C.hair}" stroke="${C.out}" stroke-width="1.5"/>`),
+    { visualMinX: 11, visualMinY: 4, visualWidth: 42, visualHeight: 57 },
+    { x: 32, y: 18 },
+    ["hair", "long"],
+  ),
+  v2HairItem(
+    "hair_braids",
+    "Braided Hair",
+    "Tightly braided hair",
+    svg(`<ellipse cx="32" cy="18" rx="18" ry="14" fill="${C.hair}" stroke="${C.out}" stroke-width="1.5"/><path d="M28 32 Q24 40 26 52 Q30 56 32 52 Q34 56 38 52 Q40 40 36 32" fill="${C.hair}" stroke="${C.out}" stroke-width="1.5"/>`),
+    { visualMinX: 14, visualMinY: 4, visualWidth: 24, visualHeight: 50 },
+    { x: 32, y: 18 },
+    ["hair", "braid"],
+  ),
+  v2HairItem(
+    "hair_wild",
+    "Wild Mane",
+    "Unkempt wild mane of hair",
+    svg(`<path d="M14 16 Q8 8 14 4 Q20 12 20 18" fill="${C.hair}" stroke="${C.out}" stroke-width="1"/><path d="M50 16 Q56 8 50 4 Q44 12 44 18" fill="${C.hair}" stroke="${C.out}" stroke-width="1"/><ellipse cx="32" cy="20" rx="20" ry="16" fill="${C.hair}" stroke="${C.out}" stroke-width="1.5"/>`),
+    { visualMinX: 8, visualMinY: 4, visualWidth: 48, visualHeight: 32 },
+    { x: 32, y: 20 },
+    ["hair", "wild"],
+  ),
 
   // ═══════════════════════════════════════════════════════════════════════
   // FACE (3 styles)
   // ═══════════════════════════════════════════════════════════════════════
+
+  {
+    id: "hair_test_v2",
+    name: "Hair Test V2",
+    description: "Canonical v2 hair for attachment editing, animation follow, and export parity.",
+    category: "hair",
+    compatibility: {
+      skeletonFamilies: HUMAN,
+      species: [],
+      viewProfiles: deriveViewProfiles(HUMAN),
+    },
+    allowedSlots: ["slot_hair", "side_slot_hair"],
+    fitProfile: "standard",
+    paletteChannels: ["hair", "outline"],
+    hasOwnAnimation: false,
+    animationClipId: null,
+    anchorRules: {
+      slot_hair: { anchorId: "hair_top", bindMode: "anchor_lock" },
+    },
+    svgLayers: [{
+      id: "thumb",
+      styleSetId: null,
+      svgData: svg(`<path d="M12 18 Q14 8 24 6 Q30 2 40 5 Q50 8 52 18 Q48 20 46 26 Q44 34 40 40 Q34 38 32 36 Q30 38 24 40 Q18 34 18 28 Q18 22 12 18Z" fill="${C.hair}" stroke="${C.out}" stroke-width="1.5"/><path d="M20 22 Q18 30 22 38" fill="none" stroke="${C.out}" stroke-width="1.2" stroke-linecap="round"/><path d="M44 22 Q46 30 42 38" fill="none" stroke="${C.out}" stroke-width="1.2" stroke-linecap="round"/>`),
+      paletteChannels: ["hair", "outline"],
+      zOffset: 0,
+    }],
+    parts: [{
+      id: "crown",
+      boneId: "head",
+      svgData: svg(`<path d="M12 18 Q14 8 24 6 Q30 2 40 5 Q50 8 52 18 Q48 20 46 26 Q44 34 40 40 Q34 38 32 36 Q30 38 24 40 Q18 34 18 28 Q18 22 12 18Z" fill="${C.hair}" stroke="${C.out}" stroke-width="1.5"/><path d="M20 22 Q18 30 22 38" fill="none" stroke="${C.out}" stroke-width="1.2" stroke-linecap="round"/><path d="M44 22 Q46 30 42 38" fill="none" stroke="${C.out}" stroke-width="1.2" stroke-linecap="round"/>`),
+      metrics: {
+        viewBoxX: 0,
+        viewBoxY: 0,
+        viewBoxWidth: 64,
+        viewBoxHeight: 64,
+        visualMinX: 12,
+        visualMinY: 5,
+        visualWidth: 40,
+        visualHeight: 35,
+      },
+      pivot: { x: 32, y: 14, preset: "custom" },
+      localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+      coordinateMode: "bone_local",
+      zOffset: 0,
+    }],
+    coordinateMode: "bone_local",
+    licenseMeta: CC0,
+    tags: ["hair", "v2", "anchor", "test"],
+  },
 
   item("face_scar",        "Battle Scar",      "Diagonal facial scar mark", "face", ["slot_face","side_slot_face"], HUMAN, ["skin","accent"],
     svg(`<ellipse cx="32" cy="32" rx="16" ry="18" fill="${C.skin}" stroke="${C.out}" stroke-width="1.5"/><line x1="26" y1="18" x2="38" y2="46" stroke="${C.accent}" stroke-width="2.5" stroke-linecap="round"/>`), ["face","scar"]),

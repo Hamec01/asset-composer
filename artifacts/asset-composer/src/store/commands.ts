@@ -9,15 +9,18 @@ export type CommandType =
   | "REMOVE_ENTITY"
   | "SET_ACTIVE_ANIMATION"
   | "SET_ATTACHMENT_OVERRIDE"
+  | "SET_TEMPLATE_SLOT_TRANSFORM"
   | "SET_ENTITY_VISUAL_TRANSFORM"
   | "ADD_ENTITY_VISUAL"
   | "REMOVE_ENTITY_VISUAL";
 
 export interface Command {
   type: CommandType;
-  entityId: string;
-  before: Partial<Entity>;
-  after: Partial<Entity>;
+  entityId?: string;
+  templateId?: string;
+  slotId?: string;
+  before: Partial<Entity> & { defaultTransform?: LocalTransform };
+  after: Partial<Entity> & { defaultTransform?: LocalTransform };
   label: string;
 }
 
@@ -100,6 +103,23 @@ export function makeSetRootTransformCommand(
     entityId,
     before: { rootTransform: before ?? undefined },
     after:  { rootTransform: after  ?? undefined },
+    label,
+  };
+}
+
+export function makeSetTemplateSlotTransformCommand(
+  templateId: string,
+  slotId: string,
+  before: LocalTransform | undefined,
+  after: LocalTransform,
+  label = "Move slot",
+): Command {
+  return {
+    type: "SET_TEMPLATE_SLOT_TRANSFORM",
+    templateId,
+    slotId,
+    before: { defaultTransform: before },
+    after: { defaultTransform: after },
     label,
   };
 }
