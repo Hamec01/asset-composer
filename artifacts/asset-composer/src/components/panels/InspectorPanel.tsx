@@ -183,6 +183,50 @@ export function InspectorPanel() {
   const [speciesValue,   setSpeciesValue]   = useState("");
   const [editingSpecies, setEditingSpecies] = useState(false);
 
+  const selectedSlotId =
+    editor.selection.kind === "item-part" || editor.selection.kind === "template-slot"
+      ? editor.selection.slotId
+      : editor.selectedSlotId;
+  const selectedAssign   = activeEntity?.slots.find(s => s.slotId === selectedSlotId);
+  const selectedItem     = selectedAssign?.itemId
+    ? (project.items.find(i => i.id === selectedAssign.itemId) as Item | undefined)
+    : undefined;
+  const selectedSlotDef  = template?.slots.find(s => s.id === selectedSlotId);
+  const selection = editor.selection;
+  const selectedEntityVisual = selection.kind === "entity-visual"
+    ? activeEntity?.visuals?.find(v => v.id === selection.visualId)
+    : undefined;
+  const selectedBone = selection.kind === "bone"
+    ? template?.bones.find(bone => bone.id === selection.boneId)
+    : undefined;
+  const selectedAnchor = selection.kind === "anchor"
+    ? template?.anchors?.[selection.anchorId]
+    : undefined;
+  const attachmentValues = {
+    offsetX: selectedAssign?.attachmentOverride?.offsetX ?? 0,
+    offsetY: selectedAssign?.attachmentOverride?.offsetY ?? 0,
+    rotation: selectedAssign?.attachmentOverride?.rotation ?? 0,
+    scaleX: selectedAssign?.attachmentOverride?.scaleX ?? 1,
+    scaleY: selectedAssign?.attachmentOverride?.scaleY ?? 1,
+  };
+  const slotTransformValues = {
+    x: selectedSlotDef?.defaultTransform?.x ?? 0,
+    y: selectedSlotDef?.defaultTransform?.y ?? 0,
+    rotation: selectedSlotDef?.defaultTransform?.rotation ?? 0,
+    scaleX: selectedSlotDef?.defaultTransform?.scaleX ?? 1,
+    scaleY: selectedSlotDef?.defaultTransform?.scaleY ?? 1,
+  };
+  const visualValues = selectedEntityVisual?.localTransform ?? {
+    x: 0,
+    y: 0,
+    rotation: 0,
+    scaleX: 1,
+    scaleY: 1,
+  };
+  const attachmentBeforeRef = useRef(attachmentValues);
+  const slotBeforeRef = useRef(slotTransformValues);
+  const visualBeforeRef = useRef(visualValues);
+
   if (!activeEntity) {
     return (
       <aside
@@ -256,49 +300,6 @@ export function InspectorPanel() {
   }
 
   // Keep slot-derived UI aligned with the actual active selection.
-  const selectedSlotId =
-    editor.selection.kind === "item-part" || editor.selection.kind === "template-slot"
-      ? editor.selection.slotId
-      : editor.selectedSlotId;
-  const selectedAssign   = activeEntity.slots.find(s => s.slotId === selectedSlotId);
-  const selectedItem     = selectedAssign?.itemId
-    ? (project.items.find(i => i.id === selectedAssign.itemId) as Item | undefined)
-    : undefined;
-  const selectedSlotDef  = template?.slots.find(s => s.id === selectedSlotId);
-  const selection = editor.selection;
-  const selectedEntityVisual = selection.kind === "entity-visual"
-    ? activeEntity.visuals?.find(v => v.id === selection.visualId)
-    : undefined;
-  const selectedBone = selection.kind === "bone"
-    ? template?.bones.find(bone => bone.id === selection.boneId)
-    : undefined;
-  const selectedAnchor = selection.kind === "anchor"
-    ? template?.anchors?.[selection.anchorId]
-    : undefined;
-  const attachmentValues = {
-    offsetX: selectedAssign?.attachmentOverride?.offsetX ?? 0,
-    offsetY: selectedAssign?.attachmentOverride?.offsetY ?? 0,
-    rotation: selectedAssign?.attachmentOverride?.rotation ?? 0,
-    scaleX: selectedAssign?.attachmentOverride?.scaleX ?? 1,
-    scaleY: selectedAssign?.attachmentOverride?.scaleY ?? 1,
-  };
-  const slotTransformValues = {
-    x: selectedSlotDef?.defaultTransform?.x ?? 0,
-    y: selectedSlotDef?.defaultTransform?.y ?? 0,
-    rotation: selectedSlotDef?.defaultTransform?.rotation ?? 0,
-    scaleX: selectedSlotDef?.defaultTransform?.scaleX ?? 1,
-    scaleY: selectedSlotDef?.defaultTransform?.scaleY ?? 1,
-  };
-  const visualValues = selectedEntityVisual?.localTransform ?? {
-    x: 0,
-    y: 0,
-    rotation: 0,
-    scaleX: 1,
-    scaleY: 1,
-  };
-  const attachmentBeforeRef = useRef(attachmentValues);
-  const slotBeforeRef = useRef(slotTransformValues);
-  const visualBeforeRef = useRef(visualValues);
 
   function buildAttachmentOverride(values: typeof attachmentValues) {
     return {
