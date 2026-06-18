@@ -26,9 +26,10 @@ async function loadSvgAsImage(
   svgData: string,
   w: number,
   h: number,
+  fitMode: "legacy_full_frame" | "v2_vector" = "legacy_full_frame",
 ): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
-    const sized = scaleSvgToFit(svgData, w, h);
+    const sized = scaleSvgToFit(svgData, w, h, fitMode);
     const img   = new Image();
     img.onload  = () => resolve(img);
     img.onerror = () => reject(new Error("SVG load failed"));
@@ -51,7 +52,7 @@ async function drawVisual(
   const pxW = Math.max(1, Math.ceil(lw * scale));
   const pxH = Math.max(1, Math.ceil(lh * scale));
 
-  const img = await loadSvgAsImage(visual.svgData, pxW, pxH);
+  const img = await loadSvgAsImage(visual.svgData, pxW, pxH, visual.svgFitMode ?? "legacy_full_frame");
   ctx.save();
   ctx.setTransform(
     scale * wa, scale * wb,

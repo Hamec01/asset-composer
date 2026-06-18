@@ -13,6 +13,7 @@ import { animController } from "@/core-v2/AnimationController";
 import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { decompose, transformPoint } from "@/lib/matrixUtils";
+import { scaleSvgToFit } from "@/lib/svgUtils";
 
 // ── Bone accent colours (debug skeleton overlay) ──────────────────────────────
 const BONE_HEX: Record<string, number> = {
@@ -31,8 +32,13 @@ const BONE_HEX: Record<string, number> = {
 };
 
 // ── SVG → rasterised PixiJS Texture ──────────────────────────────────────────
-async function rasterizeSvg(svgData: string, size = 256): Promise<Texture> {
-  const blob    = new Blob([svgData], { type: "image/svg+xml" });
+async function rasterizeSvg(
+  svgData: string,
+  size = 256,
+  fitMode: "legacy_full_frame" | "v2_vector" = "legacy_full_frame",
+): Promise<Texture> {
+  const fitted = scaleSvgToFit(svgData, size, size, fitMode);
+  const blob    = new Blob([fitted], { type: "image/svg+xml" });
   const blobUrl = URL.createObjectURL(blob);
 
   const svgImg = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -353,7 +359,7 @@ export function PixiPreviewPanel() {
         let texture = textureCacheRef.current.get(cacheKey);
         if (!texture) {
           try {
-            texture = await rasterizeSvg(visual.svgData, 256);
+            texture = await rasterizeSvg(visual.svgData, 256, visual.svgFitMode ?? "legacy_full_frame");
             textureCacheRef.current.set(cacheKey, texture);
           } catch (e) {
             console.warn("[PixiPreviewPanel] rasterize failed:", cacheKey, e);

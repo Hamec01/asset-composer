@@ -1,5 +1,5 @@
 import type { LocalTransform, SlotDef } from "@/domain/types";
-import { identity, inverse, localTransformToMatrix, transformPoint, worldBoneToMatrix } from "@/lib/matrixUtils";
+import { identity, inverse, transformPoint, worldBoneToMatrix } from "@/lib/matrixUtils";
 import type { WorldBone } from "@/lib/evaluationPipeline";
 
 export function getTemplateSlotDefaultTransform(slotDef: SlotDef): LocalTransform {
@@ -9,8 +9,7 @@ export function getTemplateSlotDefaultTransform(slotDef: SlotDef): LocalTransfor
 export function getTemplateSlotWorldCenter(slotDef: SlotDef, bone: WorldBone | null | undefined): { x: number; y: number } {
   const dt = getTemplateSlotDefaultTransform(slotDef);
   const boneMatrix = bone ? worldBoneToMatrix(bone) : identity();
-  const slotMatrix = localTransformToMatrix(dt.x, dt.y, dt.rotation, dt.scaleX, dt.scaleY);
-  return transformPoint(boneMatrix, slotMatrix[4], slotMatrix[5]);
+  return transformPoint(boneMatrix, dt.x, dt.y);
 }
 
 export function getTemplateSlotTransformFromWorldCenter(

@@ -59,8 +59,11 @@ export function parseSvgString(svgString: string): SVGElement | null {
 export function scaleSvgToFit(
   svgString: string,
   targetWidth: number,
-  targetHeight: number
+  targetHeight: number,
+  fitMode: "legacy_full_frame" | "v2_vector" = "legacy_full_frame",
 ): string {
+  const preserveAspectRatio =
+    fitMode === "v2_vector" ? "xMidYMid meet" : "none";
   return svgString.replace(
     /<svg([^>]*)>/,
     (_match, attrs: string) => {
@@ -68,7 +71,7 @@ export function scaleSvgToFit(
         .replace(/\s*width="[^"]*"/, "")
         .replace(/\s*height="[^"]*"/, "")
         .replace(/\s*preserveAspectRatio="[^"]*"/, "");
-      return `<svg${clean} width="${targetWidth}" height="${targetHeight}" preserveAspectRatio="none">`;
+      return `<svg${clean} width="${targetWidth}" height="${targetHeight}" preserveAspectRatio="${preserveAspectRatio}">`;
     }
   );
 }
@@ -82,10 +85,11 @@ export function scaleSvgToFit(
 export async function renderSvgToBlob(
   svgString: string,
   width: number,
-  height: number
+  height: number,
+  fitMode: "legacy_full_frame" | "v2_vector" = "legacy_full_frame",
 ): Promise<Blob | null> {
   return new Promise((resolve) => {
-    const sized = scaleSvgToFit(svgString, width, height);
+    const sized = scaleSvgToFit(svgString, width, height, fitMode);
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
@@ -105,6 +109,6 @@ export async function renderSvgToBlob(
  * Generate a simple thumbnail data URL from an SVG string.
  */
 export function generateThumbnail(svgString: string, size = 64): string {
-  const scaled = scaleSvgToFit(svgString, size, size);
+  const scaled = scaleSvgToFit(svgString, size, size, "legacy_full_frame");
   return svgToDataUrl(scaled);
 }

@@ -113,9 +113,7 @@ export function CanvasPanel() {
           setSelectedSlot(sel.slotId);
           return;
         }
-        if (sel.kind === "none") {
-          setSelectedSlot(null);
-        }
+        setSelectedSlot(null);
       },
       onItemPreview: (entityId, slotId, override) => {
         previewAttachmentOverride(entityId, slotId, override);

@@ -394,7 +394,7 @@ export class CanvasEngine {
     const pixH = Math.max(2, Math.round(vH));
 
     try {
-      const sized  = scaleSvgToFit(visual.svgData, pixW, pixH);
+      const sized  = scaleSvgToFit(visual.svgData, pixW, pixH, visual.svgFitMode ?? "legacy_full_frame");
       const imgEl  = await FabricImage.fromURL(svgToDataUrl(sized));
       const localCenterX = (visual.localBounds.minX + visual.localBounds.maxX) / 2;
       const localCenterY = (visual.localBounds.minY + visual.localBounds.maxY) / 2;

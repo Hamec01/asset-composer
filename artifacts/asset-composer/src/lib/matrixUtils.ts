@@ -139,7 +139,7 @@ export function decompose(M: Matrix2D): DecomposedTransform {
  *
  * The pivot is expressed in local content units (e.g. centre of the visual).
  * Composition order:
- *   T(x + pivotX, y + pivotY) × R(rotation) × S(scaleX, scaleY) × T(-pivotX, -pivotY)
+ *   T(x, y) × R(rotation) × S(scaleX, scaleY) × T(-pivotX, -pivotY)
  *
  * This places the pivot point at (x, y) in parent space after rotation/scale.
  */
@@ -154,7 +154,7 @@ export function localTransformToMatrix(
 ): Matrix2D {
   return multiply(
     multiply(
-      multiply(translation(x + pivotX, y + pivotY), rotationDeg(rotation)),
+      multiply(translation(x, y), rotationDeg(rotation)),
       scaling(scaleX, scaleY),
     ),
     translation(-pivotX, -pivotY),

@@ -287,6 +287,10 @@ export function resolveItemPartBinding(
   };
 }
 
+function visualFitModeForItemPart(part: ItemPart): "legacy_full_frame" | "v2_vector" {
+  return part.coordinateMode === "legacy_full_frame" ? "legacy_full_frame" : "v2_vector";
+}
+
 // ── evaluateScene ─────────────────────────────────────────────────────────────
 
 export function evaluateScene(
@@ -318,7 +322,17 @@ export function evaluateScene(
     const localBounds = makeMetricBounds(visual.metrics, piv.x, piv.y);
     const worldBounds = transformAABB(worldM, localBounds);
 
-    visuals.push({ id: `vis__${visual.id}`, svgData, zIndex: visual.zIndex, worldMatrix: worldM, localBounds, worldBounds, sourceKind: "entity-visual", entityVisualId: visual.id });
+    visuals.push({
+      id: `vis__${visual.id}`,
+      svgData,
+      zIndex: visual.zIndex,
+      worldMatrix: worldM,
+      localBounds,
+      worldBounds,
+      sourceKind: "entity-visual",
+      entityVisualId: visual.id,
+      svgFitMode: "v2_vector",
+    });
 
     // Legacy layer (full-frame, boneId=null for Pixi/frameRenderer)
     layers.push({
@@ -343,7 +357,17 @@ export function evaluateScene(
       const localBounds = makeLocalBounds(part.naturalWidth, part.naturalHeight);
       const worldBounds = transformAABB(worldM, localBounds);
 
-      visuals.push({ id: `part__${part.id}`, svgData, zIndex: part.zOffset, worldMatrix: worldM, localBounds, worldBounds, sourceKind: "bone-part", boneId: part.boneId });
+      visuals.push({
+        id: `part__${part.id}`,
+        svgData,
+        zIndex: part.zOffset,
+        worldMatrix: worldM,
+        localBounds,
+        worldBounds,
+        sourceKind: "bone-part",
+        boneId: part.boneId,
+        svgFitMode: "v2_vector",
+      });
 
       // Legacy layer (bone-local)
       layers.push({
@@ -362,7 +386,16 @@ export function evaluateScene(
       const localBounds = makeLocalBounds(fw, fh);
       const worldBounds = localBounds;
 
-      visuals.push({ id: `base__${bodyLayer.id}`, svgData, zIndex, worldMatrix: worldM, localBounds, worldBounds, sourceKind: "base-layer" });
+      visuals.push({
+        id: `base__${bodyLayer.id}`,
+        svgData,
+        zIndex,
+        worldMatrix: worldM,
+        localBounds,
+        worldBounds,
+        sourceKind: "base-layer",
+        svgFitMode: "legacy_full_frame",
+      });
 
       layers.push({
         id: `base__${bodyLayer.id}`, svgData, zIndex, opacity: 1,
@@ -395,7 +428,19 @@ export function evaluateScene(
           );
           const localBounds = makeLocalBounds(fw, fh);
           const worldBounds = transformAABB(worldM, localBounds);
-          visuals.push({ id: vid, svgData, zIndex, worldMatrix: worldM, localBounds, worldBounds, sourceKind: "item-part", slotId: slotAssign.slotId, itemId: item.id, partId: part.id });
+          visuals.push({
+            id: vid,
+            svgData,
+            zIndex,
+            worldMatrix: worldM,
+            localBounds,
+            worldBounds,
+            sourceKind: "item-part",
+            slotId: slotAssign.slotId,
+            itemId: item.id,
+            partId: part.id,
+            svgFitMode: "legacy_full_frame",
+          });
           layers.push({ id: vid, svgData, zIndex, opacity: 1, boneId: null, localX: 0, localY: 0, rotation: 0, scaleX: 1, scaleY: 1, naturalWidth: fw, naturalHeight: fh });
         } else {
           const piv    = part.pivot;
@@ -416,7 +461,19 @@ export function evaluateScene(
           const worldBounds = transformAABB(worldM, localBounds);
           const partWidth = part.metrics.visualWidth;
           const partHeight = part.metrics.visualHeight;
-          visuals.push({ id: vid, svgData, zIndex, worldMatrix: worldM, localBounds, worldBounds, sourceKind: "item-part", slotId: slotAssign.slotId, itemId: item.id, partId: part.id });
+          visuals.push({
+            id: vid,
+            svgData,
+            zIndex,
+            worldMatrix: worldM,
+            localBounds,
+            worldBounds,
+            sourceKind: "item-part",
+            slotId: slotAssign.slotId,
+            itemId: item.id,
+            partId: part.id,
+            svgFitMode: visualFitModeForItemPart(part),
+          });
           layers.push({ id: vid, svgData, zIndex, opacity: 1, boneId: part.boneId, localX: lt.x, localY: lt.y, rotation: lt.rotation, scaleX: lt.scaleX, scaleY: lt.scaleY, naturalWidth: partWidth, naturalHeight: partHeight });
         }
       }
@@ -432,7 +489,19 @@ export function evaluateScene(
         const localBounds = makeLocalBounds(fw, fh);
         const worldBounds = transformAABB(worldM, localBounds);
         const id = `slot__${slotAssign.slotId}__${item.id}__${svgLayer.id}`;
-        visuals.push({ id, svgData, zIndex, worldMatrix: worldM, localBounds, worldBounds, sourceKind: "item-part", slotId: slotAssign.slotId, itemId: item.id, partId: svgLayer.id });
+        visuals.push({
+          id,
+          svgData,
+          zIndex,
+          worldMatrix: worldM,
+          localBounds,
+          worldBounds,
+          sourceKind: "item-part",
+          slotId: slotAssign.slotId,
+          itemId: item.id,
+          partId: svgLayer.id,
+          svgFitMode: "legacy_full_frame",
+        });
         layers.push({ id, svgData, zIndex, opacity: 1, boneId: null, localX: 0, localY: 0, rotation: 0, scaleX: 1, scaleY: 1, naturalWidth: fw, naturalHeight: fh });
       }
     }

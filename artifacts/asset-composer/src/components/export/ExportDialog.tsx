@@ -83,7 +83,7 @@ async function prerasterizeAll(
       onStep(`Preparing textures: ${entity.name} · ${visual.id}…`);
       const width = Math.max(1, Math.ceil(visual.localBounds.maxX - visual.localBounds.minX));
       const height = Math.max(1, Math.ceil(visual.localBounds.maxY - visual.localBounds.minY));
-      const blob = await renderSvgToBlob(visual.svgData, width, height);
+      const blob = await renderSvgToBlob(visual.svgData, width, height, visual.svgFitMode ?? "legacy_full_frame");
       if (blob) cache[key] = await blob.arrayBuffer();
     }
   }

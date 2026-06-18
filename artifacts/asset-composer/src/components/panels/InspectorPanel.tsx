@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/store";
 import { sanitizeSvg } from "@/lib/sanitize";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -47,24 +47,99 @@ interface CompatWarning {
   severity: "error" | "warning";
 }
 
-function NumericInput({
+function TransactionalNumberInput({
   value,
-  step = "0.1",
-  onChange,
+  step = 0.1,
   testId,
+  onBeginEdit,
+  onPreview,
+  onCommit,
+  onCancel,
 }: {
   value: number;
-  step?: string;
-  onChange: (value: number) => void;
+  step?: number;
   testId: string;
+  onBeginEdit?: () => void;
+  onPreview: (value: number) => void;
+  onCommit: (value: number) => void;
+  onCancel: () => void;
 }) {
+  const [draft, setDraft] = useState(String(Number.isFinite(value) ? value : 0));
+  const editingRef = useRef(false);
+  const initialValueRef = useRef(value);
+  const draftRef = useRef(draft);
+
+  useEffect(() => {
+    if (editingRef.current) return;
+    setDraft(String(Number.isFinite(value) ? value : 0));
+    draftRef.current = String(Number.isFinite(value) ? value : 0);
+    initialValueRef.current = value;
+  }, [value]);
+
+  function commitDraft() {
+    const nextText = draftRef.current;
+    const next = Number(nextText);
+    if (!Number.isFinite(next)) return;
+    onCommit(next);
+    editingRef.current = false;
+    setDraft(String(next));
+    draftRef.current = String(next);
+    initialValueRef.current = next;
+  }
+
+  function cancelDraft() {
+    editingRef.current = false;
+    const initial = initialValueRef.current;
+    setDraft(String(initial));
+    draftRef.current = String(initial);
+    onPreview(initial);
+    onCancel();
+  }
+
   return (
     <Input
       data-testid={testId}
-      type="number"
-      step={step}
-      value={Number.isFinite(value) ? value : 0}
-      onChange={e => onChange(Number(e.target.value))}
+      type="text"
+      inputMode="decimal"
+      value={draft}
+      onFocus={() => {
+        editingRef.current = true;
+        initialValueRef.current = value;
+        setDraft(String(Number.isFinite(value) ? value : 0));
+        draftRef.current = String(Number.isFinite(value) ? value : 0);
+        onBeginEdit?.();
+      }}
+      onChange={e => {
+        const nextText = e.target.value;
+        setDraft(nextText);
+        draftRef.current = nextText;
+        const next = Number(nextText);
+        if (Number.isFinite(next)) {
+          onPreview(next);
+        }
+      }}
+      onBlur={() => commitDraft()}
+      onKeyDown={e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commitDraft();
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          cancelDraft();
+          return;
+        }
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+          e.preventDefault();
+          const current = Number(draft);
+          const base = Number.isFinite(current) ? current : initialValueRef.current;
+          const delta = (e.shiftKey ? step * 10 : e.altKey ? step * 0.1 : step) * (e.key === "ArrowUp" ? 1 : -1);
+          const next = Number((base + delta).toFixed(4));
+          setDraft(String(next));
+          onPreview(next);
+        }
+      }}
       className="h-6 text-[11px] bg-background border-border"
     />
   );
@@ -92,6 +167,7 @@ export function InspectorPanel() {
   const setEntityStyleSet    = useStore(s => s.setEntityStyleSet);
   const setEntitySlot        = useStore(s => s.setEntitySlot);
   const setAttachmentOverride = useStore(s => s.setAttachmentOverride);
+  const removeEntityVisual   = useStore(s => s.removeEntityVisual);
   const updateTemplateSlotTransform = useStore(s => s.updateTemplateSlotTransform);
   const getActiveEntity      = useStore(s => s.getActiveEntity);
 
@@ -190,6 +266,15 @@ export function InspectorPanel() {
     : undefined;
   const selectedSlotDef  = template?.slots.find(s => s.id === selectedSlotId);
   const selection = editor.selection;
+  const selectedEntityVisual = selection.kind === "entity-visual"
+    ? activeEntity.visuals?.find(v => v.id === selection.visualId)
+    : undefined;
+  const selectedBone = selection.kind === "bone"
+    ? template?.bones.find(bone => bone.id === selection.boneId)
+    : undefined;
+  const selectedAnchor = selection.kind === "anchor"
+    ? template?.anchors?.[selection.anchorId]
+    : undefined;
   const attachmentValues = {
     offsetX: selectedAssign?.attachmentOverride?.offsetX ?? 0,
     offsetY: selectedAssign?.attachmentOverride?.offsetY ?? 0,
@@ -204,16 +289,72 @@ export function InspectorPanel() {
     scaleX: selectedSlotDef?.defaultTransform?.scaleX ?? 1,
     scaleY: selectedSlotDef?.defaultTransform?.scaleY ?? 1,
   };
+  const visualValues = selectedEntityVisual?.localTransform ?? {
+    x: 0,
+    y: 0,
+    rotation: 0,
+    scaleX: 1,
+    scaleY: 1,
+  };
+  const attachmentBeforeRef = useRef(attachmentValues);
+  const slotBeforeRef = useRef(slotTransformValues);
+  const visualBeforeRef = useRef(visualValues);
+
+  function buildAttachmentOverride(values: typeof attachmentValues) {
+    return {
+      anchorId: selectedAssign?.attachmentOverride.anchorId ?? "",
+      bindMode: selectedAssign?.attachmentOverride.bindMode ?? "",
+      offsetX: values.offsetX,
+      offsetY: values.offsetY,
+      rotation: values.rotation,
+      scaleX: values.scaleX,
+      scaleY: values.scaleY,
+    };
+  }
 
   function patchAttachment<K extends keyof typeof attachmentValues>(key: K, value: number) {
     if (!activeEntity || !selectedSlotDef || !selectedAssign) return;
     setAttachmentOverride(activeEntity.id, selectedSlotDef.id, { [key]: value });
   }
 
+  function commitAttachmentField<K extends keyof typeof attachmentValues>(key: K, value: number) {
+    if (!activeEntity || !selectedSlotDef || !selectedAssign) return;
+    const beforeFull = buildAttachmentOverride(attachmentBeforeRef.current);
+    const afterFull = buildAttachmentOverride({
+      ...attachmentValues,
+      [key]: value,
+    });
+    useStore.getState().commitAttachmentOverride(activeEntity.id, selectedSlotDef.id, beforeFull, afterFull);
+  }
+
   function patchSlotTransform<K extends keyof typeof slotTransformValues>(key: K, value: number) {
     if (!template || !selectedSlotDef) return;
     updateTemplateSlotTransform(template.id, selectedSlotDef.id, {
       ...slotTransformValues,
+      [key]: value,
+    });
+  }
+
+  function commitSlotField<K extends keyof typeof slotTransformValues>(key: K, value: number) {
+    if (!template || !selectedSlotDef) return;
+    useStore.getState().commitTemplateSlotTransform(template.id, selectedSlotDef.id, slotBeforeRef.current, {
+      ...slotTransformValues,
+      [key]: value,
+    });
+  }
+
+  function patchVisualTransform<K extends keyof typeof visualValues>(key: K, value: number) {
+    if (!activeEntity || !selectedEntityVisual) return;
+    useStore.getState().previewEntityVisualTransform(activeEntity.id, selectedEntityVisual.id, {
+      ...visualBeforeRef.current,
+      [key]: value,
+    });
+  }
+
+  function commitVisualField<K extends keyof typeof visualValues>(key: K, value: number) {
+    if (!activeEntity || !selectedEntityVisual) return;
+    useStore.getState().commitEntityVisualTransform(activeEntity.id, selectedEntityVisual.id, visualBeforeRef.current, {
+      ...visualValues,
       [key]: value,
     });
   }
@@ -426,23 +567,58 @@ export function InspectorPanel() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">X</label>
-                    <NumericInput testId="inspector-attach-x" value={attachmentValues.offsetX} onChange={v => patchAttachment("offsetX", v)} />
+                    <TransactionalNumberInput
+                      testId="inspector-attach-x"
+                      value={attachmentValues.offsetX}
+                      onBeginEdit={() => { attachmentBeforeRef.current = attachmentValues; }}
+                      onPreview={v => patchAttachment("offsetX", v)}
+                      onCommit={v => commitAttachmentField("offsetX", v)}
+                      onCancel={() => patchAttachment("offsetX", attachmentBeforeRef.current.offsetX)}
+                    />
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">Y</label>
-                    <NumericInput testId="inspector-attach-y" value={attachmentValues.offsetY} onChange={v => patchAttachment("offsetY", v)} />
+                    <TransactionalNumberInput
+                      testId="inspector-attach-y"
+                      value={attachmentValues.offsetY}
+                      onBeginEdit={() => { attachmentBeforeRef.current = attachmentValues; }}
+                      onPreview={v => patchAttachment("offsetY", v)}
+                      onCommit={v => commitAttachmentField("offsetY", v)}
+                      onCancel={() => patchAttachment("offsetY", attachmentBeforeRef.current.offsetY)}
+                    />
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">Rotation</label>
-                    <NumericInput testId="inspector-attach-rotation" value={attachmentValues.rotation} onChange={v => patchAttachment("rotation", v)} />
+                    <TransactionalNumberInput
+                      testId="inspector-attach-rotation"
+                      value={attachmentValues.rotation}
+                      onBeginEdit={() => { attachmentBeforeRef.current = attachmentValues; }}
+                      onPreview={v => patchAttachment("rotation", v)}
+                      onCommit={v => commitAttachmentField("rotation", v)}
+                      onCancel={() => patchAttachment("rotation", attachmentBeforeRef.current.rotation)}
+                    />
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">Scale X</label>
-                    <NumericInput testId="inspector-attach-scale-x" value={attachmentValues.scaleX} onChange={v => patchAttachment("scaleX", v)} />
+                    <TransactionalNumberInput
+                      testId="inspector-attach-scale-x"
+                      value={attachmentValues.scaleX}
+                      onBeginEdit={() => { attachmentBeforeRef.current = attachmentValues; }}
+                      onPreview={v => patchAttachment("scaleX", v)}
+                      onCommit={v => commitAttachmentField("scaleX", v)}
+                      onCancel={() => patchAttachment("scaleX", attachmentBeforeRef.current.scaleX)}
+                    />
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">Scale Y</label>
-                    <NumericInput testId="inspector-attach-scale-y" value={attachmentValues.scaleY} onChange={v => patchAttachment("scaleY", v)} />
+                    <TransactionalNumberInput
+                      testId="inspector-attach-scale-y"
+                      value={attachmentValues.scaleY}
+                      onBeginEdit={() => { attachmentBeforeRef.current = attachmentValues; }}
+                      onPreview={v => patchAttachment("scaleY", v)}
+                      onCommit={v => commitAttachmentField("scaleY", v)}
+                      onCancel={() => patchAttachment("scaleY", attachmentBeforeRef.current.scaleY)}
+                    />
                   </div>
                 </div>
                 <button
@@ -456,6 +632,23 @@ export function InspectorPanel() {
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
                   Reset attachment transform
+                </button>
+                <button
+                  onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
+                    scaleX: -Math.abs(attachmentValues.scaleX || 1),
+                  })}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                >
+                  Flip X
+                </button>
+                <button
+                  onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
+                    scaleX: 1,
+                    scaleY: 1,
+                  })}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                >
+                  Reset Scale
                 </button>
                 <button
                   onClick={() => setEntitySlot(activeEntity.id, selectedSlotDef.id, null)}
@@ -477,23 +670,58 @@ export function InspectorPanel() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">X</label>
-                    <NumericInput testId="inspector-slot-x" value={slotTransformValues.x} onChange={v => patchSlotTransform("x", v)} />
+                    <TransactionalNumberInput
+                      testId="inspector-slot-x"
+                      value={slotTransformValues.x}
+                      onBeginEdit={() => { slotBeforeRef.current = slotTransformValues; }}
+                      onPreview={v => patchSlotTransform("x", v)}
+                      onCommit={v => commitSlotField("x", v)}
+                      onCancel={() => patchSlotTransform("x", slotBeforeRef.current.x)}
+                    />
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">Y</label>
-                    <NumericInput testId="inspector-slot-y" value={slotTransformValues.y} onChange={v => patchSlotTransform("y", v)} />
+                    <TransactionalNumberInput
+                      testId="inspector-slot-y"
+                      value={slotTransformValues.y}
+                      onBeginEdit={() => { slotBeforeRef.current = slotTransformValues; }}
+                      onPreview={v => patchSlotTransform("y", v)}
+                      onCommit={v => commitSlotField("y", v)}
+                      onCancel={() => patchSlotTransform("y", slotBeforeRef.current.y)}
+                    />
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">Rotation</label>
-                    <NumericInput testId="inspector-slot-rotation" value={slotTransformValues.rotation} onChange={v => patchSlotTransform("rotation", v)} />
+                    <TransactionalNumberInput
+                      testId="inspector-slot-rotation"
+                      value={slotTransformValues.rotation}
+                      onBeginEdit={() => { slotBeforeRef.current = slotTransformValues; }}
+                      onPreview={v => patchSlotTransform("rotation", v)}
+                      onCommit={v => commitSlotField("rotation", v)}
+                      onCancel={() => patchSlotTransform("rotation", slotBeforeRef.current.rotation)}
+                    />
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">Scale X</label>
-                    <NumericInput testId="inspector-slot-scale-x" value={slotTransformValues.scaleX} onChange={v => patchSlotTransform("scaleX", v)} />
+                    <TransactionalNumberInput
+                      testId="inspector-slot-scale-x"
+                      value={slotTransformValues.scaleX}
+                      onBeginEdit={() => { slotBeforeRef.current = slotTransformValues; }}
+                      onPreview={v => patchSlotTransform("scaleX", v)}
+                      onCommit={v => commitSlotField("scaleX", v)}
+                      onCancel={() => patchSlotTransform("scaleX", slotBeforeRef.current.scaleX)}
+                    />
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">Scale Y</label>
-                    <NumericInput testId="inspector-slot-scale-y" value={slotTransformValues.scaleY} onChange={v => patchSlotTransform("scaleY", v)} />
+                    <TransactionalNumberInput
+                      testId="inspector-slot-scale-y"
+                      value={slotTransformValues.scaleY}
+                      onBeginEdit={() => { slotBeforeRef.current = slotTransformValues; }}
+                      onPreview={v => patchSlotTransform("scaleY", v)}
+                      onCommit={v => commitSlotField("scaleY", v)}
+                      onCancel={() => patchSlotTransform("scaleY", slotBeforeRef.current.scaleY)}
+                    />
                   </div>
                 </div>
                 <button
@@ -508,6 +736,137 @@ export function InspectorPanel() {
                 >
                   Reset slot transform
                 </button>
+              </div>
+            </>
+          )}
+
+          {selection.kind === "entity-visual" && selectedEntityVisual && template && (
+            <>
+              <Separator className="bg-border" />
+              <div className="space-y-2">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Entity Visual
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">X</label>
+                    <TransactionalNumberInput
+                      testId="inspector-visual-x"
+                      value={visualValues.x}
+                      onBeginEdit={() => { visualBeforeRef.current = visualValues; }}
+                      onPreview={v => patchVisualTransform("x", v)}
+                      onCommit={v => commitVisualField("x", v)}
+                      onCancel={() => patchVisualTransform("x", visualBeforeRef.current.x)}
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Y</label>
+                    <TransactionalNumberInput
+                      testId="inspector-visual-y"
+                      value={visualValues.y}
+                      onBeginEdit={() => { visualBeforeRef.current = visualValues; }}
+                      onPreview={v => patchVisualTransform("y", v)}
+                      onCommit={v => commitVisualField("y", v)}
+                      onCancel={() => patchVisualTransform("y", visualBeforeRef.current.y)}
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Rotation</label>
+                    <TransactionalNumberInput
+                      testId="inspector-visual-rotation"
+                      value={visualValues.rotation}
+                      onBeginEdit={() => { visualBeforeRef.current = visualValues; }}
+                      onPreview={v => patchVisualTransform("rotation", v)}
+                      onCommit={v => commitVisualField("rotation", v)}
+                      onCancel={() => patchVisualTransform("rotation", visualBeforeRef.current.rotation)}
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Scale X</label>
+                    <TransactionalNumberInput
+                      testId="inspector-visual-scale-x"
+                      value={visualValues.scaleX}
+                      onBeginEdit={() => { visualBeforeRef.current = visualValues; }}
+                      onPreview={v => patchVisualTransform("scaleX", v)}
+                      onCommit={v => commitVisualField("scaleX", v)}
+                      onCancel={() => patchVisualTransform("scaleX", visualBeforeRef.current.scaleX)}
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Scale Y</label>
+                    <TransactionalNumberInput
+                      testId="inspector-visual-scale-y"
+                      value={visualValues.scaleY}
+                      onBeginEdit={() => { visualBeforeRef.current = visualValues; }}
+                      onPreview={v => patchVisualTransform("scaleY", v)}
+                      onCommit={v => commitVisualField("scaleY", v)}
+                      onCancel={() => patchVisualTransform("scaleY", visualBeforeRef.current.scaleY)}
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Z Index</label>
+                    <Input
+                      data-testid="inspector-visual-zindex"
+                      type="number"
+                      value={selectedEntityVisual.zIndex}
+                      readOnly
+                      className="h-6 text-[11px] bg-background border-border"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button className="text-[10px] text-primary hover:text-primary/80 transition-colors">
+                    Edit Source Asset
+                  </button>
+                  <button
+                    onClick={() => removeEntityVisual(activeEntity.id, selectedEntityVisual.id)}
+                    className="text-[10px] text-destructive/70 hover:text-destructive transition-colors"
+                  >
+                    Detach Source
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {selection.kind === "bone" && selectedBone && template && (
+            <>
+              <Separator className="bg-border" />
+              <div className="space-y-2">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Bone
+                </Label>
+                <div className="space-y-1 text-[10px] text-muted-foreground">
+                  <div className="flex justify-between"><span>Bone ID</span><span className="text-foreground">{selectedBone.id}</span></div>
+                  <div className="flex justify-between"><span>Name</span><span className="text-foreground">{selectedBone.name}</span></div>
+                  <div className="flex justify-between"><span>Parent</span><span className="text-foreground">{selectedBone.parentId ?? "none"}</span></div>
+                  <div className="flex justify-between"><span>Rest TX</span><span className="text-foreground">{selectedBone.restPose.tx}</span></div>
+                  <div className="flex justify-between"><span>Rest TY</span><span className="text-foreground">{selectedBone.restPose.ty}</span></div>
+                  <div className="flex justify-between"><span>Rest Rotation</span><span className="text-foreground">{selectedBone.restPose.rotation}</span></div>
+                  <div className="flex justify-between"><span>Rest Scale X</span><span className="text-foreground">{selectedBone.restPose.scaleX}</span></div>
+                  <div className="flex justify-between"><span>Rest Scale Y</span><span className="text-foreground">{selectedBone.restPose.scaleY}</span></div>
+                  <div className="flex justify-between"><span>Length</span><span className="text-foreground">{selectedBone.length}</span></div>
+                  <div className="flex justify-between"><span>Assigned Parts</span><span className="text-foreground">{template.boneParts?.filter(part => part.boneId === selectedBone.id).length ?? 0}</span></div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {selection.kind === "anchor" && selectedAnchor && template && (
+            <>
+              <Separator className="bg-border" />
+              <div className="space-y-2">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Anchor
+                </Label>
+                <div className="space-y-1 text-[10px] text-muted-foreground">
+                  <div className="flex justify-between"><span>Anchor ID</span><span className="text-foreground">{selectedAnchor.id}</span></div>
+                  <div className="flex justify-between"><span>Bone</span><span className="text-foreground">{selectedAnchor.boneId}</span></div>
+                  <div className="flex justify-between"><span>Offset X</span><span className="text-foreground">{selectedAnchor.offsetX}</span></div>
+                  <div className="flex justify-between"><span>Offset Y</span><span className="text-foreground">{selectedAnchor.offsetY}</span></div>
+                  <div className="flex justify-between"><span>Rotation</span><span className="text-foreground">{selectedAnchor.rotation}</span></div>
+                  <div className="flex justify-between"><span>Usage</span><span className="text-foreground">{template.slots.filter(slot => slot.defaultAnchorId === selectedAnchor.id).length}</span></div>
+                </div>
               </div>
             </>
           )}

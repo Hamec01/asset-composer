@@ -88,6 +88,14 @@ interface AppStore {
     afterOverride: AttachmentOverride,
     label?: string,
   ) => void;
+  previewEntityVisualTransform: (entityId: string, visualId: string, transform: LocalTransform) => void;
+  commitEntityVisualTransform: (
+    entityId: string,
+    visualId: string,
+    before: LocalTransform,
+    after: LocalTransform,
+    label?: string,
+  ) => void;
 
   setAppState:    (state: "dashboard" | "ide") => void;
   setSelectedSlot:(slotId: string | null) => void;
@@ -190,6 +198,10 @@ function normalizeLocalTransform(transform: LocalTransform | undefined): LocalTr
     scaleX: transform?.scaleX ?? 1,
     scaleY: transform?.scaleY ?? 1,
   };
+}
+
+function sameEntityVisualTransform(a?: LocalTransform, b?: LocalTransform) {
+  return sameLocalTransform(a, b);
 }
 
 function makeDefaultProject(): Project {
@@ -566,6 +578,38 @@ export const useStore = create<AppStore>()(
       );
 
       get().pushCommand(makeSetAttachmentOverrideCommand(entityId, before, after, label));
+    },
+    previewEntityVisualTransform: (entityId, visualId, transform) => {
+      set(state => {
+        const entity = state.project.entities.find(e => e.id === entityId);
+        if (!entity || !entity.visuals) return;
+        const visual = entity.visuals.find(v => v.id === visualId);
+        if (!visual) return;
+        visual.localTransform = { ...transform };
+      });
+    },
+    commitEntityVisualTransform: (entityId, visualId, before, after, label = "Move visual") => {
+      const entity = get().project.entities.find(e => e.id === entityId);
+      if (!entity || !entity.visuals) return;
+      const visual = entity.visuals.find(v => v.id === visualId);
+      if (!visual) return;
+      const normalizedBefore = normalizeLocalTransform(before);
+      const normalizedAfter = normalizeLocalTransform(after);
+      if (sameEntityVisualTransform(normalizedBefore, normalizedAfter)) return;
+
+      const beforeVisuals = entity.visuals.map(v =>
+        v.id === visualId ? { ...v, localTransform: { ...normalizedBefore } } : { ...v },
+      );
+      const afterVisuals = entity.visuals.map(v =>
+        v.id === visualId ? { ...v, localTransform: { ...normalizedAfter } } : { ...v },
+      );
+      get().pushCommand({
+        type: "SET_ENTITY_VISUAL_TRANSFORM",
+        entityId,
+        before: { visuals: beforeVisuals },
+        after: { visuals: afterVisuals },
+        label,
+      });
     },
 
     // ── Editor Actions ───────────────────────────────────────────────────────

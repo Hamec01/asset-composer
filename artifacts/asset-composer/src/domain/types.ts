@@ -184,6 +184,8 @@ export interface EvaluatedVisual {
   id:           string;
   svgData:      string;
   zIndex:       number;
+  /** SVG fitting policy used by rasterizers. */
+  svgFitMode?:  "legacy_full_frame" | "v2_vector";
   /** Full world matrix in template/scene units. */
   worldMatrix:  Matrix2D;
   /** Content bounds in local (pre-transform) space, template units. */
