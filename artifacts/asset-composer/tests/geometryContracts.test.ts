@@ -5,6 +5,7 @@ import { TEMPLATES } from "../src/data/templates";
 import type { Entity } from "../src/domain/types";
 import { evaluateScene, evaluateSkeleton } from "../src/lib/evaluationPipeline";
 import { localTransformToMatrix, transformAABB, transformPoint } from "../src/lib/matrixUtils";
+import { parseMetrics } from "../src/lib/svgMetrics";
 import { scaleSvgToFit } from "../src/lib/svgUtils";
 
 const template = TEMPLATES.find(t => t.id === "humanoid_topdown_v1")!;
@@ -76,6 +77,25 @@ describe("geometry contracts", () => {
     const legacySvg = scaleSvgToFit("<svg viewBox=\"0 0 10 20\"></svg>", 64, 64);
     const v2Svg = scaleSvgToFit("<svg viewBox=\"0 0 10 20\"></svg>", 64, 64, "v2_vector");
     expect(legacySvg).toContain('preserveAspectRatio="none"');
+    expect(v2Svg).toContain('preserveAspectRatio="xMidYMid meet"');
+  });
+
+  it("preserves non-zero viewBox origins in imported metrics", () => {
+    const metrics = parseMetrics("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"-12 -7 24 14\"><rect x=\"-10\" y=\"-5\" width=\"8\" height=\"6\"/></svg>");
+    expect(metrics.viewBoxX).toBe(-12);
+    expect(metrics.viewBoxY).toBe(-7);
+    expect(metrics.viewBoxWidth).toBe(24);
+    expect(metrics.viewBoxHeight).toBe(14);
+  });
+
+  it("keeps legacy full-frame rendering isolated from v2 vector fitting", () => {
+    const legacySvg = scaleSvgToFit("<svg viewBox=\"-5 -10 10 20\"></svg>", 64, 64, "legacy_full_frame");
+    const v2Svg = scaleSvgToFit("<svg viewBox=\"-5 -10 10 20\"></svg>", 64, 64, "v2_vector");
+    expect(legacySvg).toContain('width="64"');
+    expect(legacySvg).toContain('height="64"');
+    expect(legacySvg).toContain('preserveAspectRatio="none"');
+    expect(v2Svg).toContain('width="64"');
+    expect(v2Svg).toContain('height="64"');
     expect(v2Svg).toContain('preserveAspectRatio="xMidYMid meet"');
   });
 });

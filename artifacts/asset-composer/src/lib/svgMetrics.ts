@@ -19,6 +19,26 @@ interface ParsedViewBox {
   x: number; y: number; width: number; height: number;
 }
 
+function parseViewBoxFromSvgString(svgData: string): ParsedViewBox | null {
+  const viewBoxMatch = svgData.match(/viewBox\s*=\s*["']([^"']+)["']/i);
+  if (viewBoxMatch) {
+    const parts = viewBoxMatch[1].trim().split(/[\s,]+/).map(Number);
+    if (parts.length === 4 && parts.every(n => isFinite(n))) {
+      return { x: parts[0], y: parts[1], width: parts[2], height: parts[3] };
+    }
+  }
+
+  const widthMatch = svgData.match(/\bwidth\s*=\s*["']([^"']+)["']/i);
+  const heightMatch = svgData.match(/\bheight\s*=\s*["']([^"']+)["']/i);
+  const width = widthMatch ? parseFloat(widthMatch[1]) : NaN;
+  const height = heightMatch ? parseFloat(heightMatch[1]) : NaN;
+  if (Number.isFinite(width) && Number.isFinite(height)) {
+    return { x: 0, y: 0, width, height };
+  }
+
+  return null;
+}
+
 function parseViewBox(svg: SVGSVGElement): ParsedViewBox {
   const vb = svg.getAttribute("viewBox");
   if (vb) {
@@ -84,9 +104,17 @@ function getContentBounds(
  * Returns a safe default (100×100 viewBox) if parsing fails.
  */
 export function parseMetrics(svgData: string): VectorAssetMetrics {
+  const stringViewBox = parseViewBoxFromSvgString(svgData);
+  const safeViewBox = stringViewBox ?? { x: 0, y: 0, width: 100, height: 100 };
   const safe: VectorAssetMetrics = {
-    viewBoxX: 0, viewBoxY: 0, viewBoxWidth: 100, viewBoxHeight: 100,
-    visualMinX: 0, visualMinY: 0, visualWidth: 100, visualHeight: 100,
+    viewBoxX: safeViewBox.x,
+    viewBoxY: safeViewBox.y,
+    viewBoxWidth: safeViewBox.width,
+    viewBoxHeight: safeViewBox.height,
+    visualMinX: safeViewBox.x,
+    visualMinY: safeViewBox.y,
+    visualWidth: safeViewBox.width,
+    visualHeight: safeViewBox.height,
   };
 
   if (!svgData || typeof svgData !== "string") return safe;
