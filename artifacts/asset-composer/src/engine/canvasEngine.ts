@@ -108,6 +108,11 @@ interface SlotTransformGestureSnapshot {
   beforeTransform: LocalTransform;
 }
 
+type ActiveSelectionSnapshot =
+  | { kind: "visual"; visualId: string }
+  | { kind: "slot"; slotId: string }
+  | null;
+
 function normalizeAttachmentOverride(override: Partial<AttachmentOverride> | undefined): AttachmentOverride {
   return {
     anchorId: override?.anchorId ?? "",
@@ -261,6 +266,25 @@ export class CanvasEngine {
 
   getMode(): CanvasMode { return this.mode; }
 
+  private _captureActiveSelection(): ActiveSelectionSnapshot {
+    const activeObject = this.canvas.getActiveObject() as (TaggedFabricImage & TaggedRect) | undefined;
+    if (!activeObject) return null;
+    if (activeObject.__visualId) return { kind: "visual", visualId: activeObject.__visualId };
+    if (activeObject.__slotId) return { kind: "slot", slotId: activeObject.__slotId };
+    return null;
+  }
+
+  private _restoreActiveSelection(snapshot: ActiveSelectionSnapshot): void {
+    if (!snapshot) return;
+    if (snapshot.kind === "visual") {
+      const visual = this.fabricImages.get(snapshot.visualId);
+      if (visual) this.canvas.setActiveObject(visual);
+      return;
+    }
+    const zone = this.slotZones.get(snapshot.slotId);
+    if (zone) this.canvas.setActiveObject(zone);
+  }
+
   private _applyModeSelectability(): void {
     const isEditAttachment    = this.mode === "edit-attachment";
     const isEditTemplateSlots = this.mode === "edit-template-slots";
@@ -322,6 +346,8 @@ export class CanvasEngine {
       return;
     }
 
+    const activeSelection = this._captureActiveSelection();
+
     // Store current state for bone-local math
     this.currentScene    = scene;
     this.currentTemplate = template;
@@ -365,6 +391,7 @@ export class CanvasEngine {
 
     // ── 7. Apply current transforms ───────────────────────────────────────────
     this.updateSceneTransforms(scene);
+    this._restoreActiveSelection(activeSelection);
 
     const DEBUG_CANVAS_INVARIANTS = false;
     if (DEBUG_CANVAS_INVARIANTS) {
