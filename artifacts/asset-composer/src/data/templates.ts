@@ -605,6 +605,7 @@ export const TEMPLATES: Template[] = [
     anchors: {
       hand_r_weapon: { id: "hand_r_weapon", boneId: "hand_r", offsetX: 6, offsetY: 0, rotation: 0 },
       hand_l_weapon: { id: "hand_l_weapon", boneId: "hand_l", offsetX: -6, offsetY: 0, rotation: 0 },
+      hair_top: { id: "hair_top", boneId: "head", offsetX: 0, offsetY: -13, rotation: 0 },
       horn_l: { id: "horn_l", boneId: "head", offsetX: -12, offsetY: -14, rotation: -30 },
       horn_r: { id: "horn_r", boneId: "head", offsetX: 12, offsetY: -14, rotation: 30 },
     },

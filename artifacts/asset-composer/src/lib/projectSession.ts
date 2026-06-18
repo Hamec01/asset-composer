@@ -1,5 +1,4 @@
-import { ProjectSchema } from "@/domain/schema";
-import { migrateProject } from "@/lib/projectMigration";
+import { parseProjectSnapshot } from "@/lib/projectValidation";
 
 const LAST_PROJECT_KEY = "asset-composer:last-project:v2";
 const LAST_PROJECT_KEY_LEGACY = "asset-composer:last-project:v1";
@@ -52,15 +51,13 @@ export function getRecentProjectSessions(): ProjectSessionEntry[] {
   const entries: ProjectSessionEntry[] = [];
   for (const entry of loadRecentProjectEntries()) {
     try {
-      const migrated = migrateProject(entry.snapshot);
-      const result = ProjectSchema.safeParse(migrated);
-      if (!result.success) continue;
+      const result = parseProjectSnapshot(entry.snapshot);
       entries.push({
-        id: result.data.id,
-        name: result.data.name,
-        updatedAt: result.data.updatedAt,
+        id: result.id,
+        name: result.name,
+        updatedAt: result.updatedAt,
         folderPath: entry.folderPath,
-        snapshot: result.data,
+        snapshot: result,
       });
     } catch {
       continue;
@@ -104,18 +101,17 @@ export function getLastProjectSnapshotName(): string | null {
 export function saveLastProjectSnapshot(project: unknown, folderPath?: string): boolean {
   if (typeof window === "undefined") return false;
   try {
-    const result = ProjectSchema.safeParse(project);
-    if (!result.success) return false;
-    window.localStorage.setItem(LAST_PROJECT_KEY, JSON.stringify(result.data));
+    const result = parseProjectSnapshot(project);
+    window.localStorage.setItem(LAST_PROJECT_KEY, JSON.stringify(result));
 
-    const existing = loadRecentProjectEntries().find(entry => entry.id === result.data.id);
+    const existing = loadRecentProjectEntries().find(entry => entry.id === result.id);
 
     const nextEntry: ProjectSessionEntry = {
-      id: result.data.id,
-      name: result.data.name,
-      updatedAt: result.data.updatedAt,
+      id: result.id,
+      name: result.name,
+      updatedAt: result.updatedAt,
       folderPath: folderPath ?? existing?.folderPath,
-      snapshot: result.data,
+      snapshot: result,
     };
     const nextEntries = [
       nextEntry,
@@ -137,10 +133,7 @@ export function restoreLastProjectSnapshot(): unknown | null {
   const snapshot = loadLastProjectSnapshot();
   if (!snapshot) return null;
   try {
-    const migrated = migrateProject(snapshot);
-    const result = ProjectSchema.safeParse(migrated);
-    if (!result.success) return null;
-    return result.data;
+    return parseProjectSnapshot(snapshot);
   } catch {
     return null;
   }

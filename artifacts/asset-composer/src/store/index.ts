@@ -20,7 +20,7 @@ import { getPresetById } from "@/data/skinPresets";
 import { PRESET_ANIMATIONS, getClipById } from "@/data/presetAnimations";
 import { PRESET_STATE_MACHINES } from "@/data/presetStateMachines";
 import { animController } from "@/core-v2/AnimationController";
-import { migrateProject } from "@/lib/projectMigration";
+import { parseProjectSnapshot } from "@/lib/projectValidation";
 
 type ActivePanel = "library" | "inspector" | "animation" | "export" | "none";
 type AnimBottomTab = "timeline" | "preview" | "statemachine";
@@ -506,7 +506,7 @@ export const useStore = create<AppStore>()(
 
     loadProject: (raw: unknown) => {
       animController.pause();
-      const migrated = migrateProject(raw);
+      const migrated = parseProjectSnapshot(raw);
       set(state => {
         state.project = migrated as Project;
         state.history.past = [];
