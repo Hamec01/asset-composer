@@ -126,6 +126,8 @@ describe("InspectorPanel", () => {
     setItemPartSelection();
     renderInspector();
 
+    expect(document.body.textContent).toContain("Item Part");
+    expect(document.body.textContent).toContain("Anchor");
     expect(document.body.textContent).toContain("Attachment Transform");
     expect(getInput("inspector-attach-x")).toBeTruthy();
   });
@@ -134,6 +136,8 @@ describe("InspectorPanel", () => {
     setTemplateSlotSelection();
     renderInspector();
 
+    expect(document.body.textContent).toContain("Template Slot");
+    expect(document.body.textContent).toContain("Allowed");
     expect(document.body.textContent).toContain("Slot Transform");
     expect(getInput("inspector-slot-x")).toBeTruthy();
   });
@@ -230,6 +234,30 @@ describe("InspectorPanel", () => {
     const slot = entity.slots.find(s => s.slotId === "slot_hair")!;
     expect(slot.attachmentOverride.scaleX).toBe(-0.3);
     expect(slot.attachmentOverride.scaleY).toBe(0.2);
+  });
+
+  it("Reset All restores attachment position, rotation and scale", () => {
+    const entityId = setItemPartSelection();
+    useStore.getState().setAttachmentOverride(entityId, "slot_hair", {
+      offsetX: 5,
+      offsetY: -2,
+      rotation: 17,
+      scaleX: 0.3,
+      scaleY: 0.2,
+    });
+    renderInspector();
+
+    act(() => {
+      getButton("Reset All").click();
+    });
+
+    const entity = useStore.getState().project.entities.find(e => e.id === entityId)!;
+    const slot = entity.slots.find(s => s.slotId === "slot_hair")!;
+    expect(slot.attachmentOverride.offsetX).toBe(0);
+    expect(slot.attachmentOverride.offsetY).toBe(0);
+    expect(slot.attachmentOverride.rotation).toBe(0);
+    expect(slot.attachmentOverride.scaleX).toBe(1);
+    expect(slot.attachmentOverride.scaleY).toBe(1);
   });
 
   it("Remove from Character clears the slot assignment", () => {

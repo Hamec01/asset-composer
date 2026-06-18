@@ -202,6 +202,9 @@ export function InspectorPanel() {
     : undefined;
   const selectedSlotDef  = template?.slots.find(s => s.id === selectedSlotId);
   const selection = editor.selection;
+  const selectedPart = selection.kind === "item-part" && selectedItem?.parts
+    ? selectedItem.parts.find(part => part.id === selection.partId)
+    : undefined;
   const selectedEntityVisual = selection.kind === "entity-visual"
     ? activeEntity?.visuals?.find(v => v.id === selection.visualId)
     : undefined;
@@ -210,6 +213,14 @@ export function InspectorPanel() {
     : undefined;
   const selectedAnchor = selection.kind === "anchor"
     ? template?.anchors?.[selection.anchorId]
+    : undefined;
+  const selectedItemAnchorId =
+    selectedAssign?.attachmentOverride.anchorId ||
+    (selectedSlotDef && selectedItem ? selectedItem.anchorRules?.[selectedSlotDef.id]?.anchorId : undefined) ||
+    selectedSlotDef?.defaultAnchorId ||
+    "";
+  const selectedItemAnchor = selectedItemAnchorId
+    ? template?.anchors?.[selectedItemAnchorId]
     : undefined;
   const attachmentValues = {
     offsetX: selectedAssign?.attachmentOverride?.offsetX ?? 0,
@@ -572,6 +583,17 @@ export function InspectorPanel() {
               <Separator className="bg-border" />
               <div className="space-y-2">
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Item Part
+                </Label>
+                <div className="space-y-1 text-[10px] text-muted-foreground">
+                  <div className="flex justify-between"><span>Item</span><span className="text-foreground">{selectedItem.name}</span></div>
+                  <div className="flex justify-between"><span>Part</span><span className="text-foreground">{selectedPart?.id ?? selection.partId}</span></div>
+                  <div className="flex justify-between"><span>Slot</span><span className="text-foreground">{selectedSlotDef.name}</span></div>
+                  <div className="flex justify-between"><span>Bone</span><span className="text-foreground">{selectedPart?.boneId ?? selectedSlotDef.boneId}</span></div>
+                  <div className="flex justify-between"><span>Anchor</span><span className="text-foreground">{selectedItemAnchor?.id ?? "none"}</span></div>
+                </div>
+                <Separator className="bg-border" />
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Attachment Transform
                 </Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -635,13 +657,30 @@ export function InspectorPanel() {
                   onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
                     offsetX: 0,
                     offsetY: 0,
+                  })}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                >
+                  Reset Position
+                </button>
+                <button
+                  onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
+                    rotation: 0,
+                  })}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                >
+                  Reset Rotation
+                </button>
+                <button
+                  onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
+                    offsetX: 0,
+                    offsetY: 0,
                     rotation: 0,
                     scaleX: 1,
                     scaleY: 1,
                   })}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
-                  Reset attachment transform
+                  Reset All
                 </button>
                 <button
                   onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
@@ -650,6 +689,14 @@ export function InspectorPanel() {
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
                   Flip X
+                </button>
+                <button
+                  onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
+                    scaleY: -Math.abs(attachmentValues.scaleY || 1),
+                  })}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                >
+                  Flip Y
                 </button>
                 <button
                   onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
@@ -674,6 +721,18 @@ export function InspectorPanel() {
             <>
               <Separator className="bg-border" />
               <div className="space-y-2">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Template Slot
+                </Label>
+                <div className="space-y-1 text-[10px] text-muted-foreground">
+                  <div className="flex justify-between"><span>Template</span><span className="text-foreground">{template.name}</span></div>
+                  <div className="flex justify-between"><span>Slot</span><span className="text-foreground">{selectedSlotDef.name}</span></div>
+                  <div className="flex justify-between"><span>Bone</span><span className="text-foreground">{selectedSlotDef.boneId}</span></div>
+                  <div className="flex justify-between"><span>Anchor</span><span className="text-foreground">{selectedSlotDef.defaultAnchorId ?? "none"}</span></div>
+                  <div className="flex justify-between"><span>Z Index</span><span className="text-foreground">{selectedSlotDef.zIndex}</span></div>
+                  <div className="flex justify-between"><span>Allowed</span><span className="text-foreground">{selectedSlotDef.allowedCategories.join(", ") || "none"}</span></div>
+                </div>
+                <Separator className="bg-border" />
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Slot Transform
                 </Label>
@@ -757,6 +816,11 @@ export function InspectorPanel() {
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Entity Visual
                 </Label>
+                <div className="space-y-1 text-[10px] text-muted-foreground">
+                  <div className="flex justify-between"><span>Bone</span><span className="text-foreground">{selectedEntityVisual.boneId}</span></div>
+                  <div className="flex justify-between"><span>Pivot</span><span className="text-foreground">{`${selectedEntityVisual.pivot.x}, ${selectedEntityVisual.pivot.y}`}</span></div>
+                </div>
+                <Separator className="bg-border" />
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">X</label>
