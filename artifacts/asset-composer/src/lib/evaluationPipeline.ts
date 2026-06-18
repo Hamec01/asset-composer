@@ -214,7 +214,7 @@ function makeSlotDefaultTransformMatrix(slotDef: SlotDef): Matrix2D {
 }
 
 const LEGACY_BODY_COVERAGE_BY_CATEGORY: Partial<Record<ItemCategory, string[]>> = {
-  torso: ["spine", "chest", "shoulder_l", "shoulder_r", "elbow_l", "elbow_r"],
+  torso: ["spine", "chest"],
   arms: ["shoulder_l", "shoulder_r", "elbow_l", "elbow_r"],
   hands: ["hand_l", "hand_r"],
   head_cover: ["head"],

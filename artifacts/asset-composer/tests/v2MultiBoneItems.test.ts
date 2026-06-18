@@ -226,10 +226,10 @@ describe("M8 vertical slice items", () => {
 
     expect(bodyBoneIds.has("spine")).toBe(false);
     expect(bodyBoneIds.has("chest")).toBe(false);
-    expect(bodyBoneIds.has("shoulder_l")).toBe(false);
-    expect(bodyBoneIds.has("shoulder_r")).toBe(false);
-    expect(bodyBoneIds.has("elbow_l")).toBe(false);
-    expect(bodyBoneIds.has("elbow_r")).toBe(false);
+    expect(bodyBoneIds.has("shoulder_l")).toBe(true);
+    expect(bodyBoneIds.has("shoulder_r")).toBe(true);
+    expect(bodyBoneIds.has("elbow_l")).toBe(true);
+    expect(bodyBoneIds.has("elbow_r")).toBe(true);
 
     expect(bodyBoneIds.has("pelvis")).toBe(true);
     expect(bodyBoneIds.has("hand_l")).toBe(true);
