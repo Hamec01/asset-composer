@@ -36,6 +36,10 @@ import {
 } from "@/lib/matrixUtils";
 import { computeSceneBounds, fitSceneToViewport, type CameraState } from "@/lib/sceneUtils";
 import {
+  getTemplateSlotTransformFromWorldCenter,
+  getTemplateSlotWorldCenter,
+} from "@/lib/templateSlotTransforms";
+import {
   evaluateSkeleton, evaluateScene,
   buildMultiClipPose, resolveItemPartBinding,
 } from "@/lib/evaluationPipeline";
@@ -76,6 +80,10 @@ interface TaggedRect extends Rect {
   __defaultTop?:   number;
 }
 
+interface TaggedText extends FabricText {
+  __slotId?: string;
+}
+
 // ── CanvasEngine ──────────────────────────────────────────────────────────────
 
 export class CanvasEngine {
@@ -87,7 +95,7 @@ export class CanvasEngine {
   private svgCache:     Map<string, string>            = new Map();
   private slotZones:    Map<string, TaggedRect>        = new Map();
   private anchorGizmos: Map<string, Circle>            = new Map();
-  private labelTexts:   FabricText[]                   = [];
+  private slotLabels:   Map<string, TaggedText>        = new Map();
 
   // Mode state
   private mode:            CanvasMode     = "select";
@@ -349,7 +357,46 @@ export class CanvasEngine {
     }
 
     // Update anchor gizmo positions
+    this.currentScene = scene;
+
     if (scene.skeleton && this.currentTemplate) {
+      const boneGroups = new Map<string, string[]>();
+      for (const slotDef of this.currentTemplate.slots) {
+        const group = boneGroups.get(slotDef.boneId) ?? [];
+        group.push(slotDef.id);
+        boneGroups.set(slotDef.boneId, group);
+      }
+
+      for (const slotDef of this.currentTemplate.slots) {
+        const zone = this.slotZones.get(slotDef.id);
+        if (!zone) continue;
+
+        const bone = scene.skeleton.bones.get(slotDef.boneId);
+        const center = getTemplateSlotWorldCenter(slotDef, bone);
+        const group = boneGroups.get(slotDef.boneId) ?? [slotDef.id];
+        const spreadIndex = group.indexOf(slotDef.id);
+        const spread = this.mode === "edit-template-slots"
+          ? 0
+          : (spreadIndex - (group.length - 1) / 2) * Math.max(6, this.currentTemplate.previewWidth * 0.09) * 1.3;
+        zone.set({
+          left: center.x + spread,
+          top: center.y,
+        });
+        zone.__defaultLeft = center.x + spread;
+        zone.__defaultTop = center.y;
+        zone.setCoords();
+
+        const label = this.slotLabels.get(slotDef.id);
+        if (label) {
+          const hitH = Math.max(4, this.currentTemplate.previewHeight * 0.06);
+          label.set({
+            left: center.x + spread,
+            top: center.y + hitH / 2 + 2,
+          });
+          label.setCoords();
+        }
+      }
+
       for (const [anchorId, circle] of this.anchorGizmos) {
         const anchor = this.currentTemplate.anchors?.[anchorId];
         if (!anchor) continue;
@@ -371,9 +418,9 @@ export class CanvasEngine {
     highlightedSlotId: string | null,
   ): void {
     for (const zone of this.slotZones.values()) this.canvas.remove(zone);
-    for (const lbl  of this.labelTexts)         this.canvas.remove(lbl);
+    for (const lbl of this.slotLabels.values()) this.canvas.remove(lbl);
     this.slotZones.clear();
-    this.labelTexts = [];
+    this.slotLabels.clear();
 
     const hitW = Math.max(6, template.previewWidth  * 0.09);
     const hitH = Math.max(4, template.previewHeight * 0.06);
@@ -387,23 +434,17 @@ export class CanvasEngine {
 
     for (const slotDef of template.slots) {
       const wb    = skeleton.bones.get(slotDef.boneId);
-      const boneX = wb?.x ?? 0;
-      const boneY = wb?.y ?? 0;
-
-      // Apply defaultTransform offset if present
-      const dt    = slotDef.defaultTransform;
-      const dtX   = dt?.x ?? 0;
-      const dtY   = dt?.y ?? 0;
+      const center = getTemplateSlotWorldCenter(slotDef, wb);
 
       const isHigh = slotDef.id === highlightedSlotId;
 
       const group  = boneGroups.get(slotDef.boneId) ?? [slotDef.id];
       const idx    = group.indexOf(slotDef.id);
-      const spread = hitW * 1.3;
+      const spread = this.mode === "edit-template-slots" ? 0 : hitW * 1.3;
       const ofsX   = (idx - (group.length - 1) / 2) * spread;
 
-      const cx = boneX + dtX + ofsX;
-      const cy = boneY + dtY;
+      const cx = center.x + ofsX;
+      const cy = center.y;
 
       const isEditSlots = this.mode === "edit-template-slots";
       const zone = new Rect({
@@ -446,9 +487,10 @@ export class CanvasEngine {
           fontFamily: "Inter, sans-serif",
           originX: "center",
           selectable: false, evented: false,
-        });
+        }) as TaggedText;
         (lbl as any).__zIndex = slotDef.zIndex - 0.2;
-        this.labelTexts.push(lbl);
+        lbl.__slotId = slotDef.id;
+        this.slotLabels.set(slotDef.id, lbl);
         this.canvas.add(lbl);
       }
     }
@@ -579,16 +621,10 @@ export class CanvasEngine {
 
     // Compute offset from bone center to new zone position
     const boneWb = this.currentScene?.skeleton.bones.get(slotDef.boneId);
-    const boneX  = boneWb?.x ?? 0;
-    const boneY  = boneWb?.y ?? 0;
-
-    const newTransform: LocalTransform = {
-      x:        (zone.left ?? 0) - boneX,
-      y:        (zone.top  ?? 0) - boneY,
-      rotation: 0,
-      scaleX:   1,
-      scaleY:   1,
-    };
+    const newTransform = getTemplateSlotTransformFromWorldCenter(slotDef, boneWb, {
+      x: zone.left ?? 0,
+      y: zone.top ?? 0,
+    });
 
     // Update stored default so next updateSceneTransforms doesn't reset zone
     zone.__defaultLeft = zone.left ?? 0;
@@ -686,12 +722,12 @@ export class CanvasEngine {
     for (const img  of this.fabricImages.values()) this.canvas.remove(img);
     for (const zone of this.slotZones.values())    this.canvas.remove(zone);
     for (const c    of this.anchorGizmos.values())  this.canvas.remove(c);
-    for (const lbl  of this.labelTexts)             this.canvas.remove(lbl);
+    for (const lbl of this.slotLabels.values())     this.canvas.remove(lbl);
     this.fabricImages.clear();
     this.svgCache.clear();
     this.slotZones.clear();
     this.anchorGizmos.clear();
-    this.labelTexts = [];
+    this.slotLabels.clear();
     this.currentScene    = null;
     this.currentTemplate = null;
     this.currentItems    = [];

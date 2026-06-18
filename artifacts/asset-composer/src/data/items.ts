@@ -171,18 +171,248 @@ const bootSVG = (col: string, col2: string) => svg(
   `<rect x="36" y="30" width="16" height="20" rx="2" fill="none" stroke="${C.out}" stroke-width="1.5"/>`,
 );
 
+function v2LeatherBootsItem(): Item {
+  const leftBootSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 20">
+    <path d="M7 4 L15 4 Q17 4 17 6 L17 12 L20 14 L20 17 Q20 18 18.5 18 L6 18 Q4 18 4 16.5 L4 13.5 Q4 12.5 5 12 L7 11 Z" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M6 14.5 Q11 12 17 14.5" fill="none" stroke="${C.hair}" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M8.5 6 L8.5 11" stroke="${C.out}" stroke-width="1"/>
+  </svg>`;
+  const rightBootSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 20">
+    <path d="M17 4 L9 4 Q7 4 7 6 L7 12 L4 14 L4 17 Q4 18 5.5 18 L18 18 Q20 18 20 16.5 L20 13.5 Q20 12.5 19 12 L17 11 Z" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M18 14.5 Q13 12 7 14.5" fill="none" stroke="${C.hair}" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M15.5 6 L15.5 11" stroke="${C.out}" stroke-width="1"/>
+  </svg>`;
+
+  return {
+    id: "boots_leather",
+    name: "Leather Boots",
+    description: "Simple hardened leather boots",
+    category: "feet",
+    compatibility: {
+      skeletonFamilies: HUMAN,
+      species: [],
+      viewProfiles: deriveViewProfiles(HUMAN),
+    },
+    allowedSlots: bootSlots,
+    fitProfile: "standard",
+    paletteChannels: ["secondaryCloth", "outline"],
+    hasOwnAnimation: false,
+    animationClipId: null,
+    anchorRules: {},
+    svgLayers: [{
+      id: "thumb",
+      styleSetId: null,
+      svgData: bootSVG(C.cloth2, C.hair),
+      paletteChannels: ["secondaryCloth", "outline"],
+      zOffset: 0,
+    }],
+    parts: [
+      {
+        id: "boot_l",
+        boneId: "foot_l",
+        svgData: leftBootSvg,
+        metrics: {
+          viewBoxX: 0,
+          viewBoxY: 0,
+          viewBoxWidth: 24,
+          viewBoxHeight: 20,
+          visualMinX: 4,
+          visualMinY: 4,
+          visualWidth: 16,
+          visualHeight: 14,
+        },
+        pivot: { x: 12, y: 5, preset: "custom" },
+        localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+        coordinateMode: "bone_local",
+        zOffset: 0,
+      },
+      {
+        id: "boot_r",
+        boneId: "foot_r",
+        svgData: rightBootSvg,
+        metrics: {
+          viewBoxX: 0,
+          viewBoxY: 0,
+          viewBoxWidth: 24,
+          viewBoxHeight: 20,
+          visualMinX: 4,
+          visualMinY: 4,
+          visualWidth: 16,
+          visualHeight: 14,
+        },
+        pivot: { x: 12, y: 5, preset: "custom" },
+        localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+        coordinateMode: "bone_local",
+        zOffset: 0.05,
+      },
+    ],
+    coordinateMode: "bone_local",
+    licenseMeta: CC0,
+    tags: ["clothing", "boots"],
+  };
+}
+
+const legsSlots = ["slot_legs", "side_slot_legs"];
+
+function v2LeatherPantsItem(): Item {
+  const waistSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 16">
+    <rect x="2" y="3" width="24" height="10" rx="3" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5"/>
+    <path d="M4 8 H24" stroke="${C.out}" stroke-width="1" stroke-dasharray="2 1.5"/>
+  </svg>`;
+  const thighLeftSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 24">
+    <path d="M4 2 H14 Q16 2 16 4 V21 Q16 23 14 23 H7 Q5 23 4 21 Z" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M5 8 H15" stroke="${C.out}" stroke-width="1" opacity="0.6"/>
+  </svg>`;
+  const thighRightSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 24">
+    <path d="M4 2 H14 Q16 2 16 4 V21 Q16 23 14 23 H7 Q5 23 4 21 Z" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M3 8 H13" stroke="${C.out}" stroke-width="1" opacity="0.6"/>
+  </svg>`;
+  const shinLeftSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 24">
+    <path d="M4 1 H12 Q13.5 1 13.5 2.5 V20 Q13.5 22 12 23 H5 Q3.5 22 3.5 20 V2.5 Q3.5 1 4 1 Z" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M4.5 12 H12.5" stroke="${C.out}" stroke-width="1" opacity="0.55"/>
+  </svg>`;
+  const shinRightSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 24">
+    <path d="M4 1 H12 Q13.5 1 13.5 2.5 V20 Q13.5 22 12 23 H5 Q3.5 22 3.5 20 V2.5 Q3.5 1 4 1 Z" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M3.5 12 H11.5" stroke="${C.out}" stroke-width="1" opacity="0.55"/>
+  </svg>`;
+
+  return {
+    id: "pants_leather",
+    name: "Leather Pants",
+    description: "Fitted leather pants",
+    category: "legs",
+    compatibility: {
+      skeletonFamilies: HUMAN,
+      species: [],
+      viewProfiles: deriveViewProfiles(HUMAN),
+    },
+    allowedSlots: legsSlots,
+    fitProfile: "standard",
+    paletteChannels: ["secondaryCloth", "outline"],
+    hasOwnAnimation: false,
+    animationClipId: null,
+    anchorRules: {},
+    svgLayers: [{
+      id: "thumb",
+      styleSetId: null,
+      svgData: svg(`<rect x="14" y="20" width="36" height="10" rx="2" fill="${C.cloth2}"/><rect x="14" y="28" width="16" height="22" rx="2" fill="${C.cloth2}"/><rect x="34" y="28" width="16" height="22" rx="2" fill="${C.cloth2}"/><rect x="14" y="20" width="36" height="32" rx="2" fill="none" stroke="${C.out}" stroke-width="1.5"/>`),
+      paletteChannels: ["secondaryCloth", "outline"],
+      zOffset: 0,
+    }],
+    parts: [
+      {
+        id: "waist",
+        boneId: "pelvis",
+        svgData: waistSvg,
+        metrics: {
+          viewBoxX: 0,
+          viewBoxY: 0,
+          viewBoxWidth: 28,
+          viewBoxHeight: 16,
+          visualMinX: 2,
+          visualMinY: 3,
+          visualWidth: 24,
+          visualHeight: 10,
+        },
+        pivot: { x: 14, y: 8, preset: "custom" },
+        localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+        coordinateMode: "bone_local",
+        zOffset: 0.2,
+      },
+      {
+        id: "thigh_l",
+        boneId: "hip_l",
+        svgData: thighLeftSvg,
+        metrics: {
+          viewBoxX: 0,
+          viewBoxY: 0,
+          viewBoxWidth: 18,
+          viewBoxHeight: 24,
+          visualMinX: 4,
+          visualMinY: 2,
+          visualWidth: 12,
+          visualHeight: 21,
+        },
+        pivot: { x: 9, y: 3, preset: "custom" },
+        localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+        coordinateMode: "bone_local",
+        zOffset: -0.08,
+      },
+      {
+        id: "shin_l",
+        boneId: "knee_l",
+        svgData: shinLeftSvg,
+        metrics: {
+          viewBoxX: 0,
+          viewBoxY: 0,
+          viewBoxWidth: 16,
+          viewBoxHeight: 24,
+          visualMinX: 3.5,
+          visualMinY: 1,
+          visualWidth: 10,
+          visualHeight: 22,
+        },
+        pivot: { x: 8, y: 2, preset: "custom" },
+        localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+        coordinateMode: "bone_local",
+        zOffset: -0.04,
+      },
+      {
+        id: "thigh_r",
+        boneId: "hip_r",
+        svgData: thighRightSvg,
+        metrics: {
+          viewBoxX: 0,
+          viewBoxY: 0,
+          viewBoxWidth: 18,
+          viewBoxHeight: 24,
+          visualMinX: 4,
+          visualMinY: 2,
+          visualWidth: 12,
+          visualHeight: 21,
+        },
+        pivot: { x: 9, y: 3, preset: "custom" },
+        localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+        coordinateMode: "bone_local",
+        zOffset: 0.04,
+      },
+      {
+        id: "shin_r",
+        boneId: "knee_r",
+        svgData: shinRightSvg,
+        metrics: {
+          viewBoxX: 0,
+          viewBoxY: 0,
+          viewBoxWidth: 16,
+          viewBoxHeight: 24,
+          visualMinX: 3.5,
+          visualMinY: 1,
+          visualWidth: 10,
+          visualHeight: 22,
+        },
+        pivot: { x: 8, y: 2, preset: "custom" },
+        localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+        coordinateMode: "bone_local",
+        zOffset: 0.08,
+      },
+    ],
+    coordinateMode: "bone_local",
+    licenseMeta: CC0,
+    tags: ["clothing", "legs"],
+  };
+}
+
 export const ITEMS: Item[] = [
 
   // BOOTS (5)
-  item("boots_leather",   "Leather Boots",   "Simple hardened leather boots",        "feet", bootSlots, HUMAN, ["secondaryCloth","outline"], bootSVG(C.cloth2, C.hair), ["clothing","boots"]),
+  v2LeatherBootsItem(),
   item("boots_chain",     "Chain Boots",     "Boots with chain mail protection",     "feet", bootSlots, HUMAN, ["metal","outline"],          bootSVG(C.metal,  C.hair), ["armor","boots"]),
   item("boots_plate",     "Plate Boots",     "Heavy plated steel boots",             "feet", bootSlots, HUMAN, ["metal","accent"],            bootSVG(C.metal,  C.accent), ["armor","boots"]),
   item("boots_farm",      "Farm Boots",      "Worn muddy farm boots",                "feet", bootSlots, HUMAN, ["primaryCloth","outline"],    bootSVG(C.cloth,  C.cloth2), ["clothing","boots","farm"]),
   item("boots_ranger",    "Ranger Boots",    "Light soft boots for silent movement", "feet", bootSlots, HUMAN, ["secondaryCloth","accent"],   bootSVG(C.cloth2, C.accent), ["clothing","boots","ranger"]),
 
   // PANTS (4) — legs slot
-  item("pants_leather",   "Leather Pants",   "Fitted leather pants",     "legs", ["slot_legs","side_slot_legs"], HUMAN, ["secondaryCloth","outline"],
-    svg(`<rect x="14" y="20" width="36" height="10" rx="2" fill="${C.cloth2}"/><rect x="14" y="28" width="16" height="22" rx="2" fill="${C.cloth2}"/><rect x="34" y="28" width="16" height="22" rx="2" fill="${C.cloth2}"/><rect x="14" y="20" width="36" height="32" rx="2" fill="none" stroke="${C.out}" stroke-width="1.5"/>`), ["clothing","legs"]),
+  v2LeatherPantsItem(),
   item("pants_cloth",     "Cloth Breeches",  "Loose cloth breeches",     "legs", ["slot_legs","side_slot_legs"], HUMAN, ["primaryCloth","outline"],
     svg(`<rect x="14" y="20" width="36" height="10" rx="3" fill="${C.cloth}"/><rect x="14" y="28" width="16" height="22" rx="3" fill="${C.cloth}"/><rect x="34" y="28" width="16" height="22" rx="3" fill="${C.cloth}"/><line x1="32" y1="28" x2="32" y2="50" stroke="${C.out}" stroke-width="1"/>`), ["clothing","legs"]),
   item("pants_chainlegs", "Chain Leggings",  "Protective chain leggings","legs", ["slot_legs","side_slot_legs"], HUMAN, ["metal","outline"],
