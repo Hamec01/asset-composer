@@ -34,6 +34,22 @@ describe("editor shortcuts", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  it("Cmd+Z invokes undo", () => {
+    const undo = vi.fn();
+    const event = makeKeyboardEvent(document.body, { key: "z", metaKey: true });
+
+    const handled = handleEditorShortcutKeydown(event, {
+      undo,
+      redo: vi.fn(),
+      togglePlayback: vi.fn(),
+      removeSelectedAttachment: vi.fn(() => false),
+    });
+
+    expect(handled).toBe(true);
+    expect(undo).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it("Ctrl+X invokes redo outside input", () => {
     const redo = vi.fn();
     const event = makeKeyboardEvent(document.body, { key: "x", ctrlKey: true });
@@ -96,6 +112,40 @@ describe("editor shortcuts", () => {
     expect(handled).toBe(false);
     expect(redo).not.toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("Cmd+X inside input does not invoke redo", () => {
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    const redo = vi.fn();
+    const event = makeKeyboardEvent(input, { key: "x", metaKey: true });
+
+    const handled = handleEditorShortcutKeydown(event, {
+      undo: vi.fn(),
+      redo,
+      togglePlayback: vi.fn(),
+      removeSelectedAttachment: vi.fn(() => false),
+    });
+
+    expect(handled).toBe(false);
+    expect(redo).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("Cmd+Shift+Z invokes redo", () => {
+    const redo = vi.fn();
+    const event = makeKeyboardEvent(document.body, { key: "z", metaKey: true, shiftKey: true });
+
+    const handled = handleEditorShortcutKeydown(event, {
+      undo: vi.fn(),
+      redo,
+      togglePlayback: vi.fn(),
+      removeSelectedAttachment: vi.fn(() => false),
+    });
+
+    expect(handled).toBe(true);
+    expect(redo).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
   });
 
   it("ignores repeated keydown events", () => {

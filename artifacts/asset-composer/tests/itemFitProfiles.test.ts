@@ -42,6 +42,17 @@ function makeEntity(item: Item): Entity {
   };
 }
 
+function withHairAnchorRemoved(baseTemplate = template) {
+  return {
+    ...baseTemplate,
+    slots: baseTemplate.slots.map(slot =>
+      slot.id === "slot_hair"
+        ? { ...slot, defaultAnchorId: undefined }
+        : { ...slot },
+    ),
+  };
+}
+
 describe("item fit profiles", () => {
   it("prefers exact-template fit profiles over family profiles", () => {
     const item = ITEMS.find(candidate => candidate.id === "hair_test_v2")!;
@@ -157,5 +168,81 @@ describe("item fit profiles", () => {
     expect(visual).toBeTruthy();
     expect(zeroVisual).toBeTruthy();
     expect(transformPoint(visual!.worldMatrix, 5, 5)).not.toEqual(transformPoint(zeroVisual!.worldMatrix, 5, 5));
+  });
+
+  it("uses item anchor rules before slot default anchor", () => {
+    const anchoredTemplate = withHairAnchorRemoved();
+    const anchoredItem: Item = {
+      id: "anchored-hair",
+      name: "Anchored Hair",
+      description: "Hair with a specific anchor rule",
+      category: "hair",
+      compatibility: {
+        skeletonFamilies: [anchoredTemplate.skeletonFamily],
+        species: [],
+        viewProfiles: [anchoredTemplate.viewProfile],
+      },
+      allowedSlots: ["slot_hair"],
+      fitProfile: "custom_profile",
+      paletteChannels: ["hair", "outline"],
+      hasOwnAnimation: false,
+      animationClipId: null,
+      anchorRules: {
+        slot_hair: { anchorId: "hair_top", bindMode: "anchor_lock" },
+      },
+      svgLayers: [],
+      parts: [{
+        id: "main",
+        boneId: "spine",
+        svgData: "<svg viewBox='0 0 10 10'></svg>",
+        metrics: {
+          viewBoxX: 0,
+          viewBoxY: 0,
+          viewBoxWidth: 10,
+          viewBoxHeight: 10,
+          visualMinX: 0,
+          visualMinY: 0,
+          visualWidth: 10,
+          visualHeight: 10,
+        },
+        pivot: { x: 5, y: 5, preset: "center" },
+        localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+        coordinateMode: "bone_local",
+        zOffset: 0,
+      }],
+      coordinateMode: "bone_local",
+      licenseMeta: {
+        source: "test",
+        author: "test",
+        licenseType: "cc0",
+        aiGenerated: false,
+        commercialUseAllowed: true,
+        purchaseRef: null,
+        derivativePolicy: "unrestricted",
+      },
+      tags: [],
+    };
+    const noAnchorItem: Item = {
+      ...anchoredItem,
+      id: "no-anchor-hair",
+      anchorRules: {},
+    };
+
+    const anchoredEntity = makeEntity(anchoredItem);
+    const noAnchorEntity = makeEntity(noAnchorItem);
+    const pose = new Map([
+      ["spine", { tx: 18, ty: 0, rotation: 0, scaleX: 1, scaleY: 1 }],
+      ["head", { tx: -12, ty: 0, rotation: 0, scaleX: 1, scaleY: 1 }],
+    ]);
+    const skeleton = evaluateSkeleton(anchoredTemplate.bones, pose);
+    const anchoredScene = evaluateScene(anchoredEntity, anchoredTemplate, skeleton, [anchoredItem, noAnchorItem]);
+    const noAnchorScene = evaluateScene(noAnchorEntity, anchoredTemplate, skeleton, [anchoredItem, noAnchorItem]);
+
+    const anchoredVisual = anchoredScene.visuals.find(v => v.itemId === anchoredItem.id && v.partId === "main");
+    const noAnchorVisual = noAnchorScene.visuals.find(v => v.itemId === noAnchorItem.id && v.partId === "main");
+
+    expect(anchoredVisual).toBeTruthy();
+    expect(noAnchorVisual).toBeTruthy();
+    expect(anchoredVisual!.worldMatrix).not.toEqual(noAnchorVisual!.worldMatrix);
   });
 });

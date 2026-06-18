@@ -27,10 +27,9 @@ export function handleEditorShortcutKeydown(
   if (event.repeat) return false;
 
   const key = event.key.toLowerCase();
-  const hasPrimaryModifier = event.ctrlKey || event.metaKey;
   const typingTarget = isTypingTarget(event.target);
 
-  if (hasPrimaryModifier && !event.altKey) {
+  if (event.ctrlKey && !event.metaKey && !event.altKey) {
     if (!typingTarget && key === "z" && !event.shiftKey) {
       event.preventDefault();
       event.stopPropagation();
@@ -38,6 +37,22 @@ export function handleEditorShortcutKeydown(
       return true;
     }
     if (!typingTarget && (key === "x" || key === "y" || (key === "z" && event.shiftKey))) {
+      event.preventDefault();
+      event.stopPropagation();
+      actions.redo();
+      return true;
+    }
+    return false;
+  }
+
+  if (event.metaKey && !event.ctrlKey && !event.altKey) {
+    if (key === "z" && !event.shiftKey && !typingTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      actions.undo();
+      return true;
+    }
+    if (key === "z" && event.shiftKey && !typingTarget) {
       event.preventDefault();
       event.stopPropagation();
       actions.redo();
