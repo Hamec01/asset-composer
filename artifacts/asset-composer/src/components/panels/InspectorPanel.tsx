@@ -96,6 +96,14 @@ function TransactionalNumberInput({
     onCancel();
   }
 
+  useEffect(() => {
+    return () => {
+      if (editingRef.current) {
+        commitDraft();
+      }
+    };
+  }, []);
+
   return (
     <Input
       data-testid={testId}
@@ -110,6 +118,7 @@ function TransactionalNumberInput({
         onBeginEdit?.();
       }}
       onChange={e => {
+        editingRef.current = true;
         const nextText = e.target.value;
         setDraft(nextText);
         draftRef.current = nextText;

@@ -218,10 +218,13 @@ export type EditorSelection =
   | { kind: "entity-visual";  entityId: string; visualId: string };
 
 export interface ItemFitProfile {
+  id: string;
+  fitProfile: string;
   templateId:     string;
-  family:         string;
+  family?:        string;
   slotId:         string;
   partTransforms: Record<string, LocalTransform>;
+  anchorOverrides?: Record<string, string>;
 }
 
 // ── Existing domain types (unchanged below) ───────────────────────────────────

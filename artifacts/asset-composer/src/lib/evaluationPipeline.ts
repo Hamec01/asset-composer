@@ -23,6 +23,7 @@ import { resolveClipPose, blendPoses } from "./animationRuntime";
 import type { BoneTransformMap } from "./animationRuntime";
 import { applyPaletteToSvg } from "./svgUtils";
 import { refreshCanonicalBuiltInTypedItems } from "./canonicalItems";
+import { resolveItemFitPartTransform } from "./itemFitProfiles";
 import {
   identity, multiply, translation, worldBoneToMatrix,
   localTransformToMatrix, transformAABB,
@@ -445,7 +446,17 @@ export function evaluateScene(
         } else {
           const piv    = part.pivot;
           const lt     = part.localTransform;
-          const partLocalM = localTransformToMatrix(lt.x, lt.y, lt.rotation, lt.scaleX, lt.scaleY, piv.x, piv.y);
+          const fitTransform = resolveItemFitPartTransform(item, template, slotDef, part.id);
+          const resolvedPartTransform = fitTransform ?? lt;
+          const resolvedPartLocalM = localTransformToMatrix(
+            resolvedPartTransform.x,
+            resolvedPartTransform.y,
+            resolvedPartTransform.rotation,
+            resolvedPartTransform.scaleX,
+            resolvedPartTransform.scaleY,
+            piv.x,
+            piv.y,
+          );
           const binding = resolveItemPartBinding(entity, template, skeleton, item, slotAssign, slotDef, part);
           const worldM = multiply(
             binding.parentMatrix,
@@ -453,7 +464,7 @@ export function evaluateScene(
               binding.anchorMatrix,
               multiply(
                 binding.defaultTransformMatrix,
-                multiply(binding.attachmentOverrideMatrix, partLocalM),
+                multiply(binding.attachmentOverrideMatrix, resolvedPartLocalM),
               ),
             ),
           );
