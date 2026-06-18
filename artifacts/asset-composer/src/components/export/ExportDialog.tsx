@@ -6,15 +6,16 @@ import { Button }   from "@/components/ui/button";
 import { useStore } from "@/store";
 import { resolveTemplate } from "@/data/templates";
 import { renderFrameToCanvas } from "@/lib/frameRenderer";
-import { renderSvgToBlob, applyPaletteToSvg } from "@/lib/svgUtils";
+import { renderSvgToBlob } from "@/lib/svgUtils";
 import { DEFAULT_EXPORT_PROFILES } from "@/data/exportProfiles";
 import { formatFrameName } from "@/lib/exportTypes";
 import { triggerDownload } from "@/lib/download";
 import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
-import type { ExportProfile, Item, Template, Entity, PaletteTokens, AnimationClip } from "@/domain/types";
+import type { ExportProfile, Item, Template, Entity, AnimationClip } from "@/domain/types";
 import type { ExportWorkerJob, WorkerOutputMessage } from "@/lib/exportTypes";
 import ExportWorker from "@/workers/export.worker?worker";
 import { evaluateRestSkeleton, evaluateScene } from "@/lib/evaluationPipeline";
+import { buildSvgPartExportFiles } from "@/lib/svgPartExport";
 import {
   Download, Package, FileImage, Code, FileJson,
   ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Loader2,
@@ -89,48 +90,6 @@ async function prerasterizeAll(
   }
 
   return cache;
-}
-
-async function buildSvgPartFiles(
-  entities:     Entity[],
-  items:        Item[],
-  profile:      ExportProfile,
-  findTemplate: (id: string) => Template | undefined,
-): Promise<Record<string, Uint8Array>> {
-  const files: Record<string, Uint8Array> = {};
-  if (!profile.formats.includes("svg_parts")) return files;
-
-  const enc      = new TextEncoder();
-  const itemsMap = new Map(items.map(i => [i.id, i]));
-
-  for (const entity of entities) {
-    const template = findTemplate(entity.templateId);
-    if (!template) continue;
-    const entitySlug = entity.name.toLowerCase().replace(/[^a-z0-9]/g, "_");
-
-    for (const layer of template.baseBodyLayers) {
-      const svgData = applyPaletteToSvg(layer.svgData, template.paletteTokens, entity.palette);
-      files[`${entitySlug}/svg/${entitySlug}_base_${layer.zOffset ?? 0}.svg`] = enc.encode(svgData);
-    }
-
-    for (const slotAssign of entity.slots) {
-      if (!slotAssign.itemId) continue;
-      const item    = itemsMap.get(slotAssign.itemId);
-      if (!item?.svgLayers[0]) continue;
-      const slotDef = template.slots.find(s => s.id === slotAssign.slotId);
-      if (!slotDef)  continue;
-      const effectivePalette: PaletteTokens = slotAssign.paletteOverride
-        ? { ...entity.palette, ...slotAssign.paletteOverride } as PaletteTokens
-        : entity.palette;
-      const svgData  = applyPaletteToSvg(item.svgLayers[0].svgData, template.paletteTokens, effectivePalette);
-      const slotName = formatFrameName(profile.namingTemplate, {
-        entity: entity.name, animation: "slot", frame: 0, slot: slotDef.id,
-      });
-      files[`${entitySlug}/svg/${slotName}.svg`] = enc.encode(svgData);
-    }
-  }
-
-  return files;
 }
 
 function previewNamingTemplate(tmpl: string, entityName: string): string {
@@ -350,7 +309,13 @@ export function ExportDialog() {
         setProgress({ pct: 0.05, msg });
       });
 
-      const svgPartFiles = await buildSvgPartFiles(entities, effectiveItems, profile, findTemplate);
+      const svgPartFiles = await buildSvgPartExportFiles(
+        entities,
+        effectiveItems,
+        project.itemFitProfiles,
+        profile,
+        findTemplate,
+      );
 
       const job: ExportWorkerJob & { svgPartFiles?: Record<string, Uint8Array> } = {
         entities,
