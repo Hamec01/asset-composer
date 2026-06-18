@@ -17,11 +17,12 @@
 
 import type {
   Bone, Entity, Item, Template, PaletteTokens, SkeletonFamilyId,
-  AnimationClip, EvaluatedVisual, Matrix2D, AABB, ItemPart, SlotDef, SlotAssignment, ItemFitProfile,
+  AnimationClip, EvaluatedVisual, Matrix2D, AABB, ItemPart, SlotDef, SlotAssignment, ItemFitProfile, ItemCategory,
 } from "@/domain/types";
 import { resolveClipPose, blendPoses } from "./animationRuntime";
 import type { BoneTransformMap } from "./animationRuntime";
 import { applyPaletteToSvg } from "./svgUtils";
+import { parseMetrics } from "./svgMetrics";
 import { refreshCanonicalBuiltInTypedItems } from "./canonicalItems";
 import { resolveItemFitAnchorOverride, resolveItemFitPartTransform } from "./itemFitProfiles";
 import {
@@ -212,18 +213,41 @@ function makeSlotDefaultTransformMatrix(slotDef: SlotDef): Matrix2D {
     : identity();
 }
 
-function getCoveredBodyBoneIds(entity: Entity, items: Item[]): Set<string> {
+const LEGACY_BODY_COVERAGE_BY_CATEGORY: Partial<Record<ItemCategory, string[]>> = {
+  torso: ["spine", "chest", "shoulder_l", "shoulder_r", "elbow_l", "elbow_r"],
+  arms: ["shoulder_l", "shoulder_r", "elbow_l", "elbow_r"],
+  hands: ["hand_l", "hand_r"],
+  head_cover: ["head"],
+};
+
+function getCoveredBodyBoneIds(entity: Entity, template: Template, items: Item[]): Set<string> {
   const covered = new Set<string>();
   for (const slotAssign of entity.slots) {
     if (!slotAssign.itemId) continue;
     const item = items.find(i => i.id === slotAssign.itemId);
     if (!item) continue;
-    if (item.category !== "legs" && item.category !== "feet") continue;
+    const slotDef = template.slots.find(slot => slot.id === slotAssign.slotId);
 
     for (const part of item.parts ?? []) {
       if (part.coordinateMode === "bone_local") {
         covered.add(part.boneId);
       }
+    }
+
+    if ((item.parts?.length ?? 0) > 0) continue;
+    if (item.coordinateMode === "bone_local") continue;
+
+    const legacyCoverage = LEGACY_BODY_COVERAGE_BY_CATEGORY[item.category];
+    if (!legacyCoverage?.length) continue;
+
+    for (const boneId of legacyCoverage) {
+      if (template.bones.some(bone => bone.id === boneId)) {
+        covered.add(boneId);
+      }
+    }
+
+    if (slotDef?.boneId && template.bones.some(bone => bone.id === slotDef.boneId)) {
+      covered.add(slotDef.boneId);
     }
   }
   return covered;
@@ -314,7 +338,7 @@ export function evaluateScene(
   fitProfiles: ItemFitProfile[] = [],
 ): EvaluatedScene {
   const effectiveItems = refreshCanonicalBuiltInTypedItems(items);
-  const coveredBodyBoneIds = getCoveredBodyBoneIds(entity, effectiveItems);
+  const coveredBodyBoneIds = getCoveredBodyBoneIds(entity, template, effectiveItems);
   const visuals: EvaluatedVisual[] = [];
   const layers:  SceneLayer[]      = [];
 
@@ -436,11 +460,14 @@ export function evaluateScene(
         const vid     = `slot__${slotAssign.slotId}__${item.id}__${part.id}`;
 
         if (part.coordinateMode === "legacy_full_frame") {
+          const metrics = parseMetrics(svgData);
+          const frameWidth = metrics.viewBoxWidth;
+          const frameHeight = metrics.viewBoxHeight;
           const worldM = multiply(
             makeSlotDefaultTransformMatrix(slotDef),
             makeAttachmentOverrideMatrix(slotAssign.attachmentOverride),
           );
-          const localBounds = makeLocalBounds(fw, fh);
+          const localBounds = makeLocalBounds(frameWidth, frameHeight);
           const worldBounds = transformAABB(worldM, localBounds);
           visuals.push({
             id: vid,
@@ -455,7 +482,7 @@ export function evaluateScene(
             partId: part.id,
             svgFitMode: "legacy_full_frame",
           });
-          layers.push({ id: vid, svgData, zIndex, opacity: 1, boneId: null, localX: 0, localY: 0, rotation: 0, scaleX: 1, scaleY: 1, naturalWidth: fw, naturalHeight: fh });
+          layers.push({ id: vid, svgData, zIndex, opacity: 1, boneId: null, localX: 0, localY: 0, rotation: 0, scaleX: 1, scaleY: 1, naturalWidth: frameWidth, naturalHeight: frameHeight });
         } else {
           const piv    = part.pivot;
           const lt     = part.localTransform;
@@ -506,11 +533,14 @@ export function evaluateScene(
       for (const svgLayer of item.svgLayers) {
         const svgData = applyPaletteToSvg(svgLayer.svgData, template.paletteTokens, effectivePalette);
         const zIndex  = slotDef.zIndex + svgLayer.zOffset;
+        const metrics = parseMetrics(svgData);
+        const frameWidth = metrics.viewBoxWidth;
+        const frameHeight = metrics.viewBoxHeight;
         const worldM = multiply(
           makeSlotDefaultTransformMatrix(slotDef),
           makeAttachmentOverrideMatrix(slotAssign.attachmentOverride),
         );
-        const localBounds = makeLocalBounds(fw, fh);
+        const localBounds = makeLocalBounds(frameWidth, frameHeight);
         const worldBounds = transformAABB(worldM, localBounds);
         const id = `slot__${slotAssign.slotId}__${item.id}__${svgLayer.id}`;
         visuals.push({
@@ -526,7 +556,7 @@ export function evaluateScene(
           partId: svgLayer.id,
           svgFitMode: "legacy_full_frame",
         });
-        layers.push({ id, svgData, zIndex, opacity: 1, boneId: null, localX: 0, localY: 0, rotation: 0, scaleX: 1, scaleY: 1, naturalWidth: fw, naturalHeight: fh });
+        layers.push({ id, svgData, zIndex, opacity: 1, boneId: null, localX: 0, localY: 0, rotation: 0, scaleX: 1, scaleY: 1, naturalWidth: frameWidth, naturalHeight: frameHeight });
       }
     }
   }

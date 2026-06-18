@@ -11,6 +11,7 @@ const template = TEMPLATES.find(t => t.id === "humanoid_topdown_v1")!;
 const boots = ITEMS.find(i => i.id === "boots_leather")!;
 const pants = ITEMS.find(i => i.id === "pants_leather")!;
 const greaves = ITEMS.find(i => i.id === "greave_leather")!;
+const tunic = ITEMS.find(i => i.id === "tunic_linen")!;
 
 const palette = template.paletteTokens;
 const license = {
@@ -215,6 +216,27 @@ describe("M8 vertical slice items", () => {
     expect(ids.has("part__hip_r")).toBe(true);
     expect(ids.has("part__knee_l")).toBe(true);
     expect(ids.has("part__knee_r")).toBe(true);
+  });
+
+  it("hides torso body parts for legacy torso overlays", () => {
+    const scene = sceneFor(tunic, "slot_torso", template);
+    const bodyVisuals = scene.visuals.filter(v => v.sourceKind === "bone-part");
+    const bodyBoneIds = new Set(bodyVisuals.map(v => v.boneId));
+    const tunicVisual = scene.visuals.find(v => v.itemId === tunic.id);
+
+    expect(bodyBoneIds.has("spine")).toBe(false);
+    expect(bodyBoneIds.has("chest")).toBe(false);
+    expect(bodyBoneIds.has("shoulder_l")).toBe(false);
+    expect(bodyBoneIds.has("shoulder_r")).toBe(false);
+    expect(bodyBoneIds.has("elbow_l")).toBe(false);
+    expect(bodyBoneIds.has("elbow_r")).toBe(false);
+
+    expect(bodyBoneIds.has("pelvis")).toBe(true);
+    expect(bodyBoneIds.has("hand_l")).toBe(true);
+    expect(bodyBoneIds.has("hand_r")).toBe(true);
+    expect(tunicVisual).toBeDefined();
+    expect((tunicVisual!.localBounds.maxX - tunicVisual!.localBounds.minX)).toBe(64);
+    expect((tunicVisual!.localBounds.maxY - tunicVisual!.localBounds.minY)).toBe(64);
   });
 
   it("does not emit legacy svgLayers when V2 parts are present", () => {
