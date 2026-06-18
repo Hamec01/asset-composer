@@ -457,6 +457,12 @@ export function InspectorPanel() {
                 >
                   Reset attachment transform
                 </button>
+                <button
+                  onClick={() => setEntitySlot(activeEntity.id, selectedSlotDef.id, null)}
+                  className="text-[10px] text-destructive/70 hover:text-destructive transition-colors flex items-center gap-1"
+                >
+                  <span>Remove from character</span>
+                </button>
               </div>
             </>
           )}

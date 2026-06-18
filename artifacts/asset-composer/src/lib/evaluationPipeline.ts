@@ -22,6 +22,7 @@ import type {
 import { resolveClipPose, blendPoses } from "./animationRuntime";
 import type { BoneTransformMap } from "./animationRuntime";
 import { applyPaletteToSvg } from "./svgUtils";
+import { refreshCanonicalBuiltInTypedItems } from "./canonicalItems";
 import {
   identity, multiply, translation, worldBoneToMatrix,
   localTransformToMatrix, transformAABB,
@@ -210,6 +211,23 @@ function makeSlotDefaultTransformMatrix(slotDef: SlotDef): Matrix2D {
     : identity();
 }
 
+function getCoveredBodyPartIds(entity: Entity, items: Item[]): Set<string> {
+  const covered = new Set<string>();
+  for (const slotAssign of entity.slots) {
+    if (!slotAssign.itemId) continue;
+    const item = items.find(i => i.id === slotAssign.itemId);
+    if (!item) continue;
+    if (item.category !== "legs" && item.category !== "feet") continue;
+
+    for (const part of item.parts ?? []) {
+      if (part.coordinateMode === "bone_local") {
+        covered.add(part.boneId);
+      }
+    }
+  }
+  return covered;
+}
+
 function resolveAnchorId(
   slotAssign: SlotAssignment,
   slotDef: SlotDef,
@@ -271,6 +289,8 @@ export function evaluateScene(
   skeleton: EvaluatedSkeleton,
   items:    Item[],
 ): EvaluatedScene {
+  const effectiveItems = refreshCanonicalBuiltInTypedItems(items);
+  const coveredBodyPartIds = getCoveredBodyPartIds(entity, effectiveItems);
   const visuals: EvaluatedVisual[] = [];
   const layers:  SceneLayer[]      = [];
 
@@ -306,6 +326,7 @@ export function evaluateScene(
   if (template.boneParts && template.boneParts.length > 0) {
     // Stage 3: per-bone SVG parts
     for (const part of template.boneParts) {
+      if (coveredBodyPartIds.has(part.id)) continue;
       const svgData = applyPaletteToSvg(part.svgData, template.paletteTokens, entity.palette);
 
       const wb = skeleton.bones.get(part.boneId);
@@ -348,7 +369,7 @@ export function evaluateScene(
   // ── 3. Slot item layers ────────────────────────────────────────────────────
   for (const slotAssign of entity.slots) {
     if (!slotAssign.itemId) continue;
-    const item    = items.find(i => i.id === slotAssign.itemId);
+    const item    = effectiveItems.find(i => i.id === slotAssign.itemId);
     const slotDef = template.slots.find(s => s.id === slotAssign.slotId);
     if (!item || !slotDef) continue;
 

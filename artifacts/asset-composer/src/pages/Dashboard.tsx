@@ -1,6 +1,8 @@
 import { useRef } from "react";
 import { useStore } from "@/store";
 import { ProjectSchema } from "@/domain/schema";
+import { migrateProject } from "@/lib/projectMigration";
+import { getLastProjectSnapshotName, restoreLastProjectSnapshot } from "@/lib/projectSession";
 import { Layers, FolderOpen, Plus, Sparkles, Swords, TreePine, Box } from "lucide-react";
 
 export function Dashboard() {
@@ -8,6 +10,7 @@ export function Dashboard() {
   const openWizard = useStore(s => s.openWizard);
   const loadProject = useStore(s => s.loadProject);
   const fileRef = useRef<HTMLInputElement>(null);
+  const lastProjectName = getLastProjectSnapshotName();
 
   function handleNew() {
     newProject();
@@ -18,13 +21,23 @@ export function Dashboard() {
     fileRef.current?.click();
   }
 
+  function handleContinueLastSession() {
+    const restored = restoreLastProjectSnapshot();
+    if (!restored) {
+      alert("No saved session was found.");
+      return;
+    }
+    loadProject(restored);
+  }
+
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
-      const result = ProjectSchema.safeParse(parsed);
+      const migrated = migrateProject(parsed);
+      const result = ProjectSchema.safeParse(migrated);
       if (!result.success) {
         const msgs = result.error.issues
           .slice(0, 5)
@@ -65,6 +78,22 @@ export function Dashboard() {
 
       {/* Main actions */}
       <div className="flex gap-4 mb-16">
+        {lastProjectName && (
+          <button
+            data-testid="dashboard-continue-last"
+            onClick={handleContinueLastSession}
+            className="flex flex-col items-center gap-3 px-10 py-8 rounded-xl border-2 border-emerald-500/35 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-400 transition-all cursor-pointer group"
+          >
+            <div className="w-12 h-12 rounded-lg bg-emerald-500/15 flex items-center justify-center group-hover:bg-emerald-500/25 transition-colors">
+              <Layers className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div className="text-center max-w-[160px]">
+              <div className="text-sm font-semibold text-foreground">Continue Last Session</div>
+              <div className="text-xs text-muted-foreground mt-0.5 truncate">{lastProjectName}</div>
+            </div>
+          </button>
+        )}
+
         <button
           data-testid="dashboard-new"
           onClick={handleNew}

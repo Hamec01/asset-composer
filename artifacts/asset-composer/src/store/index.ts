@@ -80,6 +80,14 @@ interface AppStore {
   addEntityVisual:        (entityId: string, visual: EntityVisual) => void;
   removeEntityVisual:     (entityId: string, visualId: string) => void;
   setAttachmentOverride:  (entityId: string, slotId: string, override: Partial<AttachmentOverride>) => void;
+  previewAttachmentOverride: (entityId: string, slotId: string, override: Partial<AttachmentOverride>) => void;
+  commitAttachmentOverride: (
+    entityId: string,
+    slotId: string,
+    beforeOverride: AttachmentOverride,
+    afterOverride: AttachmentOverride,
+    label?: string,
+  ) => void;
 
   setAppState:    (state: "dashboard" | "ide") => void;
   setSelectedSlot:(slotId: string | null) => void;
@@ -93,6 +101,14 @@ interface AppStore {
   setCanvasMode:          (mode: CanvasMode) => void;
   setEditorSelection:     (sel: EditorSelection) => void;
   updateTemplateSlotTransform: (templateId: string, slotId: string, transform: LocalTransform) => void;
+  previewTemplateSlotTransform: (templateId: string, slotId: string, transform: LocalTransform) => void;
+  commitTemplateSlotTransform: (
+    templateId: string,
+    slotId: string,
+    before: LocalTransform,
+    after: LocalTransform,
+    label?: string,
+  ) => void;
 
   undo:        () => void;
   redo:        () => void;
@@ -141,6 +157,20 @@ function sameAttachmentOverride(
   );
 }
 
+function normalizeAttachmentOverride(
+  override: Partial<AttachmentOverride> | undefined,
+): AttachmentOverride {
+  return {
+    anchorId: override?.anchorId ?? "",
+    bindMode: override?.bindMode ?? "",
+    offsetX: override?.offsetX ?? 0,
+    offsetY: override?.offsetY ?? 0,
+    rotation: override?.rotation ?? 0,
+    scaleX: override?.scaleX ?? 1,
+    scaleY: override?.scaleY ?? 1,
+  };
+}
+
 function sameLocalTransform(a?: LocalTransform, b?: LocalTransform) {
   if (!a || !b) return false;
   return (
@@ -150,6 +180,16 @@ function sameLocalTransform(a?: LocalTransform, b?: LocalTransform) {
     a.scaleX === b.scaleX &&
     a.scaleY === b.scaleY
   );
+}
+
+function normalizeLocalTransform(transform: LocalTransform | undefined): LocalTransform {
+  return {
+    x: transform?.x ?? 0,
+    y: transform?.y ?? 0,
+    rotation: transform?.rotation ?? 0,
+    scaleX: transform?.scaleX ?? 1,
+    scaleY: transform?.scaleY ?? 1,
+  };
 }
 
 function makeDefaultProject(): Project {
@@ -495,6 +535,38 @@ export const useStore = create<AppStore>()(
       );
       get().pushCommand(makeSetAttachmentOverrideCommand(entityId, before, after));
     },
+    previewAttachmentOverride: (entityId, slotId, override) => {
+      set(state => {
+        const entity = state.project.entities.find(e => e.id === entityId);
+        if (!entity) return;
+        const slot = entity.slots.find(s => s.slotId === slotId);
+        if (!slot) return;
+        slot.attachmentOverride = { ...slot.attachmentOverride, ...override };
+      });
+    },
+    commitAttachmentOverride: (entityId, slotId, beforeOverride, afterOverride, label = "Adjust attachment") => {
+      const entity = get().project.entities.find(e => e.id === entityId);
+      if (!entity) return;
+      const slot = entity.slots.find(s => s.slotId === slotId);
+      if (!slot) return;
+
+      const normalizedBefore = normalizeAttachmentOverride(beforeOverride);
+      const normalizedAfter = normalizeAttachmentOverride(afterOverride);
+      if (sameAttachmentOverride(normalizedBefore, normalizedAfter)) return;
+
+      const before: SlotAssignment[] = entity.slots.map(s =>
+        s.slotId === slotId
+          ? { ...s, attachmentOverride: { ...normalizedBefore } }
+          : { ...s }
+      );
+      const after: SlotAssignment[] = entity.slots.map(s =>
+        s.slotId === slotId
+          ? { ...s, attachmentOverride: { ...normalizedAfter } }
+          : { ...s }
+      );
+
+      get().pushCommand(makeSetAttachmentOverrideCommand(entityId, before, after, label));
+    },
 
     // ── Editor Actions ───────────────────────────────────────────────────────
     setAppState:         (appState)  => set(state => { state.editor.appState = appState; }),
@@ -529,8 +601,31 @@ export const useStore = create<AppStore>()(
       if (!tmpl) return;
       const slot = tmpl.slots.find(s => s.id === slotId);
       if (!slot) return;
-      if (sameLocalTransform(slot.defaultTransform, transform)) return;
+      const beforeTransform = normalizeLocalTransform(slot.defaultTransform);
+      if (sameLocalTransform(beforeTransform, transform)) return;
       const cmd = makeSetTemplateSlotTransformCommand(templateId, slotId, slot.defaultTransform, transform);
+      state.project.templates = applyTemplateCommand(state.project.templates as Template[], cmd, "do");
+      state.history.past.push(cmd);
+      if (state.history.past.length > state.history.maxDepth) state.history.past.shift();
+      state.history.future = [];
+      state.project.updatedAt = Date.now();
+    }),
+    previewTemplateSlotTransform: (templateId, slotId, transform) => set(state => {
+      const tmpl = state.project.templates.find(t => t.id === templateId);
+      if (!tmpl) return;
+      const slot = tmpl.slots.find(s => s.id === slotId);
+      if (!slot) return;
+      slot.defaultTransform = { ...transform };
+    }),
+    commitTemplateSlotTransform: (templateId, slotId, before, after, label = "Move slot") => set(state => {
+      const tmpl = state.project.templates.find(t => t.id === templateId);
+      if (!tmpl) return;
+      const slot = tmpl.slots.find(s => s.id === slotId);
+      if (!slot) return;
+      const normalizedBefore = normalizeLocalTransform(before);
+      const normalizedAfter = normalizeLocalTransform(after);
+      if (sameLocalTransform(normalizedBefore, normalizedAfter)) return;
+      const cmd = makeSetTemplateSlotTransformCommand(templateId, slotId, normalizedBefore, normalizedAfter, label);
       state.project.templates = applyTemplateCommand(state.project.templates as Template[], cmd, "do");
       state.history.past.push(cmd);
       if (state.history.past.length > state.history.maxDepth) state.history.past.shift();
@@ -636,8 +731,20 @@ export const useStore = create<AppStore>()(
       });
     },
 
-    setUpperClip:    (clipId) => set(state => { state.animPlayback.upperClipId = clipId; }),
-    setLowerClip:    (clipId) => set(state => { state.animPlayback.lowerClipId = clipId; }),
+    setUpperClip:    (clipId) => {
+      if (clipId && !get().animPlayback.activeClipId) {
+        get().setPlaybackClip(clipId);
+        return;
+      }
+      set(state => { state.animPlayback.upperClipId = clipId; });
+    },
+    setLowerClip:    (clipId) => {
+      if (clipId && !get().animPlayback.activeClipId) {
+        get().setPlaybackClip(clipId);
+        return;
+      }
+      set(state => { state.animPlayback.lowerClipId = clipId; });
+    },
     setBlendWeight:  (w)      => set(state => { state.animPlayback.upperBlendWeight = Math.max(0, Math.min(1, w)); }),
     setAnimBottomTab:(tab)    => set(state => { state.animPlayback.activeTab = tab; }),
     setTimelineZoom: (px)     => set(state => { state.animPlayback.zoomPx = Math.max(40, Math.min(600, px)); }),
@@ -667,24 +774,6 @@ if (typeof window !== "undefined") {
   if (import.meta.env.DEV) {
     (window as typeof window & { __assetComposerStore?: typeof useStore }).__assetComposerStore = useStore;
   }
-
-  window.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-      e.preventDefault(); useStore.getState().undo();
-    }
-    if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
-      e.preventDefault(); useStore.getState().redo();
-    }
-    if (
-      e.key === " " &&
-      (e.target as HTMLElement).tagName !== "INPUT" &&
-      (e.target as HTMLElement).tagName !== "TEXTAREA"
-    ) {
-      e.preventDefault();
-      const { playing } = useStore.getState().animPlayback;
-      useStore.getState().setPlaybackPlaying(!playing);
-    }
-  });
 
   animController.addSyncListener((timeMs) => {
     useStore.setState(state => {

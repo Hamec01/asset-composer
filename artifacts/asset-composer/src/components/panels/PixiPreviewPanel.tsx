@@ -8,6 +8,7 @@ import {
   evaluateSkeleton,
   evaluateScene,
 } from "@/lib/evaluationPipeline";
+import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
 import { animController } from "@/core-v2/AnimationController";
 import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -196,7 +197,8 @@ export function PixiPreviewPanel() {
           const {
             activeClipId, upperClipId, lowerClipId, upperBlendWeight,
           } = store.animPlayback;
-          const { entities, animationClips, items, activeEntityId: eId } = store.project;
+          const { entities, animationClips, activeEntityId: eId } = store.project;
+          const items = refreshCanonicalBuiltInTypedItems(store.project.items);
 
           // Time is authoritative from animController — no local clock needed.
           const renderTime = animController.currentTimeMs;
@@ -338,7 +340,8 @@ export function PixiPreviewPanel() {
     if (!entity || !template) return;
 
     const restSkeleton = evaluateSkeleton(template.bones, new Map());
-    const scene        = evaluateScene(entity, template, restSkeleton, store.project.items);
+    const items        = refreshCanonicalBuiltInTypedItems(store.project.items);
+    const scene        = evaluateScene(entity, template, restSkeleton, items);
 
     (async () => {
       const newPool: PooledSprite[] = [];

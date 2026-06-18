@@ -662,6 +662,46 @@ export function cloneTemplates(): Template[] {
   return JSON.parse(JSON.stringify(TEMPLATES)) as Template[];
 }
 
+const REFRESHED_BUILTIN_TEMPLATE_IDS = new Set([
+  "humanoid_topdown_v1",
+]);
+
+function cloneTemplate(template: Template): Template {
+  if (typeof globalThis.structuredClone === "function") {
+    return globalThis.structuredClone(template);
+  }
+  return JSON.parse(JSON.stringify(template)) as Template;
+}
+
+function mergeUserSlotTransforms(canonical: Template, saved: Template): Template {
+  const savedSlots = new Map(saved.slots.map(slot => [slot.id, slot]));
+  return {
+    ...canonical,
+    slots: canonical.slots.map(slot => {
+      const savedSlot = savedSlots.get(slot.id);
+      if (!savedSlot) return slot;
+      return {
+        ...slot,
+        defaultAnchorId: savedSlot.defaultAnchorId ?? slot.defaultAnchorId,
+        defaultTransform: savedSlot.defaultTransform ?? slot.defaultTransform,
+      };
+    }),
+  };
+}
+
+export function refreshCanonicalBuiltInTemplate(template: Template): Template {
+  if (!REFRESHED_BUILTIN_TEMPLATE_IDS.has(template.id)) {
+    return template;
+  }
+  const canonical = TEMPLATES.find(t => t.id === template.id);
+  if (!canonical) return template;
+  return mergeUserSlotTransforms(cloneTemplate(canonical), template);
+}
+
+export function refreshCanonicalBuiltInTemplates(templates: Template[]): Template[] {
+  return templates.map(refreshCanonicalBuiltInTemplate);
+}
+
 export function getTemplateById(id: string): Template | undefined {
   return TEMPLATES.find(t => t.id === id);
 }
@@ -680,5 +720,8 @@ export function resolveTemplate(
   project: { templates: Template[] },
   id: string,
 ): Template | undefined {
-  return project.templates.find(t => t.id === id) ?? TEMPLATES.find(t => t.id === id);
+  const projectTemplate = project.templates.find(t => t.id === id);
+  return projectTemplate
+    ? refreshCanonicalBuiltInTemplate(projectTemplate)
+    : TEMPLATES.find(t => t.id === id);
 }

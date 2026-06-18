@@ -1,3 +1,8 @@
+import { ProjectSchema } from "@/domain/schema";
+import { refreshCanonicalBuiltInItems } from "@/lib/canonicalItems";
+import { refreshCanonicalBuiltInTemplates } from "@/data/templates";
+import type { Template } from "@/domain/types";
+
 /**
  * projectMigration.ts
  *
@@ -5,14 +10,39 @@
  *
  * Pipeline:
  *   JSON.parse(text)
- *     → detectProjectVersion(raw)
- *     → migrateProject(raw)          ← adds missing fields, bumps version
- *     → ProjectV2Schema.safeParse()  ← strict validation
- *     → loadProject(result.data)
+ *     -> detectProjectVersion(raw)
+ *     -> migrateProject(raw)          <- adds missing fields, bumps version
+ *     -> ProjectV2Schema.safeParse()  <- strict validation
+ *     -> loadProject(result.data)
  *
  * Old files are never broken: all new fields are optional with safe defaults.
  * Migration is idempotent: calling it twice on a v2.0 project is a no-op.
  */
+
+function normalizeMigratedItems(items: Record<string, unknown>[]) {
+  return refreshCanonicalBuiltInItems(items).map(item => ({
+    ...item,
+    anchorRules: item.anchorRules ?? {},
+    parts: item.parts ?? [],
+    coordinateMode: item.coordinateMode ?? "legacy_full_frame",
+  }));
+}
+
+function normalizeMigratedTemplates(templates: Record<string, unknown>[]) {
+  const normalized = templates.map(t => ({
+    ...t,
+    anchors: t.anchors ?? {},
+    boneParts: t.boneParts ?? [],
+    slots: Array.isArray(t.slots)
+      ? (t.slots as Record<string, unknown>[]).map(slot => ({
+          ...slot,
+          defaultAnchorId: slot.defaultAnchorId ?? undefined,
+          defaultTransform: slot.defaultTransform ?? undefined,
+        }))
+      : [],
+  }));
+  return refreshCanonicalBuiltInTemplates(normalized as Template[]);
+}
 
 export function detectProjectVersion(raw: unknown): string {
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
@@ -30,45 +60,24 @@ export function migrateProject(raw: unknown): unknown {
   return parsed.success ? parsed.data : migrated;
 }
 
-// ── v1.x → v2.0 ──────────────────────────────────────────────────────────────
-
 function migrateV1ToV2(raw: unknown): unknown {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const r = { ...(raw as Record<string, unknown>) };
 
   r.version = "2.0";
 
-  // templates: add boneParts (preserves existing non-empty boneParts)
   if (Array.isArray(r.templates)) {
-    r.templates = (r.templates as Record<string, unknown>[]).map(t => ({
-      ...t,
-      anchors: t.anchors ?? {},
-      boneParts: t.boneParts ?? [],
-      slots: Array.isArray(t.slots)
-        ? (t.slots as Record<string, unknown>[]).map(slot => ({
-            ...slot,
-            defaultAnchorId: slot.defaultAnchorId ?? undefined,
-            defaultTransform: slot.defaultTransform ?? undefined,
-          }))
-        : [],
-    }));
+    r.templates = normalizeMigratedTemplates(r.templates as Record<string, unknown>[]);
   }
 
-  // items: add parts + coordinateMode (existing svgLayers-only items become legacy_full_frame)
   if (Array.isArray(r.items)) {
-    r.items = (r.items as Record<string, unknown>[]).map(i => ({
-      ...i,
-      anchorRules:    i.anchorRules    ?? {},
-      parts:          i.parts          ?? [],
-      coordinateMode: i.coordinateMode ?? "legacy_full_frame",
-    }));
+    r.items = normalizeMigratedItems(r.items as Record<string, unknown>[]);
   }
 
-  // entities: add visuals + rootTransform
   if (Array.isArray(r.entities)) {
     r.entities = (r.entities as Record<string, unknown>[]).map(e => ({
       ...e,
-      visuals:       e.visuals       ?? [],
+      visuals: e.visuals ?? [],
       rootTransform: e.rootTransform ?? null,
       slots: Array.isArray(e.slots)
         ? (e.slots as Record<string, unknown>[]).map(slot => ({
@@ -88,27 +97,11 @@ function normalizeV2Project(raw: unknown): unknown {
   r.version = "2.0";
 
   if (Array.isArray(r.templates)) {
-    r.templates = (r.templates as Record<string, unknown>[]).map(t => ({
-      ...t,
-      anchors: t.anchors ?? {},
-      boneParts: t.boneParts ?? [],
-      slots: Array.isArray(t.slots)
-        ? (t.slots as Record<string, unknown>[]).map(slot => ({
-            ...slot,
-            defaultAnchorId: slot.defaultAnchorId ?? undefined,
-            defaultTransform: slot.defaultTransform ?? undefined,
-          }))
-        : [],
-    }));
+    r.templates = normalizeMigratedTemplates(r.templates as Record<string, unknown>[]);
   }
 
   if (Array.isArray(r.items)) {
-    r.items = (r.items as Record<string, unknown>[]).map(i => ({
-      ...i,
-      anchorRules: i.anchorRules ?? {},
-      parts: i.parts ?? [],
-      coordinateMode: i.coordinateMode ?? "legacy_full_frame",
-    }));
+    r.items = normalizeMigratedItems(r.items as Record<string, unknown>[]);
   }
 
   if (Array.isArray(r.entities)) {
@@ -129,4 +122,3 @@ function normalizeV2Project(raw: unknown): unknown {
 
   return r;
 }
-import { ProjectSchema } from "@/domain/schema";

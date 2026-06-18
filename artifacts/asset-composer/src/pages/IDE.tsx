@@ -12,6 +12,7 @@ import { ExportDialog } from "@/components/export/ExportDialog";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { useStore } from "@/store";
 import type { AnimBottomTab } from "@/store";
+import { useEditorShortcuts } from "@/hooks/useEditorShortcuts";
 
 const MIN_SIDE_WIDTH = 160;
 const MAX_SIDE_WIDTH = 480;
@@ -78,6 +79,8 @@ function useDragHandle() {
 }
 
 export function IDE() {
+  useEditorShortcuts();
+
   const [libraryWidth,   setLibraryWidth]   = useState(220);
   const [inspectorWidth, setInspectorWidth] = useState(220);
   const [timelineHeight, setTimelineHeight] = useState(200);

@@ -5,6 +5,7 @@ import { resolveTemplate } from "@/data/templates";
 import {
   buildMultiClipPose, evaluateSkeleton, evaluateScene,
 } from "@/lib/evaluationPipeline";
+import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
 import { animController } from "@/core-v2/AnimationController";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,10 +52,12 @@ export function CanvasPanel() {
   const editor          = useStore(s => s.editor);
   const animPlayback    = useStore(s => s.animPlayback);
   const setSelectedSlot           = useStore(s => s.setSelectedSlot);
-  const setAttachmentOverride     = useStore(s => s.setAttachmentOverride);
+  const previewAttachmentOverride = useStore(s => s.previewAttachmentOverride);
+  const commitAttachmentOverride  = useStore(s => s.commitAttachmentOverride);
   const setCanvasMode             = useStore(s => s.setCanvasMode);
   const setEditorSelection        = useStore(s => s.setEditorSelection);
-  const updateTemplateSlotTransform = useStore(s => s.updateTemplateSlotTransform);
+  const previewTemplateSlotTransform = useStore(s => s.previewTemplateSlotTransform);
+  const commitTemplateSlotTransform  = useStore(s => s.commitTemplateSlotTransform);
   const setPlaybackPlaying        = useStore(s => s.setPlaybackPlaying);
 
   const canvasRef    = useRef<HTMLCanvasElement>(null);
@@ -114,14 +117,23 @@ export function CanvasPanel() {
           setSelectedSlot(null);
         }
       },
-      onItemModified: (entityId, slotId, override) => {
-        setAttachmentOverride(entityId, slotId, override);
+      onItemPreview: (entityId, slotId, override) => {
+        previewAttachmentOverride(entityId, slotId, override);
       },
-      onSlotTransformChanged: (slotId, transform) => {
+      onItemCommit: (entityId, slotId, beforeOverride, afterOverride) => {
+        commitAttachmentOverride(entityId, slotId, beforeOverride, afterOverride);
+      },
+      onSlotTransformPreview: (slotId, transform) => {
         const st = useStore.getState();
         const eid = st.project.activeEntityId;
         const ent = eid ? st.project.entities.find(e => e.id === eid) : null;
-        if (ent) updateTemplateSlotTransform(ent.templateId, slotId, transform);
+        if (ent) previewTemplateSlotTransform(ent.templateId, slotId, transform);
+      },
+      onSlotTransformCommit: (slotId, beforeTransform, afterTransform) => {
+        const st = useStore.getState();
+        const eid = st.project.activeEntityId;
+        const ent = eid ? st.project.entities.find(e => e.id === eid) : null;
+        if (ent) commitTemplateSlotTransform(ent.templateId, slotId, beforeTransform, afterTransform);
       },
     });
     setInitialized(true);
@@ -134,7 +146,9 @@ export function CanvasPanel() {
       return;
     }
 
-    engineRef.current.commitPendingEdits();
+    if (!engineRef.current.isTransforming) {
+      engineRef.current.commitPendingEdits();
+    }
     engineRef.current.setMode(editor.canvasMode);
   }, [initialized, editor.canvasMode]);
 
@@ -154,7 +168,9 @@ export function CanvasPanel() {
     const doReconcile = async () => {
       if (!engineRef.current) return;
 
-      engineRef.current.commitPendingEdits();
+      if (!engineRef.current.isTransforming) {
+        engineRef.current.commitPendingEdits();
+      }
       const store = useStore.getState();
       const liveEntity = store.project.entities.find(e => e.id === store.project.activeEntityId);
       const liveTemplate = liveEntity
@@ -167,20 +183,21 @@ export function CanvasPanel() {
         return;
       }
 
+      const effectiveItems = refreshCanonicalBuiltInTypedItems(store.project.items);
       const pose  = buildMultiClipPose(
         store.project.animationClips,
         store.animPlayback.activeClipId,
         store.animPlayback.upperClipId,
         store.animPlayback.lowerClipId,
         store.animPlayback.upperBlendWeight,
-        animController.currentTimeMs,
+        store.animPlayback.timeMs,
         liveEntity,
-        store.project.items,
+        effectiveItems,
       );
       const skeleton = evaluateSkeleton(liveTemplate.bones, pose);
-      const scene    = evaluateScene(liveEntity, liveTemplate, skeleton, store.project.items);
+      const scene    = evaluateScene(liveEntity, liveTemplate, skeleton, effectiveItems);
 
-      const itemsArr = store.project.items;
+      const itemsArr = effectiveItems;
       await engineRef.current.reconcileSceneStructure(scene, liveTemplate, editor.selectedSlotId, itemsArr, liveEntity);
 
       // Re-apply viewport after reconcile (new visuals reset internal state)
@@ -219,18 +236,19 @@ export function CanvasPanel() {
       const tmpl  = ent ? resolveTemplate(store.project, ent.templateId) : null;
       if (!ent || !tmpl) return;
 
+      const effectiveItems = refreshCanonicalBuiltInTypedItems(store.project.items);
       const pose = buildMultiClipPose(
         store.project.animationClips,
         store.animPlayback.activeClipId,
         store.animPlayback.upperClipId,
         store.animPlayback.lowerClipId,
         store.animPlayback.upperBlendWeight,
-        animController.currentTimeMs,
+        store.animPlayback.timeMs,
         ent,
-        store.project.items,
+        effectiveItems,
       );
       const skeleton = evaluateSkeleton(tmpl.bones, pose);
-      const scene    = evaluateScene(ent, tmpl, skeleton, store.project.items);
+      const scene    = evaluateScene(ent, tmpl, skeleton, effectiveItems);
       engineRef.current.updateSceneTransforms(scene);
     });
     return remove;
@@ -293,8 +311,9 @@ export function CanvasPanel() {
       return;
     }
     const store    = useStore.getState();
+    const effectiveItems = refreshCanonicalBuiltInTypedItems(store.project.items);
     const skeleton = evaluateSkeleton(template.bones, new Map());
-    const scene    = evaluateScene(activeEntity, template, skeleton, store.project.items);
+    const scene    = evaluateScene(activeEntity, template, skeleton, effectiveItems);
     const cam      = engineRef.current.fitScene(scene, template);
     applyViewport(cam);
   }, [activeEntity, template, applyViewport]);

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { ITEMS } from "../src/data/items";
+import { PRESET_ANIMATIONS } from "../src/data/presetAnimations";
 import { TEMPLATES } from "../src/data/templates";
 import { ProjectSchema } from "../src/domain/schema";
 import type { Entity, Item, LocalTransform, Project, Template } from "../src/domain/types";
-import { evaluateScene, evaluateSkeleton, evaluateRestSkeleton } from "../src/lib/evaluationPipeline";
+import { buildMultiClipPose, evaluateScene, evaluateSkeleton, evaluateRestSkeleton } from "../src/lib/evaluationPipeline";
 
 const template = TEMPLATES.find(t => t.id === "humanoid_topdown_v1")!;
 const boots = ITEMS.find(i => i.id === "boots_leather")!;
@@ -150,12 +151,118 @@ describe("M8 vertical slice items", () => {
     }
   });
 
+  it("moves every leather pants part with its assigned animated bone", () => {
+    const entity = makeEntity("slot_legs", pants.id);
+    const runClip = PRESET_ANIMATIONS.find(clip => clip.id === "humanoid_topdown_v1__run");
+    expect(runClip).toBeTruthy();
+
+    const restScene = evaluateScene(entity, template, evaluateRestSkeleton(template.bones), ITEMS);
+    const runPose = buildMultiClipPose(
+      PRESET_ANIMATIONS,
+      runClip!.id,
+      null,
+      null,
+      1,
+      125,
+      entity,
+      ITEMS,
+    );
+    const runScene = evaluateScene(entity, template, evaluateSkeleton(template.bones, runPose), ITEMS);
+
+    const restByPart = new Map(itemVisuals(restScene, pants.id).map(visual => [visual.partId!, visual]));
+    const runByPart = new Map(itemVisuals(runScene, pants.id).map(visual => [visual.partId!, visual]));
+
+    expect(runByPart.size).toBe(5);
+    expect(runByPart.get("waist")?.worldMatrix).not.toEqual(restByPart.get("waist")?.worldMatrix);
+
+    const movedLegPartIds = ["thigh_l", "shin_l", "thigh_r", "shin_r"].filter(partId => (
+      runByPart.get(partId)?.worldMatrix !== restByPart.get(partId)?.worldMatrix &&
+      JSON.stringify(runByPart.get(partId)?.worldMatrix) !== JSON.stringify(restByPart.get(partId)?.worldMatrix)
+    ));
+    expect(movedLegPartIds.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("hides covered skin leg body parts when leather pants are equipped", () => {
+    const scene = sceneFor(pants, "slot_legs", template);
+    const ids = new Set(scene.visuals.map(visual => visual.id));
+
+    expect(ids.has("part__pelvis")).toBe(false);
+    expect(ids.has("part__hip_l")).toBe(false);
+    expect(ids.has("part__hip_r")).toBe(false);
+    expect(ids.has("part__knee_l")).toBe(false);
+    expect(ids.has("part__knee_r")).toBe(false);
+    expect(itemVisuals(scene, pants.id)).toHaveLength(5);
+  });
+
+  it("does not hide skin legs for legacy-only leg overlays", () => {
+    const legacyPants: Item = {
+      ...pants,
+      id: "custom_legacy_pants",
+      coordinateMode: "legacy_full_frame",
+      parts: [],
+    };
+    const scene = evaluateScene(
+      makeEntity("slot_legs", legacyPants.id),
+      template,
+      evaluateRestSkeleton(template.bones),
+      [legacyPants],
+    );
+    const ids = new Set(scene.visuals.map(visual => visual.id));
+
+    expect(ids.has("part__pelvis")).toBe(true);
+    expect(ids.has("part__hip_l")).toBe(true);
+    expect(ids.has("part__hip_r")).toBe(true);
+    expect(ids.has("part__knee_l")).toBe(true);
+    expect(ids.has("part__knee_r")).toBe(true);
+  });
+
   it("does not emit legacy svgLayers when V2 parts are present", () => {
     const bootsScene = sceneFor(boots, "slot_feet", template);
     const pantsScene = sceneFor(pants, "slot_legs", template);
 
     expect(itemVisuals(bootsScene, boots.id)).toHaveLength(boots.parts?.length ?? 0);
     expect(itemVisuals(pantsScene, pants.id)).toHaveLength(pants.parts?.length ?? 0);
+  });
+
+  it("prefers V2 parts over legacy svgLayers for leather pants", () => {
+    const scene = sceneFor(pants, "slot_legs", template);
+    const visuals = itemVisuals(scene, pants.id);
+
+    expect(visuals).toHaveLength(5);
+    expect(visuals.map(visual => visual.partId).sort()).toEqual([
+      "waist",
+      "thigh_l",
+      "shin_l",
+      "thigh_r",
+      "shin_r",
+    ].sort());
+    expect(visuals.filter(visual => visual.partId === "thumb" || visual.partId === "layer_0")).toHaveLength(0);
+  });
+
+  it("heals stale built-in leather pants data at runtime", () => {
+    const stalePants: Item = {
+      ...pants,
+      coordinateMode: "legacy_full_frame",
+      parts: [],
+      svgLayers: [{
+        id: "legacy_layer",
+        svgData: "<svg viewBox='0 0 64 64'></svg>",
+        zOffset: 0,
+      }],
+    };
+
+    const entity = makeEntity("slot_legs", pants.id);
+    const skeleton = evaluateRestSkeleton(template.bones);
+    const healedScene = evaluateScene(entity, template, skeleton, [stalePants]);
+
+    expect(itemVisuals(healedScene, pants.id)).toHaveLength(5);
+    expect(itemVisuals(healedScene, pants.id).map(visual => visual.partId).sort()).toEqual([
+      "waist",
+      "thigh_l",
+      "shin_l",
+      "thigh_r",
+      "shin_r",
+    ].sort());
   });
 
   it("round-trips V2 boots and pants through ProjectSchema", () => {

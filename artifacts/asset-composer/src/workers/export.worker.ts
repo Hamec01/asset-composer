@@ -12,6 +12,7 @@
 
 import { resolveClipPose } from "@/lib/animationRuntime";
 import { evaluateSkeleton, evaluateScene } from "@/lib/evaluationPipeline";
+import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
 import { packSprites } from "@/lib/spritePacker";
 import { buildAtlasJson, buildPhaserAtlasJson } from "@/lib/atlasGenerator";
 import { formatFrameName } from "@/lib/exportTypes";
@@ -565,7 +566,8 @@ self.onmessage = async (e: MessageEvent<WorkerInputMessage>) => {
   const job = e.data.job;
 
   try {
-    const itemsMap = new Map(job.items.map(i => [i.id, i]));
+    const canonicalItems = refreshCanonicalBuiltInTypedItems(job.items);
+    const itemsMap = new Map(canonicalItems.map(i => [i.id, i]));
 
     const onProgress = (pct: number, msg: string) => {
       post({ type: "progress", pct: Math.min(pct, 0.99), msg });

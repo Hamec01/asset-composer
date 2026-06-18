@@ -53,6 +53,19 @@ export interface CanvasEngineOptions {
   height:                 number;
   onSlotClick?:           (slotId: string) => void;
   onSelectionChange?:     (selection: EditorSelection) => void;
+  onItemPreview?:         (entityId: string, slotId: string, override: AttachmentOverride) => void;
+  onItemCommit?:          (
+    entityId: string,
+    slotId: string,
+    beforeOverride: AttachmentOverride,
+    afterOverride: AttachmentOverride,
+  ) => void;
+  onSlotTransformPreview?: (slotId: string, transform: LocalTransform) => void;
+  onSlotTransformCommit?: (
+    slotId: string,
+    beforeTransform: LocalTransform,
+    afterTransform: LocalTransform,
+  ) => void;
   onItemModified?:        (entityId: string, slotId: string, override: Partial<AttachmentOverride>) => void;
   onSlotTransformChanged?:(slotId: string, transform: LocalTransform) => void;
 }
@@ -84,6 +97,61 @@ interface TaggedText extends FabricText {
   __slotId?: string;
 }
 
+interface AttachmentTransformGestureSnapshot {
+  entityId: string;
+  slotId: string;
+  beforeOverride: AttachmentOverride;
+}
+
+interface SlotTransformGestureSnapshot {
+  slotId: string;
+  beforeTransform: LocalTransform;
+}
+
+function normalizeAttachmentOverride(override: Partial<AttachmentOverride> | undefined): AttachmentOverride {
+  return {
+    anchorId: override?.anchorId ?? "",
+    bindMode: override?.bindMode ?? "",
+    offsetX: override?.offsetX ?? 0,
+    offsetY: override?.offsetY ?? 0,
+    rotation: override?.rotation ?? 0,
+    scaleX: override?.scaleX ?? 1,
+    scaleY: override?.scaleY ?? 1,
+  };
+}
+
+function normalizeLocalTransform(transform: LocalTransform | undefined): LocalTransform {
+  return {
+    x: transform?.x ?? 0,
+    y: transform?.y ?? 0,
+    rotation: transform?.rotation ?? 0,
+    scaleX: transform?.scaleX ?? 1,
+    scaleY: transform?.scaleY ?? 1,
+  };
+}
+
+function sameAttachmentOverride(a: AttachmentOverride, b: AttachmentOverride): boolean {
+  return (
+    a.anchorId === b.anchorId &&
+    a.bindMode === b.bindMode &&
+    a.offsetX === b.offsetX &&
+    a.offsetY === b.offsetY &&
+    a.rotation === b.rotation &&
+    a.scaleX === b.scaleX &&
+    a.scaleY === b.scaleY
+  );
+}
+
+function sameLocalTransform(a: LocalTransform, b: LocalTransform): boolean {
+  return (
+    a.x === b.x &&
+    a.y === b.y &&
+    a.rotation === b.rotation &&
+    a.scaleX === b.scaleX &&
+    a.scaleY === b.scaleY
+  );
+}
+
 // ── CanvasEngine ──────────────────────────────────────────────────────────────
 
 export class CanvasEngine {
@@ -109,6 +177,8 @@ export class CanvasEngine {
   isTransforming = false;
   private pendingReconcile: (() => Promise<void>) | null = null;
   private pointerDownAt: { x: number; y: number } | null = null;
+  private activeAttachmentGesture: AttachmentTransformGestureSnapshot | null = null;
+  private activeSlotGesture: SlotTransformGestureSnapshot | null = null;
 
   constructor(opts: CanvasEngineOptions) {
     this.opts   = opts;
@@ -138,9 +208,18 @@ export class CanvasEngine {
     });
 
     // ── Transform tracking ────────────────────────────────────────────────────
-    this.canvas.on("object:moving",   () => { this.isTransforming = true; });
-    this.canvas.on("object:rotating", () => { this.isTransforming = true; });
-    this.canvas.on("object:scaling",  () => { this.isTransforming = true; });
+    this.canvas.on("object:moving",   (ev) => {
+      this.isTransforming = true;
+      this._handleTransformPreview(ev.target as (TaggedFabricImage & TaggedRect) | undefined);
+    });
+    this.canvas.on("object:rotating", (ev) => {
+      this.isTransforming = true;
+      this._handleTransformPreview(ev.target as (TaggedFabricImage & TaggedRect) | undefined);
+    });
+    this.canvas.on("object:scaling",  (ev) => {
+      this.isTransforming = true;
+      this._handleTransformPreview(ev.target as (TaggedFabricImage & TaggedRect) | undefined);
+    });
 
     this.canvas.on("object:modified", (ev) => {
       this.isTransforming = false;
@@ -155,6 +234,8 @@ export class CanvasEngine {
           this._handleSlotZoneModified(zone);
         }
       }
+      this.activeAttachmentGesture = null;
+      this.activeSlotGesture = null;
       this._flushPendingReconcile();
     });
 
@@ -536,9 +617,64 @@ export class CanvasEngine {
     this.canvas.requestRenderAll();
   }
 
+  private _handleTransformPreview(target: (TaggedFabricImage & TaggedRect) | undefined): void {
+    if (!target) return;
+
+    if (this.mode === "edit-attachment" && target.__sourceKind === "item-part") {
+      this._ensureAttachmentGestureSnapshot(target);
+      this._previewMultiPartAttachment(target);
+      const override = this._computeOverrideFromFabricImage(target);
+      if (override && this.currentEntityId && target.__slotId) {
+        this.opts.onItemPreview?.(this.currentEntityId, target.__slotId, override);
+      }
+      return;
+    }
+
+    if (this.mode === "edit-template-slots" && target.__slotId) {
+      this._ensureSlotGestureSnapshot(target);
+      const nextTransform = this._getSlotTransformFromZone(target);
+      if (nextTransform) {
+        this.opts.onSlotTransformPreview?.(target.__slotId, nextTransform);
+      }
+    }
+  }
+
+  private _ensureAttachmentGestureSnapshot(img: TaggedFabricImage): void {
+    if (this.activeAttachmentGesture || !this.currentEntity || !img.__slotId || !this.currentEntityId) return;
+    const slotAssign = this.currentEntity.slots.find(slot => slot.slotId === img.__slotId);
+    if (!slotAssign) return;
+    this.activeAttachmentGesture = {
+      entityId: this.currentEntityId,
+      slotId: img.__slotId,
+      beforeOverride: normalizeAttachmentOverride(slotAssign.attachmentOverride),
+    };
+  }
+
+  private _ensureSlotGestureSnapshot(zone: TaggedRect): void {
+    if (this.activeSlotGesture || !this.currentTemplate || !zone.__slotId) return;
+    const slotDef = this.currentTemplate.slots.find(slot => slot.id === zone.__slotId);
+    if (!slotDef) return;
+    this.activeSlotGesture = {
+      slotId: zone.__slotId,
+      beforeTransform: normalizeLocalTransform(slotDef.defaultTransform),
+    };
+  }
+
   // ── Bone-local math for item:modified ────────────────────────────────────
 
   private _handleItemModified(img: TaggedFabricImage): void {
+    if (!img.__slotId || !this.currentEntityId) return;
+    const snapshot = this.activeAttachmentGesture;
+    const afterOverride = this._computeOverrideFromFabricImage(img);
+    if (snapshot && afterOverride) {
+      if (snapshot.slotId === img.__slotId && snapshot.entityId === this.currentEntityId) {
+        if (!sameAttachmentOverride(snapshot.beforeOverride, afterOverride)) {
+          this.opts.onItemCommit?.(snapshot.entityId, snapshot.slotId, snapshot.beforeOverride, afterOverride);
+        }
+        return;
+      }
+    }
+
     if (!img.__slotId || !img.__itemId || !img.__partId || !this.currentEntityId) return;
     if (!this.currentScene || !this.currentTemplate || !this.currentEntity) return;
 
@@ -554,19 +690,8 @@ export class CanvasEngine {
     if (!slotAssign) return;
     const part = item.parts?.find(p => p.id === img.__partId);
 
-    // New world matrix from current Fabric position
-    const worldM_new = localTransformToMatrix(
-      img.left  ?? 0,
-      img.top   ?? 0,
-      img.angle ?? 0,
-      img.scaleX ?? 1,
-      img.scaleY ?? 1,
-    );
-    const centerX = img.__centerX ?? 0;
-    const centerY = img.__centerY ?? 0;
-    const worldOriginM = multiply(worldM_new, localTransformToMatrix(-centerX, -centerY, 0, 1, 1));
-
     if (!part || part.coordinateMode === "legacy_full_frame") {
+      const worldOriginM = this._getFabricImageWorldOriginMatrix(img);
       const dt = slotDef.defaultTransform;
       const defaultTransformMatrix = dt
         ? localTransformToMatrix(dt.x, dt.y, dt.rotation, dt.scaleX, dt.scaleY)
@@ -584,6 +709,40 @@ export class CanvasEngine {
     }
 
     // overrideM = inverse(partBoneM × defaultM) × worldM_new × inverse(partLocalM)
+    const overrideM = this._computeAttachmentOverrideMatrix(slotDef, item, slotAssign, part, img);
+    if (!overrideM) return;
+
+    const d = decompose(overrideM);
+    this.opts.onItemModified?.(entityId, img.__slotId!, {
+      offsetX:  d.tx,
+      offsetY:  d.ty,
+      rotation: d.rotation,
+      scaleX:   d.scaleX,
+      scaleY:   d.scaleY,
+    });
+  }
+
+  private _getFabricImageWorldOriginMatrix(img: TaggedFabricImage): ReturnType<typeof localTransformToMatrix> {
+    const worldM = localTransformToMatrix(
+      img.left  ?? 0,
+      img.top   ?? 0,
+      img.angle ?? 0,
+      img.scaleX ?? 1,
+      img.scaleY ?? 1,
+    );
+    const centerX = img.__centerX ?? 0;
+    const centerY = img.__centerY ?? 0;
+    return multiply(worldM, localTransformToMatrix(-centerX, -centerY, 0, 1, 1));
+  }
+
+  private _computeAttachmentOverrideMatrix(
+    slotDef: Template["slots"][number],
+    item: Item,
+    slotAssign: Entity["slots"][number],
+    part: NonNullable<Item["parts"]>[number],
+    img: TaggedFabricImage,
+  ) {
+    if (!this.currentEntity || !this.currentTemplate || !this.currentScene) return null;
     const lt  = part.localTransform;
     const piv = part.pivot;
     const partLocalM = localTransformToMatrix(lt.x, lt.y, lt.rotation, lt.scaleX, lt.scaleY, piv.x, piv.y);
@@ -596,24 +755,151 @@ export class CanvasEngine {
       slotDef,
       part,
     );
-    const overrideM = multiply(
+    const worldOriginM = this._getFabricImageWorldOriginMatrix(img);
+    return multiply(
       inverse(multiply(binding.parentMatrix, multiply(binding.anchorMatrix, binding.defaultTransformMatrix))),
       multiply(worldOriginM, inverse(partLocalM)),
     );
+  }
 
+  private _computeOverrideFromFabricImage(img: TaggedFabricImage): AttachmentOverride | null {
+    if (!img.__slotId || !img.__itemId || !img.__partId) return null;
+    if (!this.currentScene || !this.currentTemplate || !this.currentEntity) return null;
+
+    const slotDef = this.currentTemplate.slots.find(s => s.id === img.__slotId);
+    if (!slotDef) return null;
+
+    const item = this.currentItems.find(i => i.id === img.__itemId);
+    if (!item) return null;
+
+    const slotAssign = this.currentEntity.slots.find(s => s.slotId === img.__slotId);
+    if (!slotAssign) return null;
+
+    const current = normalizeAttachmentOverride(slotAssign.attachmentOverride);
+    const part = item.parts?.find(p => p.id === img.__partId);
+
+    if (!part || part.coordinateMode === "legacy_full_frame") {
+      const worldOriginM = this._getFabricImageWorldOriginMatrix(img);
+      const dt = slotDef.defaultTransform;
+      const defaultTransformMatrix = dt
+        ? localTransformToMatrix(dt.x, dt.y, dt.rotation, dt.scaleX, dt.scaleY)
+        : identity();
+      const overrideM = multiply(inverse(defaultTransformMatrix), worldOriginM);
+      const d = decompose(overrideM);
+      return {
+        ...current,
+        offsetX: d.tx,
+        offsetY: d.ty,
+        rotation: d.rotation,
+        scaleX: d.scaleX,
+        scaleY: d.scaleY,
+      };
+    }
+
+    const overrideM = this._computeAttachmentOverrideMatrix(slotDef, item, slotAssign, part, img);
+    if (!overrideM) return null;
     const d = decompose(overrideM);
-    this.opts.onItemModified?.(entityId, img.__slotId!, {
-      offsetX:  d.tx,
-      offsetY:  d.ty,
+    return {
+      ...current,
+      offsetX: d.tx,
+      offsetY: d.ty,
       rotation: d.rotation,
-      scaleX:   d.scaleX,
-      scaleY:   d.scaleY,
+      scaleX: d.scaleX,
+      scaleY: d.scaleY,
+    };
+  }
+
+  private _previewMultiPartAttachment(img: TaggedFabricImage): void {
+    if (!img.__slotId || !img.__itemId || !img.__partId) return;
+    if (!this.currentScene || !this.currentTemplate || !this.currentEntity) return;
+
+    const slotDef = this.currentTemplate.slots.find(s => s.id === img.__slotId);
+    if (!slotDef) return;
+    const item = this.currentItems.find(i => i.id === img.__itemId);
+    if (!item?.parts || item.parts.length < 2) return;
+    const slotAssign = this.currentEntity.slots.find(s => s.slotId === img.__slotId);
+    if (!slotAssign) return;
+    const selectedPart = item.parts.find(p => p.id === img.__partId);
+    if (!selectedPart || selectedPart.coordinateMode !== "bone_local") return;
+
+    const overrideM = this._computeAttachmentOverrideMatrix(slotDef, item, slotAssign, selectedPart, img);
+    if (!overrideM) return;
+
+    for (const siblingPart of item.parts) {
+      if (siblingPart.id === selectedPart.id) continue;
+      if (siblingPart.coordinateMode !== "bone_local") continue;
+
+      const visualId = `slot__${img.__slotId}__${item.id}__${siblingPart.id}`;
+      const siblingImg = this.fabricImages.get(visualId);
+      const siblingVisual = this.currentScene.visuals.find(v => v.id === visualId);
+      if (!siblingImg || !siblingVisual) continue;
+
+      const binding = resolveItemPartBinding(
+        this.currentEntity,
+        this.currentTemplate,
+        this.currentScene.skeleton,
+        item,
+        slotAssign,
+        slotDef,
+        siblingPart,
+      );
+      const lt = siblingPart.localTransform;
+      const piv = siblingPart.pivot;
+      const partLocalM = localTransformToMatrix(lt.x, lt.y, lt.rotation, lt.scaleX, lt.scaleY, piv.x, piv.y);
+      const worldM = multiply(
+        binding.parentMatrix,
+        multiply(
+          binding.anchorMatrix,
+          multiply(
+            binding.defaultTransformMatrix,
+            multiply(overrideM, partLocalM),
+          ),
+        ),
+      );
+      const localCenterX = (siblingVisual.localBounds.minX + siblingVisual.localBounds.maxX) / 2;
+      const localCenterY = (siblingVisual.localBounds.minY + siblingVisual.localBounds.maxY) / 2;
+      const centerPoint = transformPoint(worldM, localCenterX, localCenterY);
+      const d = decompose(worldM);
+      siblingImg.__centerX = localCenterX;
+      siblingImg.__centerY = localCenterY;
+      siblingImg.set({
+        left: centerPoint.x,
+        top: centerPoint.y,
+        angle: d.rotation,
+        scaleX: d.scaleX,
+        scaleY: d.scaleY,
+      });
+      siblingImg.setCoords();
+    }
+
+    this.canvas.requestRenderAll();
+  }
+
+  private _getSlotTransformFromZone(zone: TaggedRect): LocalTransform | null {
+    if (!zone.__slotId || !this.currentTemplate) return null;
+    const slotDef = this.currentTemplate.slots.find(s => s.id === zone.__slotId);
+    if (!slotDef) return null;
+    const boneWb = this.currentScene?.skeleton.bones.get(slotDef.boneId);
+    return getTemplateSlotTransformFromWorldCenter(slotDef, boneWb, {
+      x: zone.left ?? 0,
+      y: zone.top ?? 0,
     });
   }
 
   // ── Slot zone drag for Edit Template Slots mode ───────────────────────────
 
   private _handleSlotZoneModified(zone: TaggedRect): void {
+    const snapshot = this.activeSlotGesture;
+    const nextTransform = this._getSlotTransformFromZone(zone);
+    if (snapshot && nextTransform && zone.__slotId === snapshot.slotId) {
+      zone.__defaultLeft = zone.left ?? 0;
+      zone.__defaultTop  = zone.top  ?? 0;
+      if (!sameLocalTransform(snapshot.beforeTransform, nextTransform)) {
+        this.opts.onSlotTransformCommit?.(snapshot.slotId, snapshot.beforeTransform, nextTransform);
+      }
+      return;
+    }
+
     if (!zone.__slotId || !this.currentTemplate) return;
 
     const slotDef = this.currentTemplate.slots.find(s => s.id === zone.__slotId);
@@ -630,7 +916,11 @@ export class CanvasEngine {
     zone.__defaultLeft = zone.left ?? 0;
     zone.__defaultTop  = zone.top  ?? 0;
 
-    this.opts.onSlotTransformChanged?.(zone.__slotId!, newTransform);
+    this.opts.onSlotTransformCommit?.(
+      zone.__slotId!,
+      normalizeLocalTransform(slotDef.defaultTransform),
+      newTransform,
+    );
   }
 
   // ── Selection events ──────────────────────────────────────────────────────

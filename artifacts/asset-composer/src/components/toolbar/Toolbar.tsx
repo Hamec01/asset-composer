@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { STYLE_SETS } from "@/data/styleSets";
 import { migrateProject } from "@/lib/projectMigration";
+import { triggerDownload } from "@/lib/download";
+import { saveLastProjectSnapshot } from "@/lib/projectSession";
 import {
   Plus, Save, FolderOpen, Undo2, Redo2, Download, Layers, Upload,
 } from "lucide-react";
@@ -40,13 +42,9 @@ export function Toolbar() {
       return;
     }
     const data = JSON.stringify(result.data, null, 2);
+    saveLastProjectSnapshot(result.data);
     const blob = new Blob([data], { type: "application/json" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
-    a.download = `${project.name.replace(/\s+/g, "_")}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    triggerDownload(blob, `${project.name.replace(/\s+/g, "_")}.json`);
   }
 
   function handleLoad() {
@@ -170,7 +168,7 @@ export function Toolbar() {
               onClick={redo} disabled={!canRedo}
             ><Redo2 className="w-3.5 h-3.5" /></Button>
           </TooltipTrigger>
-          <TooltipContent>Redo (Ctrl+Shift+Z)</TooltipContent>
+          <TooltipContent>Redo (Ctrl+X / Ctrl+Shift+Z / Ctrl+Y)</TooltipContent>
         </Tooltip>
 
         <div className="w-px h-5 bg-border mx-0.5" />

@@ -9,6 +9,8 @@ import { renderFrameToCanvas } from "@/lib/frameRenderer";
 import { renderSvgToBlob, applyPaletteToSvg } from "@/lib/svgUtils";
 import { DEFAULT_EXPORT_PROFILES } from "@/data/exportProfiles";
 import { formatFrameName } from "@/lib/exportTypes";
+import { triggerDownload } from "@/lib/download";
+import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
 import type { ExportProfile, Item, Template, Entity, PaletteTokens, AnimationClip } from "@/domain/types";
 import type { ExportWorkerJob, WorkerOutputMessage } from "@/lib/exportTypes";
 import ExportWorker from "@/workers/export.worker?worker";
@@ -133,15 +135,6 @@ async function buildSvgPartFiles(
 
 function previewNamingTemplate(tmpl: string, entityName: string): string {
   return formatFrameName(tmpl, { entity: entityName, animation: "idle", frame: 0 });
-}
-
-function triggerDownload(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a   = document.createElement("a");
-  a.href     = url;
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 function fmtMs(ms: number): string {
@@ -351,16 +344,17 @@ export function ExportDialog() {
     setErrorMsg(null);
 
     try {
-      const rasterizedImages = await prerasterizeAll(entities, project.items, findTemplate, msg => {
+      const effectiveItems = refreshCanonicalBuiltInTypedItems(project.items);
+      const rasterizedImages = await prerasterizeAll(entities, effectiveItems, findTemplate, msg => {
         setProgress({ pct: 0.05, msg });
       });
 
-      const svgPartFiles = await buildSvgPartFiles(entities, project.items, profile, findTemplate);
+      const svgPartFiles = await buildSvgPartFiles(entities, effectiveItems, profile, findTemplate);
 
       const job: ExportWorkerJob & { svgPartFiles?: Record<string, Uint8Array> } = {
         entities,
         templates:       Array.from(templateMap.values()),
-        items:           project.items,
+        items:           effectiveItems,
         animationClips:  project.animationClips,
         profile,
         rasterizedImages,
