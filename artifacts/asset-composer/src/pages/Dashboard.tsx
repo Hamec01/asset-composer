@@ -4,16 +4,19 @@ import { ProjectSchema } from "@/domain/schema";
 import { migrateProject } from "@/lib/projectMigration";
 import {
   getLastProjectSnapshotName,
+  getRecentProjectFolderPath,
   getRecentProjectSessions,
   loadProjectSession,
   restoreLastProjectSnapshot,
+  saveLastProjectSnapshot,
 } from "@/lib/projectSession";
-import { Layers, FolderOpen, Plus, Sparkles, Swords, TreePine, Box } from "lucide-react";
+import { Layers, FolderOpen, Plus, Sparkles, Swords, TreePine, Box, FolderPlus } from "lucide-react";
 
 export function Dashboard() {
   const newProject = useStore(s => s.newProject);
   const openWizard = useStore(s => s.openWizard);
   const loadProject = useStore(s => s.loadProject);
+  const setProjectName = useStore(s => s.setProjectName);
   const fileRef = useRef<HTMLInputElement>(null);
   const recentProjects = getRecentProjectSessions();
   const lastProjectName = getLastProjectSnapshotName();
@@ -37,12 +40,69 @@ export function Dashboard() {
   }
 
   function handleOpenRecentProject(projectId: string) {
+    const folderPath = getRecentProjectFolderPath(projectId);
+    if (folderPath && window.assetComposerProjects) {
+      window.assetComposerProjects.readProjectFromFolder(folderPath).then(result => {
+        if (!result) {
+          alert("That project folder could not be read.");
+          return;
+        }
+        const migrated = migrateProject(result.project);
+        const parsed = ProjectSchema.safeParse(migrated);
+        if (!parsed.success) {
+          alert("That project folder contains invalid data.");
+          return;
+        }
+        loadProject(parsed.data);
+        saveLastProjectSnapshot(parsed.data, folderPath);
+      });
+      return;
+    }
+
     const restored = loadProjectSession(projectId);
     if (!restored) {
       alert("That project is no longer available.");
       return;
     }
     loadProject(restored);
+  }
+
+  async function handleCreateProjectFolder() {
+    const projectName = window.prompt("Project name", "New Project")?.trim();
+    if (!projectName) return;
+    const folderResult = await window.assetComposerProjects?.pickProjectFolder();
+    if (!folderResult) return;
+
+    newProject();
+    setProjectName(projectName);
+
+    const project = useStore.getState().project;
+    const saved = await window.assetComposerProjects?.saveProjectToFolder(folderResult.folderPath, project);
+    if (!saved) {
+      alert("Could not create the project folder.");
+      return;
+    }
+
+    saveLastProjectSnapshot(project, folderResult.folderPath);
+    loadProject(project);
+  }
+
+  async function handleOpenProjectFolder() {
+    const folderResult = await window.assetComposerProjects?.pickProjectFolder();
+    if (!folderResult) return;
+    const loaded = await window.assetComposerProjects?.readProjectFromFolder(folderResult.folderPath);
+    if (!loaded) {
+      alert("Could not open a project.json in that folder.");
+      return;
+    }
+    const migrated = migrateProject(loaded.project);
+    const parsed = ProjectSchema.safeParse(migrated);
+    if (!parsed.success) {
+      alert("Project data in that folder is invalid.");
+      return;
+    }
+    loadProject(parsed.data);
+    saveLastProjectSnapshot(parsed.data, folderResult.folderPath);
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -135,6 +195,25 @@ export function Dashboard() {
             <div className="text-sm font-semibold text-foreground">Load Project</div>
             <div className="text-xs text-muted-foreground mt-0.5">Open a .json file</div>
           </div>
+        </button>
+      </div>
+
+      <div className="flex gap-3 mb-10">
+        <button
+          data-testid="dashboard-create-folder"
+          onClick={handleCreateProjectFolder}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/40 bg-primary/10 hover:bg-primary/15 transition-colors"
+        >
+          <FolderPlus className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-foreground">Create Project Folder</span>
+        </button>
+        <button
+          data-testid="dashboard-open-folder"
+          onClick={handleOpenProjectFolder}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-card hover:bg-card/80 transition-colors"
+        >
+          <FolderOpen className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground">Open Project Folder</span>
         </button>
       </div>
 

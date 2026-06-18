@@ -10,6 +10,7 @@ export interface ProjectSessionEntry {
   id: string;
   name: string;
   updatedAt: number;
+  folderPath?: string;
   snapshot: unknown;
 }
 
@@ -32,6 +33,7 @@ function loadRecentProjectEntries(): ProjectSessionEntry[] {
         id: candidate.id,
         name: candidate.name,
         updatedAt: candidate.updatedAt,
+        folderPath: typeof candidate.folderPath === "string" ? candidate.folderPath : undefined,
         snapshot: candidate.snapshot,
       });
     }
@@ -57,6 +59,7 @@ export function getRecentProjectSessions(): ProjectSessionEntry[] {
         id: result.data.id,
         name: result.data.name,
         updatedAt: result.data.updatedAt,
+        folderPath: entry.folderPath,
         snapshot: result.data,
       });
     } catch {
@@ -70,6 +73,12 @@ export function loadProjectSession(projectId: string): unknown | null {
   const entries = getRecentProjectSessions();
   const entry = entries.find(candidate => candidate.id === projectId);
   return entry?.snapshot ?? null;
+}
+
+export function getRecentProjectFolderPath(projectId: string): string | null {
+  const entries = getRecentProjectSessions();
+  const entry = entries.find(candidate => candidate.id === projectId);
+  return entry?.folderPath ?? null;
 }
 
 export function loadLastProjectSnapshot(): unknown | null {
@@ -92,22 +101,30 @@ export function getLastProjectSnapshotName(): string | null {
   return typeof name === "string" && name.trim().length > 0 ? name : null;
 }
 
-export function saveLastProjectSnapshot(project: unknown): boolean {
+export function saveLastProjectSnapshot(project: unknown, folderPath?: string): boolean {
   if (typeof window === "undefined") return false;
   try {
     const result = ProjectSchema.safeParse(project);
     if (!result.success) return false;
     window.localStorage.setItem(LAST_PROJECT_KEY, JSON.stringify(result.data));
 
+    const existing = loadRecentProjectEntries().find(entry => entry.id === result.data.id);
+
     const nextEntry: ProjectSessionEntry = {
       id: result.data.id,
       name: result.data.name,
       updatedAt: result.data.updatedAt,
+      folderPath: folderPath ?? existing?.folderPath,
       snapshot: result.data,
     };
     const nextEntries = [
       nextEntry,
-      ...loadRecentProjectEntries().filter(entry => entry.id !== nextEntry.id),
+      ...loadRecentProjectEntries()
+        .filter(entry => entry.id !== nextEntry.id)
+        .map(entry => ({
+          ...entry,
+          folderPath: entry.folderPath ?? existing?.folderPath,
+        })),
     ];
     saveRecentProjectEntries(nextEntries);
     return true;

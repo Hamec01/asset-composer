@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { STYLE_SETS } from "@/data/styleSets";
 import { migrateProject } from "@/lib/projectMigration";
 import { triggerDownload } from "@/lib/download";
-import { saveLastProjectSnapshot } from "@/lib/projectSession";
+import { getRecentProjectFolderPath, saveLastProjectSnapshot } from "@/lib/projectSession";
 import {
   Plus, Save, FolderOpen, Undo2, Redo2, Download, Layers, Upload,
 } from "lucide-react";
@@ -30,6 +30,34 @@ export function Toolbar() {
   const activeEntity = getActiveEntity();
   const canUndo = history.past.length > 0;
   const canRedo = history.future.length > 0;
+
+  async function handleSaveProject() {
+    const result = ProjectSchema.safeParse(project);
+    if (!result.success) {
+      const msgs = result.error.issues
+        .slice(0, 5)
+        .map(i => `вЂў ${i.path.join(".")}: ${i.message}`)
+        .join("\n");
+      alert(`Cannot save вЂ” project has validation errors:\n${msgs}`);
+      return;
+    }
+
+    const folderPath = getRecentProjectFolderPath(project.id);
+    if (folderPath && window.assetComposerProjects) {
+      const saved = await window.assetComposerProjects.saveProjectToFolder(folderPath, result.data);
+      if (!saved) {
+        alert("Could not save the project folder.");
+        return;
+      }
+      saveLastProjectSnapshot(result.data, folderPath);
+      return;
+    }
+
+    const data = JSON.stringify(result.data, null, 2);
+    saveLastProjectSnapshot(result.data);
+    const blob = new Blob([data], { type: "application/json" });
+    triggerDownload(blob, `${project.name.replace(/\s+/g, "_")}.json`);
+  }
 
   function handleSave() {
     const result = ProjectSchema.safeParse(project);
@@ -180,7 +208,7 @@ export function Toolbar() {
               data-testid="toolbar-save"
               size="icon" variant="ghost"
               className="h-7 w-7"
-              onClick={handleSave}
+              onClick={handleSaveProject}
             ><Save className="w-3.5 h-3.5" /></Button>
           </TooltipTrigger>
           <TooltipContent>Save Project</TooltipContent>

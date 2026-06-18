@@ -11,6 +11,7 @@ import { TEMPLATES } from "../src/data/templates";
 import type { Project } from "../src/domain/types";
 import {
   getRecentProjectSessions,
+  getRecentProjectFolderPath,
   loadProjectSession,
   restoreLastProjectSnapshot,
   saveLastProjectSnapshot,
@@ -59,13 +60,15 @@ describe("project session persistence", () => {
     const first = makeProject();
     const second = { ...makeProject(), id: "project-session-test-2", name: "Second Session", updatedAt: 22 };
 
-    expect(saveLastProjectSnapshot(first)).toBe(true);
+    expect(saveLastProjectSnapshot(first, "D:/projects/first")).toBe(true);
     expect(saveLastProjectSnapshot(second)).toBe(true);
 
     const recent = getRecentProjectSessions();
     expect(recent).toHaveLength(2);
     expect(recent[0].id).toBe(second.id);
     expect(recent[1].id).toBe(first.id);
+    expect(getRecentProjectFolderPath(first.id)).toBe("D:/projects/first");
+    expect(getRecentProjectFolderPath(second.id)).toBeNull();
 
     const restored = loadProjectSession(first.id) as Project | null;
     expect(restored?.id).toBe(first.id);
