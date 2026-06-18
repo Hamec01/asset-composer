@@ -2,7 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { handleEditorShortcutKeydown } from "../src/hooks/useEditorShortcuts";
+import { handleEditorShortcutKeydown } from "../src/features/shortcuts/useEditorShortcuts";
 
 function makeKeyboardEvent(
   target: EventTarget,

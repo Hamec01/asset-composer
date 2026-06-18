@@ -9,7 +9,12 @@ import { DEFAULT_EXPORT_PROFILES } from "../src/data/exportProfiles";
 import { STYLE_SETS } from "../src/data/styleSets";
 import { TEMPLATES } from "../src/data/templates";
 import type { Project } from "../src/domain/types";
-import { restoreLastProjectSnapshot, saveLastProjectSnapshot } from "../src/lib/projectSession";
+import {
+  getRecentProjectSessions,
+  loadProjectSession,
+  restoreLastProjectSnapshot,
+  saveLastProjectSnapshot,
+} from "../src/lib/projectSession";
 
 function makeProject(): Project {
   return {
@@ -48,5 +53,22 @@ describe("project session persistence", () => {
   it("returns null when local snapshot is invalid", () => {
     window.localStorage.setItem("asset-composer:last-project:v1", "{not valid json");
     expect(restoreLastProjectSnapshot()).toBeNull();
+  });
+
+  it("keeps a recent projects list and opens a stored project by id", () => {
+    const first = makeProject();
+    const second = { ...makeProject(), id: "project-session-test-2", name: "Second Session", updatedAt: 22 };
+
+    expect(saveLastProjectSnapshot(first)).toBe(true);
+    expect(saveLastProjectSnapshot(second)).toBe(true);
+
+    const recent = getRecentProjectSessions();
+    expect(recent).toHaveLength(2);
+    expect(recent[0].id).toBe(second.id);
+    expect(recent[1].id).toBe(first.id);
+
+    const restored = loadProjectSession(first.id) as Project | null;
+    expect(restored?.id).toBe(first.id);
+    expect(restored?.name).toBe(first.name);
   });
 });

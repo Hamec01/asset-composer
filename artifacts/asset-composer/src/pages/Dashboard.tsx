@@ -2,7 +2,12 @@ import { useRef } from "react";
 import { useStore } from "@/store";
 import { ProjectSchema } from "@/domain/schema";
 import { migrateProject } from "@/lib/projectMigration";
-import { getLastProjectSnapshotName, restoreLastProjectSnapshot } from "@/lib/projectSession";
+import {
+  getLastProjectSnapshotName,
+  getRecentProjectSessions,
+  loadProjectSession,
+  restoreLastProjectSnapshot,
+} from "@/lib/projectSession";
 import { Layers, FolderOpen, Plus, Sparkles, Swords, TreePine, Box } from "lucide-react";
 
 export function Dashboard() {
@@ -10,6 +15,7 @@ export function Dashboard() {
   const openWizard = useStore(s => s.openWizard);
   const loadProject = useStore(s => s.loadProject);
   const fileRef = useRef<HTMLInputElement>(null);
+  const recentProjects = getRecentProjectSessions();
   const lastProjectName = getLastProjectSnapshotName();
 
   function handleNew() {
@@ -25,6 +31,15 @@ export function Dashboard() {
     const restored = restoreLastProjectSnapshot();
     if (!restored) {
       alert("No saved session was found.");
+      return;
+    }
+    loadProject(restored);
+  }
+
+  function handleOpenRecentProject(projectId: string) {
+    const restored = loadProjectSession(projectId);
+    if (!restored) {
+      alert("That project is no longer available.");
       return;
     }
     loadProject(restored);
@@ -122,6 +137,38 @@ export function Dashboard() {
           </div>
         </button>
       </div>
+
+      {recentProjects.length > 0 && (
+        <div className="w-full max-w-4xl px-4 mb-10">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className="text-sm font-semibold text-foreground">Recent Projects</div>
+              <div className="text-xs text-muted-foreground">Open where you left off in one click</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {recentProjects.map(project => (
+              <button
+                key={project.id}
+                data-testid={`dashboard-recent-${project.id}`}
+                onClick={() => handleOpenRecentProject(project.id)}
+                className="flex items-center justify-between gap-4 p-4 rounded-xl border border-border bg-card hover:bg-card/80 hover:border-primary/40 transition-all text-left"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-foreground truncate">{project.name}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Updated {new Date(project.updatedAt).toLocaleString()}
+                  </div>
+                </div>
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Layers className="w-4 h-4 text-primary" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Feature highlights */}
       <div className="grid grid-cols-3 gap-4 max-w-lg w-full px-4">

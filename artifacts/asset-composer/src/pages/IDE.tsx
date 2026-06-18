@@ -12,7 +12,7 @@ import { ExportDialog } from "@/components/export/ExportDialog";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { useStore } from "@/store";
 import type { AnimBottomTab } from "@/store";
-import { useEditorShortcuts } from "@/hooks/useEditorShortcuts";
+import { useEditorShortcuts } from "@/features/shortcuts/useEditorShortcuts";
 
 const MIN_SIDE_WIDTH = 160;
 const MAX_SIDE_WIDTH = 480;
