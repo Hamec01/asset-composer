@@ -179,6 +179,7 @@ export function InspectorPanel() {
   const removeEntityVisual   = useStore(s => s.removeEntityVisual);
   const updateTemplateSlotTransform = useStore(s => s.updateTemplateSlotTransform);
   const getActiveEntity      = useStore(s => s.getActiveEntity);
+  const animPlayback         = useStore(s => s.animPlayback);
 
   const setEntitySpecies = useStore(s => s.setEntitySpecies);
 
@@ -186,6 +187,13 @@ export function InspectorPanel() {
   const template     = activeEntity ? resolveTemplate(project, activeEntity.templateId) : undefined;
   const styleSet     = activeEntity ? getStyleSetById(activeEntity.styleSetId) : undefined;
   const entityFamily = template?.skeletonFamily ?? null;
+  const activeClip = activeEntity?.activeAnimationClipId
+    ? project.animationClips.find(clip => clip.id === activeEntity.activeAnimationClipId)
+    : null;
+  const activeStateMachineId = activeEntity?.activeStateMachineId ?? animPlayback.activeStateMachineId;
+  const activeStateMachine = activeStateMachineId
+    ? project.stateMachines.find(machine => machine.id === activeStateMachineId)
+    : null;
 
   const [editingName,    setEditingName]    = useState(false);
   const [nameValue,      setNameValue]      = useState("");
@@ -193,7 +201,7 @@ export function InspectorPanel() {
   const [editingSpecies, setEditingSpecies] = useState(false);
 
   const selectedSlotId =
-    editor.selection.kind === "item-part" || editor.selection.kind === "template-slot"
+    editor.selection.kind === "item-part" || editor.selection.kind === "template-slot" || editor.selection.kind === "equipped-item"
       ? editor.selection.slotId
       : editor.selectedSlotId;
   const selectedAssign   = activeEntity?.slots.find(s => s.slotId === selectedSlotId);
@@ -418,6 +426,15 @@ export function InspectorPanel() {
               </p>
             )}
           </div>
+
+          <div className="space-y-1 text-[10px] text-muted-foreground">
+            <div className="flex justify-between"><span>Entity Type</span><span className="text-foreground">{activeEntity.entityType}</span></div>
+            <div className="flex justify-between"><span>Active Animation</span><span className="text-foreground">{activeClip?.label ?? activeClip?.name ?? "none"}</span></div>
+            <div className="flex justify-between"><span>State Machine</span><span className="text-foreground">{activeStateMachine?.name ?? "none"}</span></div>
+            <div className="flex justify-between"><span>Root Transform</span><span className="text-foreground">{activeEntity.rootTransform ? "custom" : "identity"}</span></div>
+          </div>
+
+          <Separator className="bg-border" />
 
           {/* Template info */}
           <div className="space-y-1.5">
@@ -712,6 +729,35 @@ export function InspectorPanel() {
                   className="text-[10px] text-destructive/70 hover:text-destructive transition-colors flex items-center gap-1"
                 >
                   <span>Remove from character</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {selectedSlotDef && selection.kind === "equipped-item" && selection.slotId === selectedSlotDef.id && selectedAssign && selectedItem && (
+            <>
+              <Separator className="bg-border" />
+              <div className="space-y-2">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Equipped Item
+                </Label>
+                <div className="space-y-1 text-[10px] text-muted-foreground">
+                  <div className="flex justify-between"><span>Item</span><span className="text-foreground">{selectedItem.name}</span></div>
+                  <div className="flex justify-between"><span>Slot</span><span className="text-foreground">{selectedSlotDef.name}</span></div>
+                  <div className="flex justify-between"><span>Anchor</span><span className="text-foreground">{selectedItemAnchor?.id ?? "none"}</span></div>
+                  <div className="flex justify-between"><span>Shared Attachment Override</span><span className="text-foreground">active</span></div>
+                  <div className="flex justify-between"><span>Palette Override</span><span className="text-foreground">{Object.keys(selectedAssign.paletteOverride ?? {}).length ? "custom" : "default"}</span></div>
+                </div>
+                <button
+                  onClick={() => setEntitySlot(activeEntity.id, selectedSlotDef.id, null)}
+                  className="text-[10px] text-destructive/70 hover:text-destructive transition-colors flex items-center gap-1"
+                >
+                  <span>Remove from character</span>
+                </button>
+                <button
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                >
+                  Edit Default Fit
                 </button>
               </div>
             </>

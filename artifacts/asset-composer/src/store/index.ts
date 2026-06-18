@@ -408,6 +408,23 @@ export const useStore = create<AppStore>()(
         afterSlots = [...beforeSlots, { slotId, itemId, paletteOverride: {}, attachmentOverride: {} }];
       }
       get().pushCommand(makeSetSlotCommand(entityId, beforeSlots, afterSlots));
+      set(state => {
+        if (state.project.activeEntityId !== entityId) return;
+        if (state.editor.selectedSlotId !== slotId && state.editor.selection.kind !== "equipped-item" && state.editor.selection.kind !== "item-part") {
+          return;
+        }
+        if (itemId) {
+          state.editor.selectedSlotId = slotId;
+          state.editor.selection = { kind: "equipped-item", entityId, slotId, itemId };
+          return;
+        }
+        if (
+          state.editor.selection.kind === "equipped-item" ||
+          (state.editor.selection.kind === "item-part" && state.editor.selection.slotId === slotId)
+        ) {
+          state.editor.selection = { kind: "none" };
+        }
+      });
     },
 
     setEntityPalette: (entityId, palette) => {
@@ -629,7 +646,29 @@ export const useStore = create<AppStore>()(
 
       if (selection.kind === "template-slot" && selection.slotId !== slotId) {
         state.editor.selection = { kind: "none" };
+        return;
       }
+
+      if (
+        selection.kind === "equipped-item" &&
+        selection.slotId === slotId
+      ) {
+        return;
+      }
+
+      const activeEntity = state.project.entities.find(entity => entity.id === state.project.activeEntityId);
+      const assignment = activeEntity?.slots.find(slot => slot.slotId === slotId);
+      if (activeEntity && assignment?.itemId) {
+        state.editor.selection = {
+          kind: "equipped-item",
+          entityId: activeEntity.id,
+          slotId,
+          itemId: assignment.itemId,
+        };
+        return;
+      }
+
+      state.editor.selection = { kind: "none" };
     }),
     setActivePanel:      (panel)     => set(state => { state.editor.activePanel = panel; }),
     openWizard:          ()          => set(state => { state.editor.isWizardOpen = true; }),

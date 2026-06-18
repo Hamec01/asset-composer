@@ -83,6 +83,15 @@ function setTemplateSlotSelection() {
   });
 }
 
+function setEquippedItemSelection() {
+  useStore.getState().newProject();
+  useStore.getState().createEntity("character", "humanoid_topdown_v1", "Equipped Inspector");
+  const entityId = useStore.getState().project.activeEntityId!;
+  useStore.getState().setEntitySlot(entityId, "slot_hair", "hair_test_v2");
+  useStore.getState().setSelectedSlot("slot_hair");
+  return entityId;
+}
+
 function setEntityVisualSelection() {
   useStore.getState().newProject();
   useStore.getState().createEntity("character", "humanoid_topdown_v1", "Visual Inspector");
@@ -126,6 +135,8 @@ describe("InspectorPanel", () => {
     setItemPartSelection();
     renderInspector();
 
+    expect(document.body.textContent).toContain("Entity Type");
+    expect(document.body.textContent).toContain("Root Transform");
     expect(document.body.textContent).toContain("Item Part");
     expect(document.body.textContent).toContain("Anchor");
     expect(document.body.textContent).toContain("Attachment Transform");
@@ -148,6 +159,15 @@ describe("InspectorPanel", () => {
 
     expect(document.body.textContent).toContain("Entity Visual");
     expect(getInput("inspector-visual-x")).toBeTruthy();
+  });
+
+  it("shows equipped-item inspector for equipped-item selection", () => {
+    setEquippedItemSelection();
+    renderInspector();
+
+    expect(document.body.textContent).toContain("Equipped Item");
+    expect(document.body.textContent).toContain("Edit Default Fit");
+    expect(document.body.textContent).toContain("Palette Override");
   });
 
   it("commits one history entry after numeric edit", async () => {
@@ -271,5 +291,16 @@ describe("InspectorPanel", () => {
     const entity = useStore.getState().project.entities.find(e => e.id === entityId)!;
     const slot = entity.slots.find(s => s.slotId === "slot_hair")!;
     expect(slot.itemId).toBeNull();
+  });
+
+  it("selecting an equipped slot creates equipped-item selection", () => {
+    const entityId = setEquippedItemSelection();
+    const selection = useStore.getState().editor.selection;
+    expect(selection).toEqual({
+      kind: "equipped-item",
+      entityId,
+      slotId: "slot_hair",
+      itemId: "hair_test_v2",
+    });
   });
 });
