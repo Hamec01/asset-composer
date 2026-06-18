@@ -10,6 +10,7 @@ import { buildMultiClipPose, evaluateScene, evaluateSkeleton, evaluateRestSkelet
 const template = TEMPLATES.find(t => t.id === "humanoid_topdown_v1")!;
 const boots = ITEMS.find(i => i.id === "boots_leather")!;
 const pants = ITEMS.find(i => i.id === "pants_leather")!;
+const greaves = ITEMS.find(i => i.id === "greave_leather")!;
 
 const palette = template.paletteTokens;
 const license = {
@@ -303,5 +304,80 @@ describe("M8 vertical slice items", () => {
     expect(pantsScene.visuals.every((visual, index, arr) => index === 0 || arr[index - 1].zIndex <= visual.zIndex)).toBe(true);
     expect(bootsScene.visuals.every(visual => visual.localBounds.maxX > visual.localBounds.minX)).toBe(true);
     expect(pantsScene.visuals.every(visual => visual.localBounds.maxY > visual.localBounds.minY)).toBe(true);
+  });
+
+  describe("greave_leather behavior", () => {
+    it("animates every leather greaves part with its own run bone", () => {
+      const entity = makeEntity("slot_legs", greaves.id);
+      const runClip = PRESET_ANIMATIONS.find(clip => clip.id === "humanoid_topdown_v1__run");
+      expect(runClip).toBeTruthy();
+      
+      const frameAPose = buildMultiClipPose(
+        PRESET_ANIMATIONS, runClip!.id, null, null, 1, 0, entity, ITEMS
+      );
+      const frameAScene = evaluateScene(entity, template, evaluateSkeleton(template.bones, frameAPose), ITEMS);
+
+      const frameBPose = buildMultiClipPose(
+        PRESET_ANIMATIONS, runClip!.id, null, null, 1, 250, entity, ITEMS
+      );
+      const frameBScene = evaluateScene(entity, template, evaluateSkeleton(template.bones, frameBPose), ITEMS);
+
+      const restParts = new Map(itemVisuals(frameAScene, greaves.id).map(v => [v.partId!, v]));
+      const runParts = new Map(itemVisuals(frameBScene, greaves.id).map(v => [v.partId!, v]));
+
+      // Should have 4 parts
+      expect(restParts.size).toBe(4);
+
+      // They should all move during the run animation
+      for (const [partId, restVisual] of restParts.entries()) {
+        const runVisual = runParts.get(partId);
+        expect(runVisual).toBeDefined();
+        
+        // Use not.toEqual to check matrix inequality
+        expect(runVisual!.worldMatrix).not.toEqual(restVisual.worldMatrix);
+      }
+    });
+
+    it("hides skin parts covered by leather greaves (hips and knees)", () => {
+      const scene = sceneFor(greaves, "slot_legs", template);
+      
+      const bodyVisuals = scene.visuals.filter(v => v.sourceKind === "bone-part");
+      const bodyBoneIds = new Set(bodyVisuals.map(v => v.boneId));
+
+      expect(bodyBoneIds.has("hip_l")).toBe(false);
+      expect(bodyBoneIds.has("hip_r")).toBe(false);
+      expect(bodyBoneIds.has("knee_l")).toBe(false);
+      expect(bodyBoneIds.has("knee_r")).toBe(false);
+
+      // Should still have pelvis and feet
+      expect(bodyBoneIds.has("pelvis")).toBe(true);
+      expect(bodyBoneIds.has("foot_l")).toBe(true);
+      expect(bodyBoneIds.has("foot_r")).toBe(true);
+    });
+
+    it("heals stale built-in leather greaves data at runtime", () => {
+      const staleGreaves: Item = {
+        ...greaves,
+        coordinateMode: "legacy_full_frame",
+        parts: [],
+        svgLayers: [{
+          id: "legacy_layer",
+          svgData: "<svg viewBox='0 0 64 64'></svg>",
+          zOffset: 0,
+        }],
+      };
+
+      const entity = makeEntity("slot_legs", greaves.id);
+      const skeleton = evaluateRestSkeleton(template.bones);
+      const healedScene = evaluateScene(entity, template, skeleton, [staleGreaves]);
+
+      expect(itemVisuals(healedScene, greaves.id)).toHaveLength(4);
+      expect(itemVisuals(healedScene, greaves.id).map(visual => visual.partId).sort()).toEqual([
+        "greave_thigh_l",
+        "greave_shin_l",
+        "greave_thigh_r",
+        "greave_shin_r",
+      ].sort());
+    });
   });
 });

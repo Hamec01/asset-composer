@@ -4,6 +4,7 @@ import type { Item } from "@/domain/types";
 const REFRESHED_BUILTIN_ITEM_IDS = new Set([
   "boots_leather",
   "pants_leather",
+  "greave_leather",
 ]);
 
 const BUILTIN_ITEM_MAP = new Map(

@@ -402,6 +402,99 @@ function v2LeatherPantsItem(): Item {
   };
 }
 
+function v2LeatherGreavesItem(): Item {
+  const thighSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 18">
+    <path d="M3 2 H13 Q15 2 15 4 V18 H1 V4 Q1 2 3 2 Z" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M1 4 Q1 2 3 2 H13 Q15 2 15 4 V10 H1 Z" fill="${C.accent}" opacity="0.5"/>
+    <path d="M1 10 H15" stroke="${C.out}" stroke-width="1.5" opacity="0.5"/>
+  </svg>`;
+  const shinSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 18">
+    <path d="M1 0 H15 V14 Q15 16 13 16 H3 Q1 16 1 14 Z" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>`;
+
+  return {
+    id: "greave_leather",
+    name: "Leather Greaves",
+    description: "Leather shin protectors",
+    category: "legs",
+    compatibility: {
+      skeletonFamilies: HUMAN,
+      species: [],
+      viewProfiles: deriveViewProfiles(HUMAN),
+    },
+    allowedSlots: ["slot_legs", "side_slot_legs"],
+    fitProfile: "standard",
+    paletteChannels: ["secondaryCloth", "accent"],
+    hasOwnAnimation: false,
+    animationClipId: null,
+    anchorRules: {},
+    svgLayers: [{
+      id: "thumb",
+      styleSetId: null,
+      svgData: svg(`<rect x="16" y="20" width="14" height="30" rx="3" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5"/><rect x="34" y="20" width="14" height="30" rx="3" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5"/><rect x="16" y="20" width="14" height="8" fill="${C.accent}" opacity="0.5"/><rect x="34" y="20" width="14" height="8" fill="${C.accent}" opacity="0.5"/>`),
+      paletteChannels: ["secondaryCloth", "accent"],
+      zOffset: 0,
+    }],
+    parts: [
+      {
+        id: "greave_thigh_l",
+        boneId: "hip_l",
+        svgData: thighSvg,
+        metrics: {
+          viewBoxX: 0, viewBoxY: 0, viewBoxWidth: 16, viewBoxHeight: 18,
+          visualMinX: 1, visualMinY: 2, visualWidth: 14, visualHeight: 16,
+        },
+        pivot: { x: 8, y: 3, preset: "custom" },
+        localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+        coordinateMode: "bone_local",
+        zOffset: 0.1,
+      },
+      {
+        id: "greave_shin_l",
+        boneId: "knee_l",
+        svgData: shinSvg,
+        metrics: {
+          viewBoxX: 0, viewBoxY: 0, viewBoxWidth: 16, viewBoxHeight: 18,
+          visualMinX: 1, visualMinY: 0, visualWidth: 14, visualHeight: 16,
+        },
+        pivot: { x: 8, y: 2, preset: "custom" },
+        localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+        coordinateMode: "bone_local",
+        zOffset: 0.1,
+      },
+      {
+        id: "greave_thigh_r",
+        boneId: "hip_r",
+        svgData: thighSvg,
+        metrics: {
+          viewBoxX: 0, viewBoxY: 0, viewBoxWidth: 16, viewBoxHeight: 18,
+          visualMinX: 1, visualMinY: 2, visualWidth: 14, visualHeight: 16,
+        },
+        pivot: { x: 8, y: 3, preset: "custom" },
+        localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+        coordinateMode: "bone_local",
+        zOffset: 0.15,
+      },
+      {
+        id: "greave_shin_r",
+        boneId: "knee_r",
+        svgData: shinSvg,
+        metrics: {
+          viewBoxX: 0, viewBoxY: 0, viewBoxWidth: 16, viewBoxHeight: 18,
+          visualMinX: 1, visualMinY: 0, visualWidth: 14, visualHeight: 16,
+        },
+        pivot: { x: 8, y: 2, preset: "custom" },
+        localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+        coordinateMode: "bone_local",
+        zOffset: 0.15,
+      },
+    ],
+    coordinateMode: "bone_local",
+    licenseMeta: CC0,
+    tags: ["armor", "legs"],
+  };
+}
+
 export const ITEMS: Item[] = [
 
   // BOOTS (5)
@@ -510,8 +603,7 @@ export const ITEMS: Item[] = [
     svg(`<rect x="14" y="18" width="16" height="34" rx="2" fill="${C.metal}" stroke="${C.out}" stroke-width="1.5"/><rect x="34" y="18" width="16" height="34" rx="2" fill="${C.metal}" stroke="${C.out}" stroke-width="1.5"/><line x1="14" y1="30" x2="30" y2="30" stroke="${C.out}" stroke-width="1"/><line x1="34" y1="30" x2="50" y2="30" stroke="${C.out}" stroke-width="1"/>`), ["armor","legs"]),
   item("greave_plate",    "Plate Greaves",   "Full plate leg protection",  "legs", ["slot_legs","side_slot_legs"], HUMAN, ["metal","accent"],
     svg(`<rect x="14" y="16" width="16" height="36" rx="2" fill="${C.metal}" stroke="${C.out}" stroke-width="2"/><rect x="34" y="16" width="16" height="36" rx="2" fill="${C.metal}" stroke="${C.out}" stroke-width="2"/><rect x="14" y="16" width="16" height="10" fill="${C.accent}"/><rect x="34" y="16" width="16" height="10" fill="${C.accent}"/>`), ["armor","legs"]),
-  item("greave_leather",  "Leather Greaves", "Leather shin protectors",    "legs", ["slot_legs","side_slot_legs"], HUMAN, ["secondaryCloth","accent"],
-    svg(`<rect x="16" y="20" width="14" height="30" rx="3" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5"/><rect x="34" y="20" width="14" height="30" rx="3" fill="${C.cloth2}" stroke="${C.out}" stroke-width="1.5"/><rect x="16" y="20" width="14" height="8" fill="${C.accent}" opacity="0.5"/><rect x="34" y="20" width="14" height="8" fill="${C.accent}" opacity="0.5"/>`), ["armor","legs"]),
+  v2LeatherGreavesItem(),
 
   // ═══════════════════════════════════════════════════════════════════════
   // ACCESSORIES
