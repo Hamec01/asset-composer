@@ -362,6 +362,23 @@ export class CanvasEngine {
 
     // ── 7. Apply current transforms ───────────────────────────────────────────
     this.updateSceneTransforms(scene);
+
+    const DEBUG_CANVAS_INVARIANTS = false;
+    if (DEBUG_CANVAS_INVARIANTS) {
+      const sceneIds = new Set(scene.visuals.map(v => v.id));
+      const fabricIds = new Set(this.fabricImages.keys());
+
+      for (const id of sceneIds) {
+        if (!fabricIds.has(id)) {
+          console.error(`[Invariant] Missing Fabric object for visual ID: ${id}`);
+        }
+      }
+      for (const id of fabricIds) {
+        if (!sceneIds.has(id)) {
+          console.error(`[Invariant] Stale Fabric object remains for ID: ${id}`);
+        }
+      }
+    }
   }
 
   private _sortCanvasObjects(): void {

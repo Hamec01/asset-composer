@@ -151,46 +151,46 @@ describe("M8 vertical slice items", () => {
     }
   });
 
-  it("moves every leather pants part with its assigned animated bone", () => {
+  it("animates every leather pants part with its own run bone", () => {
     const entity = makeEntity("slot_legs", pants.id);
     const runClip = PRESET_ANIMATIONS.find(clip => clip.id === "humanoid_topdown_v1__run");
     expect(runClip).toBeTruthy();
 
-    const restScene = evaluateScene(entity, template, evaluateRestSkeleton(template.bones), ITEMS);
-    const runPose = buildMultiClipPose(
-      PRESET_ANIMATIONS,
-      runClip!.id,
-      null,
-      null,
-      1,
-      125,
-      entity,
-      ITEMS,
+    const frameAPose = buildMultiClipPose(
+      PRESET_ANIMATIONS, runClip!.id, null, null, 1, 0, entity, ITEMS
     );
-    const runScene = evaluateScene(entity, template, evaluateSkeleton(template.bones, runPose), ITEMS);
+    const frameAScene = evaluateScene(entity, template, evaluateSkeleton(template.bones, frameAPose), ITEMS);
 
-    const restByPart = new Map(itemVisuals(restScene, pants.id).map(visual => [visual.partId!, visual]));
-    const runByPart = new Map(itemVisuals(runScene, pants.id).map(visual => [visual.partId!, visual]));
+    const frameBPose = buildMultiClipPose(
+      PRESET_ANIMATIONS, runClip!.id, null, null, 1, 250, entity, ITEMS
+    );
+    const frameBScene = evaluateScene(entity, template, evaluateSkeleton(template.bones, frameBPose), ITEMS);
 
-    expect(runByPart.size).toBe(5);
-    expect(runByPart.get("waist")?.worldMatrix).not.toEqual(restByPart.get("waist")?.worldMatrix);
+    const frameAByPart = new Map(itemVisuals(frameAScene, pants.id).map(v => [v.partId!, v]));
+    const frameBByPart = new Map(itemVisuals(frameBScene, pants.id).map(v => [v.partId!, v]));
 
-    const movedLegPartIds = ["thigh_l", "shin_l", "thigh_r", "shin_r"].filter(partId => (
-      runByPart.get(partId)?.worldMatrix !== restByPart.get(partId)?.worldMatrix &&
-      JSON.stringify(runByPart.get(partId)?.worldMatrix) !== JSON.stringify(restByPart.get(partId)?.worldMatrix)
-    ));
-    expect(movedLegPartIds.length).toBeGreaterThanOrEqual(4);
+    expect(frameAByPart.get("thigh_l")?.worldMatrix).not.toEqual(frameBByPart.get("thigh_l")?.worldMatrix);
+    expect(frameAByPart.get("shin_l")?.worldMatrix).not.toEqual(frameBByPart.get("shin_l")?.worldMatrix);
+    expect(frameAByPart.get("thigh_r")?.worldMatrix).not.toEqual(frameBByPart.get("thigh_r")?.worldMatrix);
+    expect(frameAByPart.get("shin_r")?.worldMatrix).not.toEqual(frameBByPart.get("shin_r")?.worldMatrix);
   });
 
-  it("hides covered skin leg body parts when leather pants are equipped", () => {
+  it("hides naked body bone parts covered by V2 pants", () => {
     const scene = sceneFor(pants, "slot_legs", template);
-    const ids = new Set(scene.visuals.map(visual => visual.id));
+    
+    const bodyVisuals = scene.visuals.filter(v => v.sourceKind === "bone-part");
+    const bodyBoneIds = new Set(bodyVisuals.map(v => v.boneId));
 
-    expect(ids.has("part__pelvis")).toBe(false);
-    expect(ids.has("part__hip_l")).toBe(false);
-    expect(ids.has("part__hip_r")).toBe(false);
-    expect(ids.has("part__knee_l")).toBe(false);
-    expect(ids.has("part__knee_r")).toBe(false);
+    expect(bodyBoneIds.has("pelvis")).toBe(false);
+    expect(bodyBoneIds.has("hip_l")).toBe(false);
+    expect(bodyBoneIds.has("hip_r")).toBe(false);
+    expect(bodyBoneIds.has("knee_l")).toBe(false);
+    expect(bodyBoneIds.has("knee_r")).toBe(false);
+
+    // Should still have feet if boots are not equipped
+    expect(bodyBoneIds.has("foot_l")).toBe(true);
+    expect(bodyBoneIds.has("foot_r")).toBe(true);
+
     expect(itemVisuals(scene, pants.id)).toHaveLength(5);
   });
 

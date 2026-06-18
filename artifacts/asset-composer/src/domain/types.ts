@@ -196,6 +196,7 @@ export interface EvaluatedVisual {
   itemId?:         string;
   partId?:         string;
   entityVisualId?: string;
+  boneId?:         string;
 }
 
 // ── Canvas editor types (M1-E3B) ──────────────────────────────────────────────

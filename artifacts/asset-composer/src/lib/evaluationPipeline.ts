@@ -211,7 +211,7 @@ function makeSlotDefaultTransformMatrix(slotDef: SlotDef): Matrix2D {
     : identity();
 }
 
-function getCoveredBodyPartIds(entity: Entity, items: Item[]): Set<string> {
+function getCoveredBodyBoneIds(entity: Entity, items: Item[]): Set<string> {
   const covered = new Set<string>();
   for (const slotAssign of entity.slots) {
     if (!slotAssign.itemId) continue;
@@ -259,12 +259,18 @@ export function resolveItemPartBinding(
   const anchorId = resolveAnchorId(slotAssign, slotDef, item);
   const anchor = anchorId ? template.anchors?.[anchorId] : undefined;
 
-  const fallbackBoneId = part.boneId || slotDef.boneId;
-  const parentBoneId = anchor?.boneId ?? fallbackBoneId;
+  const distinctPartBones = new Set((item.parts ?? []).map(itemPart => itemPart.boneId));
+  const isMultiBoneItem = distinctPartBones.size > 1;
+
+  const parentBoneId =
+    isMultiBoneItem
+      ? part.boneId || slotDef.boneId
+      : anchor?.boneId ?? part.boneId ?? slotDef.boneId;
+
   const parentBone = skeleton.bones.get(parentBoneId);
   const parentMatrix: Matrix2D = parentBone ? worldBoneToMatrix(parentBone) : identity();
 
-  const anchorMatrix = anchor
+  const anchorMatrix = anchor && !isMultiBoneItem
     ? localTransformToMatrix(anchor.offsetX, anchor.offsetY, anchor.rotation, 1, 1)
     : identity();
 
@@ -277,7 +283,7 @@ export function resolveItemPartBinding(
     anchorMatrix,
     defaultTransformMatrix,
     attachmentOverrideMatrix,
-    anchorId,
+    anchorId: isMultiBoneItem ? null : anchorId,
   };
 }
 
@@ -290,7 +296,7 @@ export function evaluateScene(
   items:    Item[],
 ): EvaluatedScene {
   const effectiveItems = refreshCanonicalBuiltInTypedItems(items);
-  const coveredBodyPartIds = getCoveredBodyPartIds(entity, effectiveItems);
+  const coveredBodyBoneIds = getCoveredBodyBoneIds(entity, effectiveItems);
   const visuals: EvaluatedVisual[] = [];
   const layers:  SceneLayer[]      = [];
 
@@ -326,7 +332,7 @@ export function evaluateScene(
   if (template.boneParts && template.boneParts.length > 0) {
     // Stage 3: per-bone SVG parts
     for (const part of template.boneParts) {
-      if (coveredBodyPartIds.has(part.id)) continue;
+      if (coveredBodyBoneIds.has(part.boneId)) continue;
       const svgData = applyPaletteToSvg(part.svgData, template.paletteTokens, entity.palette);
 
       const wb = skeleton.bones.get(part.boneId);
@@ -337,7 +343,7 @@ export function evaluateScene(
       const localBounds = makeLocalBounds(part.naturalWidth, part.naturalHeight);
       const worldBounds = transformAABB(worldM, localBounds);
 
-      visuals.push({ id: `part__${part.id}`, svgData, zIndex: part.zOffset, worldMatrix: worldM, localBounds, worldBounds, sourceKind: "bone-part" });
+      visuals.push({ id: `part__${part.id}`, svgData, zIndex: part.zOffset, worldMatrix: worldM, localBounds, worldBounds, sourceKind: "bone-part", boneId: part.boneId });
 
       // Legacy layer (bone-local)
       layers.push({
