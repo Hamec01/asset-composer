@@ -1,4 +1,4 @@
-import type { Entity, Template, Item, AnimationClip, ExportProfile } from "@/domain/types";
+import type { Entity, Template, Item, AnimationClip, ExportProfile, ItemFitProfile } from "@/domain/types";
 
 export interface FrameRegion {
   x: number;
@@ -67,6 +67,7 @@ export interface ExportWorkerJob {
   entities: Entity[];
   templates: Template[];
   items: Item[];
+  itemFitProfiles: ItemFitProfile[];
   animationClips: AnimationClip[];
   profile: ExportProfile;
   /**

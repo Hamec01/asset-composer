@@ -507,6 +507,7 @@ export interface Project {
   entities: Entity[];
   templates: Template[];
   items: Item[];
+  itemFitProfiles: ItemFitProfile[];
   animationClips: AnimationClip[];
   stateMachines: StateMachine[];
   styleSets: StyleSet[];

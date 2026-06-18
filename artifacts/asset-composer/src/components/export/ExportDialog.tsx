@@ -76,7 +76,7 @@ async function prerasterizeAll(
   for (const entity of entities) {
     const template = findTemplate(entity.templateId);
     if (!template) continue;
-    const scene = evaluateScene(entity, template, evaluateRestSkeleton(template.bones), items);
+    const scene = evaluateScene(entity, template, evaluateRestSkeleton(template.bones), items, useStore.getState().project.itemFitProfiles);
     for (const visual of scene.visuals) {
       const key = `visual:${entity.id}:${visual.id}`;
       if (cache[key]) continue;
@@ -283,6 +283,7 @@ export function ExportDialog() {
         await renderFrameToCanvas({
           canvas, entity, template,
           items: project.items,
+          itemFitProfiles: project.itemFitProfiles,
           frameSz,
           bgColor: profile.bgColor,
           outlinePadding: profile.outlinePadding,
@@ -355,6 +356,7 @@ export function ExportDialog() {
         entities,
         templates:       Array.from(templateMap.values()),
         items:           effectiveItems,
+        itemFitProfiles: project.itemFitProfiles,
         animationClips:  project.animationClips,
         profile,
         rasterizedImages,

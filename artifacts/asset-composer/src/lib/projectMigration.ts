@@ -1,6 +1,7 @@
 import { ProjectSchema } from "@/domain/schema";
 import { refreshCanonicalBuiltInItems } from "@/lib/canonicalItems";
 import { refreshCanonicalBuiltInTemplates } from "@/data/templates";
+import { ITEM_FIT_PROFILES } from "@/data/itemFitProfiles";
 import type { Template } from "@/domain/types";
 
 /**
@@ -74,6 +75,8 @@ function migrateV1ToV2(raw: unknown): unknown {
     r.items = normalizeMigratedItems(r.items as Record<string, unknown>[]);
   }
 
+  r.itemFitProfiles = Array.isArray(r.itemFitProfiles) ? r.itemFitProfiles : ITEM_FIT_PROFILES;
+
   if (Array.isArray(r.entities)) {
     r.entities = (r.entities as Record<string, unknown>[]).map(e => ({
       ...e,
@@ -103,6 +106,8 @@ function normalizeV2Project(raw: unknown): unknown {
   if (Array.isArray(r.items)) {
     r.items = normalizeMigratedItems(r.items as Record<string, unknown>[]);
   }
+
+  r.itemFitProfiles = Array.isArray(r.itemFitProfiles) ? r.itemFitProfiles : ITEM_FIT_PROFILES;
 
   if (Array.isArray(r.entities)) {
     r.entities = (r.entities as Record<string, unknown>[]).map(e => ({

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { ITEM_FIT_PROFILES } from "../src/data/itemFitProfiles";
 import { ITEMS } from "../src/data/items";
 import { TEMPLATES } from "../src/data/templates";
 import type { Template } from "../src/domain/types";
@@ -72,6 +73,7 @@ describe("project migration built-in item refresh", () => {
           tags: ["legacy"],
         },
       ],
+      itemFitProfiles: ITEM_FIT_PROFILES,
       animationClips: [],
       stateMachines: [],
       styleSets: [],
@@ -125,6 +127,7 @@ describe("project migration built-in item refresh", () => {
           tags: [],
         },
       ],
+      itemFitProfiles: ITEM_FIT_PROFILES,
       animationClips: [],
       stateMachines: [],
       styleSets: [],
@@ -171,6 +174,7 @@ describe("project migration built-in template refresh", () => {
       entities: [],
       templates: [staleHumanoid],
       items: [],
+      itemFitProfiles: ITEM_FIT_PROFILES,
       animationClips: [],
       stateMachines: [],
       styleSets: [],
@@ -186,5 +190,26 @@ describe("project migration built-in template refresh", () => {
     expect(humanoid.anchors).toEqual(humanoidBuiltin.anchors);
     expect(humanoid.boneParts?.map(part => part.id)).toEqual(humanoidBuiltin.boneParts?.map(part => part.id));
     expect(legsSlot.defaultTransform).toEqual(savedSlotTransform);
+  });
+
+  it("hydrates built-in fit profiles when older projects do not store them yet", () => {
+    const migrated = migrateProject({
+      id: "project",
+      version: "2.0",
+      name: "Missing fit profiles",
+      description: "",
+      entities: [],
+      templates: [],
+      items: [],
+      animationClips: [],
+      stateMachines: [],
+      styleSets: [],
+      exportProfiles: [],
+      activeEntityId: null,
+      createdAt: 0,
+      updatedAt: 0,
+    }) as { itemFitProfiles: typeof ITEM_FIT_PROFILES };
+
+    expect(migrated.itemFitProfiles).toEqual(ITEM_FIT_PROFILES);
   });
 });

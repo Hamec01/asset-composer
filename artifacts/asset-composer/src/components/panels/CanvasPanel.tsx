@@ -193,10 +193,17 @@ export function CanvasPanel() {
         effectiveItems,
       );
       const skeleton = evaluateSkeleton(liveTemplate.bones, pose);
-      const scene    = evaluateScene(liveEntity, liveTemplate, skeleton, effectiveItems);
+      const scene    = evaluateScene(liveEntity, liveTemplate, skeleton, effectiveItems, store.project.itemFitProfiles);
 
       const itemsArr = effectiveItems;
-      await engineRef.current.reconcileSceneStructure(scene, liveTemplate, editor.selectedSlotId, itemsArr, liveEntity);
+      await engineRef.current.reconcileSceneStructure(
+        scene,
+        liveTemplate,
+        editor.selectedSlotId,
+        itemsArr,
+        store.project.itemFitProfiles,
+        liveEntity,
+      );
 
       // Re-apply viewport after reconcile (new visuals reset internal state)
       engineRef.current.setViewport(vpRef.current.zoom, vpRef.current.panX, vpRef.current.panY);
@@ -246,7 +253,7 @@ export function CanvasPanel() {
         effectiveItems,
       );
       const skeleton = evaluateSkeleton(tmpl.bones, pose);
-      const scene    = evaluateScene(ent, tmpl, skeleton, effectiveItems);
+      const scene    = evaluateScene(ent, tmpl, skeleton, effectiveItems, store.project.itemFitProfiles);
       engineRef.current.updateSceneTransforms(scene);
     });
     return remove;
@@ -311,7 +318,7 @@ export function CanvasPanel() {
     const store    = useStore.getState();
     const effectiveItems = refreshCanonicalBuiltInTypedItems(store.project.items);
     const skeleton = evaluateSkeleton(template.bones, new Map());
-    const scene    = evaluateScene(activeEntity, template, skeleton, effectiveItems);
+    const scene    = evaluateScene(activeEntity, template, skeleton, effectiveItems, store.project.itemFitProfiles);
     const cam      = engineRef.current.fitScene(scene, template);
     applyViewport(cam);
   }, [activeEntity, template, applyViewport]);

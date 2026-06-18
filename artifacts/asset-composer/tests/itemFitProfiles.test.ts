@@ -245,4 +245,53 @@ describe("item fit profiles", () => {
     expect(noAnchorVisual).toBeTruthy();
     expect(anchoredVisual!.worldMatrix).not.toEqual(noAnchorVisual!.worldMatrix);
   });
+
+  it("resolves attachment override anchor before fit profile and item anchor rules", () => {
+    const item = ITEMS.find(candidate => candidate.id === "hair_test_v2")!;
+    const slotDef = template.slots.find(slot => slot.id === "slot_hair")!;
+    const fitProfiles: ItemFitProfile[] = [{
+      id: "fit-anchor",
+      fitProfile: item.fitProfile,
+      templateId: template.id,
+      family: template.skeletonFamily,
+      slotId: slotDef.id,
+      partTransforms: {},
+      anchorOverrides: {
+        [slotDef.id]: "hair_top",
+      },
+    }];
+    const entity = {
+      ...makeEntity(item),
+      slots: [{
+        slotId: slotDef.id,
+        itemId: item.id,
+        paletteOverride: {},
+        attachmentOverride: {
+          anchorId: "",
+        },
+      }],
+    };
+    const pose = new Map([
+      ["head", { tx: 18, ty: -9, rotation: 0, scaleX: 1, scaleY: 1 }],
+    ]);
+    const skeleton = evaluateSkeleton(template.bones, pose);
+
+    const fitAnchoredScene = evaluateScene(entity, template, skeleton, [item], fitProfiles);
+    const fitAnchoredVisual = fitAnchoredScene.visuals.find(v => v.itemId === item.id);
+
+    const overrideScene = evaluateScene({
+      ...entity,
+      slots: [{
+        ...entity.slots[0],
+        attachmentOverride: {
+          anchorId: "beard",
+        },
+      }],
+    }, template, skeleton, [item], fitProfiles);
+    const overrideVisual = overrideScene.visuals.find(v => v.itemId === item.id);
+
+    expect(fitAnchoredVisual).toBeTruthy();
+    expect(overrideVisual).toBeTruthy();
+    expect(overrideVisual!.worldMatrix).not.toEqual(fitAnchoredVisual!.worldMatrix);
+  });
 });

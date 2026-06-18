@@ -20,7 +20,7 @@
 import { scaleSvgToFit, svgToDataUrl } from "@/lib/svgUtils";
 import { evaluateRestSkeleton, evaluateScene } from "@/lib/evaluationPipeline";
 import type { EvaluatedVisual } from "@/domain/types";
-import type { Entity, Template, Item } from "@/domain/types";
+import type { Entity, Template, Item, ItemFitProfile } from "@/domain/types";
 
 async function loadSvgAsImage(
   svgData: string,
@@ -78,12 +78,13 @@ export async function renderFrameToCanvas(opts: {
   entity:         Entity;
   template:       Template;
   items:          Item[];
+  itemFitProfiles?: ItemFitProfile[];
   frameSz:        number;
   bgColor:        string | null;
   outlinePadding: number;
   antiAlias?:     boolean;
 }): Promise<void> {
-  const { canvas, entity, template, items, frameSz, bgColor, outlinePadding } = opts;
+  const { canvas, entity, template, items, itemFitProfiles = [], frameSz, bgColor, outlinePadding } = opts;
   const antiAlias = opts.antiAlias ?? true;
   const scale = frameSz / Math.max(template.previewWidth, template.previewHeight);
 
@@ -100,7 +101,7 @@ export async function renderFrameToCanvas(opts: {
   }
 
   const skeleton = evaluateRestSkeleton(template.bones);
-  const scene    = evaluateScene(entity, template, skeleton, items);
+  const scene    = evaluateScene(entity, template, skeleton, items, itemFitProfiles);
 
   for (const visual of scene.visuals) {
     try {

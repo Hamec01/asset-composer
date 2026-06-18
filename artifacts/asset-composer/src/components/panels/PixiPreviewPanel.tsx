@@ -251,7 +251,7 @@ export function PixiPreviewPanel() {
 
           // Step 2: canonical evaluated scene
           const skeleton = evaluateSkeleton(template.bones, localPose);
-          const scene = evaluateScene(entity, template, skeleton, items);
+          const scene = evaluateScene(entity, template, skeleton, items, store.project.itemFitProfiles);
 
           // Step 3: viewport scale from template units to preview pixels
           const sceneScale = Math.min(w, h) / Math.max(template.previewWidth, template.previewHeight);
@@ -347,7 +347,7 @@ export function PixiPreviewPanel() {
 
     const restSkeleton = evaluateSkeleton(template.bones, new Map());
     const items        = refreshCanonicalBuiltInTypedItems(store.project.items);
-    const scene        = evaluateScene(entity, template, restSkeleton, items);
+    const scene        = evaluateScene(entity, template, restSkeleton, items, store.project.itemFitProfiles);
 
     (async () => {
       const newPool: PooledSprite[] = [];

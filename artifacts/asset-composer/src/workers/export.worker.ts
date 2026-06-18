@@ -28,6 +28,7 @@ import type {
   Item,
   AnimationClip,
   ExportProfile,
+  ItemFitProfile,
 } from "@/domain/types";
 import type { BoneTransformMap } from "@/lib/animationRuntime";
 
@@ -73,6 +74,7 @@ async function renderFrame(
   entity: Entity,
   template: Template,
   itemsMap: Map<string, Item>,
+  fitProfiles: ItemFitProfile[],
   rasterizedImages: Record<string, ArrayBuffer>,
   pose: BoneTransformMap,
   frameSz: number,
@@ -90,7 +92,7 @@ async function renderFrame(
   }
 
   const canonicalSkeleton = evaluateSkeleton(template.bones, pose);
-  const canonicalScene = evaluateScene(entity, template, canonicalSkeleton, [...itemsMap.values()]);
+  const canonicalScene = evaluateScene(entity, template, canonicalSkeleton, [...itemsMap.values()], fitProfiles);
   const canonicalScale = frameSz / Math.max(template.previewWidth, template.previewHeight);
 
   for (const visual of canonicalScene.visuals) {
@@ -303,6 +305,7 @@ async function exportEntity(
   entity: Entity,
   templates: Template[],
   itemsMap: Map<string, Item>,
+  fitProfiles: ItemFitProfile[],
   rasterizedImages: Record<string, ArrayBuffer>,
   allClips: AnimationClip[],
   profile: ExportProfile,
@@ -353,7 +356,7 @@ async function exportEntity(
       });
 
       const bitmap = await renderFrame(
-        entity, template, itemsMap, rasterizedImages, pose, frameSz, profile
+        entity, template, itemsMap, fitProfiles, rasterizedImages, pose, frameSz, profile
       );
       renderedFrames.push({ frameName, bitmap, clipName: clip.name });
 
@@ -377,7 +380,7 @@ async function exportEntity(
       entity: entity.name, animation: "idle", frame: 0,
     });
     const bitmap = await renderFrame(
-      entity, template, itemsMap, rasterizedImages, new Map(), frameSz, profile
+      entity, template, itemsMap, fitProfiles, rasterizedImages, new Map(), frameSz, profile
     );
     renderedFrames.push({ frameName, bitmap, clipName: "idle" });
   }
@@ -432,7 +435,7 @@ async function exportCombined(
   itemsMap: Map<string, Item>,
   onProgress: (pct: number, msg: string) => void
 ): Promise<Record<string, Uint8Array>> {
-  const { entities, templates, animationClips, profile, rasterizedImages } = job;
+  const { entities, templates, animationClips, profile, rasterizedImages, itemFitProfiles } = job;
   const frameSz = parseInt(profile.frameSizeKey, 10);
   const files: Record<string, Uint8Array> = {};
 
@@ -469,7 +472,7 @@ async function exportCombined(
             entity: entity.name, animation: clip.name, frame: fi,
           });
 
-          const bitmap = await renderFrame(entity, template, itemsMap, rasterizedImages, pose, frameSz, profile);
+          const bitmap = await renderFrame(entity, template, itemsMap, itemFitProfiles, rasterizedImages, pose, frameSz, profile);
           if (!firstBitmap) firstBitmap = bitmap;
 
           if (profile.formats.includes("frame_sequence")) {
@@ -517,7 +520,7 @@ async function exportCombined(
         const frameName = formatFrameName(profile.namingTemplate, {
           entity: `${entity.id}_${entity.name}`, animation: clip.name, frame: fi,
         });
-        const bitmap = await renderFrame(entity, template, itemsMap, rasterizedImages, pose, frameSz, profile);
+        const bitmap = await renderFrame(entity, template, itemsMap, itemFitProfiles, rasterizedImages, pose, frameSz, profile);
         allRendered.push({ frameName, bitmap });
       }
     }
@@ -585,6 +588,7 @@ self.onmessage = async (e: MessageEvent<WorkerInputMessage>) => {
           job.entities[ei],
           job.templates,
           itemsMap,
+          job.itemFitProfiles,
           job.rasterizedImages,
           job.animationClips,
           job.profile,

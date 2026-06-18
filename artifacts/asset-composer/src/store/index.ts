@@ -15,6 +15,7 @@ import { cloneTemplates, resolveTemplate } from "@/data/templates";
 import { STYLE_SETS, DEFAULT_STYLE_SET_ID, getStyleSetById } from "@/data/styleSets";
 import { DEFAULT_EXPORT_PROFILES } from "@/data/exportProfiles";
 import { ITEMS } from "@/data/items";
+import { ITEM_FIT_PROFILES } from "@/data/itemFitProfiles";
 import { getPresetById } from "@/data/skinPresets";
 import { PRESET_ANIMATIONS, getClipById } from "@/data/presetAnimations";
 import { PRESET_STATE_MACHINES } from "@/data/presetStateMachines";
@@ -213,6 +214,7 @@ function makeDefaultProject(): Project {
     entities:        [],
     templates:       cloneTemplates(),
     items:           [...ITEMS],
+    itemFitProfiles: [...ITEM_FIT_PROFILES],
     animationClips:  PRESET_ANIMATIONS,
     stateMachines:   PRESET_STATE_MACHINES,
     styleSets:       STYLE_SETS,

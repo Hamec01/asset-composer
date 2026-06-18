@@ -27,7 +27,7 @@
  */
 
 import { Canvas, FabricImage, Rect, FabricText, Circle } from "fabric";
-import type { Template, Item, LocalTransform, AttachmentOverride, CanvasMode, EditorSelection } from "@/domain/types";
+import type { Template, Item, LocalTransform, AttachmentOverride, CanvasMode, EditorSelection, ItemFitProfile } from "@/domain/types";
 import type { EvaluatedScene, EvaluatedSkeleton } from "@/lib/evaluationPipeline";
 import type { EvaluatedVisual } from "@/domain/types";
 import { svgToDataUrl, scaleSvgToFit } from "@/lib/svgUtils";
@@ -170,6 +170,7 @@ export class CanvasEngine {
   private currentScene:    EvaluatedScene | null = null;
   private currentTemplate: Template       | null = null;
   private currentItems:    Item[]                = [];
+  private currentFitProfiles: ItemFitProfile[]   = [];
   private currentEntity:   Entity | null         = null;
   private currentEntityId: string         | null = null;
 
@@ -312,11 +313,12 @@ export class CanvasEngine {
     template:          Template,
     highlightedSlotId: string | null,
     items:             Item[] = [],
+    fitProfiles:       ItemFitProfile[] = [],
     entity:            Entity | null = null,
   ): Promise<void> {
     if (this.isTransforming) {
       this.pendingReconcile = () =>
-        this.reconcileSceneStructure(scene, template, highlightedSlotId, items, entity);
+        this.reconcileSceneStructure(scene, template, highlightedSlotId, items, fitProfiles, entity);
       return;
     }
 
@@ -324,6 +326,7 @@ export class CanvasEngine {
     this.currentScene    = scene;
     this.currentTemplate = template;
     this.currentItems    = items;
+    this.currentFitProfiles = fitProfiles;
     this.currentEntity   = entity;
     this.currentEntityId = scene.entityId;
 
@@ -771,6 +774,7 @@ export class CanvasEngine {
       slotAssign,
       slotDef,
       part,
+      this.currentFitProfiles,
     );
     const worldOriginM = this._getFabricImageWorldOriginMatrix(img);
     return multiply(
@@ -859,6 +863,7 @@ export class CanvasEngine {
         slotAssign,
         slotDef,
         siblingPart,
+        this.currentFitProfiles,
       );
       const lt = siblingPart.localTransform;
       const piv = siblingPart.pivot;
@@ -993,17 +998,18 @@ export class CanvasEngine {
     entity:            Entity,
     template:          Template,
     items:             Map<string, Item>,
+    fitProfiles:       ItemFitProfile[] = [],
     highlightedSlotId: string | null,
     pose:              BoneTransformMap | null,
     isAnimTick         = false,
   ): Promise<void> {
     const skeleton = evaluateSkeleton(template.bones, pose ?? new Map());
-    const scene    = evaluateScene(entity, template, skeleton, [...items.values()]);
+    const scene    = evaluateScene(entity, template, skeleton, [...items.values()], fitProfiles);
 
     if (isAnimTick) {
       this.updateSceneTransforms(scene);
     } else {
-      await this.reconcileSceneStructure(scene, template, highlightedSlotId, [...items.values()], entity);
+      await this.reconcileSceneStructure(scene, template, highlightedSlotId, [...items.values()], fitProfiles, entity);
     }
   }
 
@@ -1038,6 +1044,7 @@ export class CanvasEngine {
     this.currentScene    = null;
     this.currentTemplate = null;
     this.currentItems    = [];
+    this.currentFitProfiles = [];
     this.currentEntity   = null;
     this.currentEntityId = null;
 

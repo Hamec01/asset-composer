@@ -283,6 +283,16 @@ const ExportProfileSchema = z.object({
   atlasMode: z.string(),
 });
 
+const ItemFitProfileSchema = z.object({
+  id: z.string(),
+  fitProfile: z.string(),
+  templateId: z.string(),
+  family: z.string().optional(),
+  slotId: z.string(),
+  partTransforms: z.record(LocalTransformSchema),
+  anchorOverrides: z.record(z.string()).optional(),
+});
+
 // ── Project schema v2.0 ───────────────────────────────────────────────────────
 
 export const ProjectSchema = z.object({
@@ -293,6 +303,7 @@ export const ProjectSchema = z.object({
   entities: z.array(EntitySchema),
   templates: z.array(TemplateSchema),
   items: z.array(ItemSchema),
+  itemFitProfiles: z.array(ItemFitProfileSchema).default([]),
   animationClips: z.array(AnimationClipSchema),
   stateMachines: z.array(StateMachineSchema),
   styleSets: z.array(StyleSetSchema),

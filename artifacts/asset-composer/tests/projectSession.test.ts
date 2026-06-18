@@ -6,6 +6,7 @@ import { ITEMS } from "../src/data/items";
 import { PRESET_ANIMATIONS } from "../src/data/presetAnimations";
 import { PRESET_STATE_MACHINES } from "../src/data/presetStateMachines";
 import { DEFAULT_EXPORT_PROFILES } from "../src/data/exportProfiles";
+import { ITEM_FIT_PROFILES } from "../src/data/itemFitProfiles";
 import { STYLE_SETS } from "../src/data/styleSets";
 import { TEMPLATES } from "../src/data/templates";
 import type { Project } from "../src/domain/types";
@@ -26,6 +27,7 @@ function makeProject(): Project {
     entities: [],
     templates: TEMPLATES,
     items: ITEMS,
+    itemFitProfiles: ITEM_FIT_PROFILES,
     animationClips: PRESET_ANIMATIONS,
     stateMachines: PRESET_STATE_MACHINES,
     styleSets: STYLE_SETS,

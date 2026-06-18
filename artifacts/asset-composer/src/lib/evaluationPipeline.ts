@@ -17,13 +17,13 @@
 
 import type {
   Bone, Entity, Item, Template, PaletteTokens, SkeletonFamilyId,
-  AnimationClip, EvaluatedVisual, Matrix2D, AABB, ItemPart, SlotDef, SlotAssignment,
+  AnimationClip, EvaluatedVisual, Matrix2D, AABB, ItemPart, SlotDef, SlotAssignment, ItemFitProfile,
 } from "@/domain/types";
 import { resolveClipPose, blendPoses } from "./animationRuntime";
 import type { BoneTransformMap } from "./animationRuntime";
 import { applyPaletteToSvg } from "./svgUtils";
 import { refreshCanonicalBuiltInTypedItems } from "./canonicalItems";
-import { resolveItemFitPartTransform } from "./itemFitProfiles";
+import { resolveItemFitAnchorOverride, resolveItemFitPartTransform } from "./itemFitProfiles";
 import {
   identity, multiply, translation, worldBoneToMatrix,
   localTransformToMatrix, transformAABB,
@@ -233,9 +233,20 @@ function resolveAnchorId(
   slotAssign: SlotAssignment,
   slotDef: SlotDef,
   item: Item,
+  template: Template,
+  fitProfiles: ItemFitProfile[],
 ): string | null {
+  const assignmentAnchorId = slotAssign.attachmentOverride.anchorId?.trim();
+  if (assignmentAnchorId) {
+    return assignmentAnchorId;
+  }
+
+  const fitProfileAnchorId = resolveItemFitAnchorOverride(item, template, slotDef, fitProfiles)?.trim();
+  if (fitProfileAnchorId) {
+    return fitProfileAnchorId;
+  }
+
   return (
-    slotAssign.attachmentOverride.anchorId ??
     item.anchorRules?.[slotDef.id]?.anchorId ??
     slotDef.defaultAnchorId ??
     null
@@ -250,6 +261,7 @@ export function resolveItemPartBinding(
   slotAssign: SlotAssignment,
   slotDef: SlotDef,
   part: ItemPart,
+  fitProfiles: ItemFitProfile[] = [],
 ): {
   parentMatrix: Matrix2D;
   anchorMatrix: Matrix2D;
@@ -257,7 +269,7 @@ export function resolveItemPartBinding(
   attachmentOverrideMatrix: Matrix2D;
   anchorId: string | null;
 } {
-  const anchorId = resolveAnchorId(slotAssign, slotDef, item);
+  const anchorId = resolveAnchorId(slotAssign, slotDef, item, template, fitProfiles);
   const anchor = anchorId ? template.anchors?.[anchorId] : undefined;
 
   const distinctPartBones = new Set((item.parts ?? []).map(itemPart => itemPart.boneId));
@@ -299,6 +311,7 @@ export function evaluateScene(
   template: Template,
   skeleton: EvaluatedSkeleton,
   items:    Item[],
+  fitProfiles: ItemFitProfile[] = [],
 ): EvaluatedScene {
   const effectiveItems = refreshCanonicalBuiltInTypedItems(items);
   const coveredBodyBoneIds = getCoveredBodyBoneIds(entity, effectiveItems);
@@ -446,7 +459,7 @@ export function evaluateScene(
         } else {
           const piv    = part.pivot;
           const lt     = part.localTransform;
-          const fitTransform = resolveItemFitPartTransform(item, template, slotDef, part.id);
+          const fitTransform = resolveItemFitPartTransform(item, template, slotDef, part.id, fitProfiles);
           const resolvedPartTransform = fitTransform ?? lt;
           const resolvedPartLocalM = localTransformToMatrix(
             resolvedPartTransform.x,
@@ -457,7 +470,7 @@ export function evaluateScene(
             piv.x,
             piv.y,
           );
-          const binding = resolveItemPartBinding(entity, template, skeleton, item, slotAssign, slotDef, part);
+          const binding = resolveItemPartBinding(entity, template, skeleton, item, slotAssign, slotDef, part, fitProfiles);
           const worldM = multiply(
             binding.parentMatrix,
             multiply(
