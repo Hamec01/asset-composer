@@ -283,6 +283,15 @@ const ExportProfileSchema = z.object({
   atlasMode: z.string(),
 });
 
+const SlotEditorStateSchema = z.object({
+  hiddenSlotIds: z.array(z.string()).default([]),
+  lockedSlotIds: z.array(z.string()).default([]),
+});
+
+const ProjectEditorMetaSchema = z.object({
+  slotEditorByTemplateId: z.record(SlotEditorStateSchema).default({}),
+});
+
 const ItemFitProfileSchema = z.object({
   id: z.string(),
   fitProfile: z.string(),
@@ -308,6 +317,7 @@ export const ProjectSchema = z.object({
   stateMachines: z.array(StateMachineSchema),
   styleSets: z.array(StyleSetSchema),
   exportProfiles: z.array(ExportProfileSchema),
+  editorMeta: ProjectEditorMetaSchema.default({ slotEditorByTemplateId: {} }),
   activeEntityId: z.string().nullable(),
   createdAt: z.number(),
   updatedAt: z.number(),

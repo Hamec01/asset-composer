@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { useStore } from "../src/store";
+import type { Project } from "../src/domain/types";
 
 describe("playback overlay selection", () => {
   beforeEach(() => {
+    globalThis.requestAnimationFrame ??= ((cb: FrameRequestCallback) => setTimeout(() => cb(0), 0) as unknown as number);
+    globalThis.cancelAnimationFrame ??= ((id: number) => clearTimeout(id as unknown as ReturnType<typeof setTimeout>));
     useStore.getState().newProject();
   });
 
@@ -23,5 +26,22 @@ describe("playback overlay selection", () => {
 
     expect(useStore.getState().animPlayback.activeClipId).toBe(runId);
     expect(useStore.getState().animPlayback.lowerClipId).toBeNull();
+  });
+
+  it("rehydrates playback when loading a saved project with an active entity", () => {
+    const store = useStore.getState();
+    store.createEntity("character", "humanoid_topdown_v1", "Hydrate Hero");
+
+    const savedProject = structuredClone(useStore.getState().project) as Project;
+
+    useStore.getState().loadProject(savedProject);
+
+    const nextState = useStore.getState();
+    expect(nextState.editor.appState).toBe("ide");
+    expect(nextState.project.activeEntityId).toBeTruthy();
+    expect(nextState.animPlayback.activeClipId).toBeTruthy();
+    expect(nextState.animPlayback.activeStateMachineId).toBeTruthy();
+    expect(nextState.animPlayback.playing).toBe(true);
+    expect(nextState.animPlayback.timeMs).toBe(0);
   });
 });

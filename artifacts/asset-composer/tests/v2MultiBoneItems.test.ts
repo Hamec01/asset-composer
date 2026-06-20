@@ -11,7 +11,10 @@ const template = TEMPLATES.find(t => t.id === "humanoid_topdown_v1")!;
 const boots = ITEMS.find(i => i.id === "boots_leather")!;
 const pants = ITEMS.find(i => i.id === "pants_leather")!;
 const greaves = ITEMS.find(i => i.id === "greave_leather")!;
+const hair = ITEMS.find(i => i.id === "hair_test_v2")!;
 const tunic = ITEMS.find(i => i.id === "tunic_linen")!;
+const faceMask = ITEMS.find(i => i.id === "face_mask")!;
+const helm = ITEMS.find(i => i.id === "helm_iron")!;
 
 const palette = template.paletteTokens;
 const license = {
@@ -177,6 +180,42 @@ describe("M8 vertical slice items", () => {
     expect(frameAByPart.get("shin_r")?.worldMatrix).not.toEqual(frameBByPart.get("shin_r")?.worldMatrix);
   });
 
+  it("keeps run feet and boots visually separated across the stride", () => {
+    const entity = makeEntity("slot_feet", boots.id);
+    const runClip = PRESET_ANIMATIONS.find(clip => clip.id === "humanoid_topdown_v1__run");
+    expect(runClip).toBeTruthy();
+
+    const frameAPose = buildMultiClipPose(
+      PRESET_ANIMATIONS, runClip!.id, null, null, 1, 0, entity, ITEMS,
+    );
+    const frameASkeleton = evaluateSkeleton(template.bones, frameAPose);
+    const frameAScene = evaluateScene(entity, template, frameASkeleton, ITEMS);
+
+    const frameBPose = buildMultiClipPose(
+      PRESET_ANIMATIONS, runClip!.id, null, null, 1, 250, entity, ITEMS,
+    );
+    const frameBSkeleton = evaluateSkeleton(template.bones, frameBPose);
+    const frameBScene = evaluateScene(entity, template, frameBSkeleton, ITEMS);
+
+    const frameABones = {
+      left: frameASkeleton.bones.get("foot_l")!,
+      right: frameASkeleton.bones.get("foot_r")!,
+    };
+    const frameBBones = {
+      left: frameBSkeleton.bones.get("foot_l")!,
+      right: frameBSkeleton.bones.get("foot_r")!,
+    };
+
+    expect(Math.abs(frameABones.left.x - frameABones.right.x)).toBeGreaterThan(12);
+    expect(Math.abs(frameBBones.left.x - frameBBones.right.x)).toBeGreaterThan(12);
+
+    const frameAByPart = new Map(itemVisuals(frameAScene, boots.id).map(v => [v.partId!, v]));
+    const frameBByPart = new Map(itemVisuals(frameBScene, boots.id).map(v => [v.partId!, v]));
+
+    expect(Math.abs(frameAByPart.get("boot_l")!.worldMatrix[4] - frameAByPart.get("boot_r")!.worldMatrix[4])).toBeGreaterThan(10);
+    expect(Math.abs(frameBByPart.get("boot_l")!.worldMatrix[4] - frameBByPart.get("boot_r")!.worldMatrix[4])).toBeGreaterThan(10);
+  });
+
   it("hides naked body bone parts covered by V2 pants", () => {
     const scene = sceneFor(pants, "slot_legs", template);
     
@@ -194,6 +233,17 @@ describe("M8 vertical slice items", () => {
     expect(bodyBoneIds.has("foot_r")).toBe(true);
 
     expect(itemVisuals(scene, pants.id)).toHaveLength(5);
+  });
+
+  it("does not hide the head when V2 hair is equipped", () => {
+    const scene = sceneFor(hair, "slot_hair", template);
+    const bodyVisuals = scene.visuals.filter(v => v.sourceKind === "bone-part");
+    const bodyBoneIds = new Set(bodyVisuals.map(v => v.boneId));
+    const hairVisuals = itemVisuals(scene, hair.id);
+
+    expect(bodyBoneIds.has("head")).toBe(true);
+    expect(hairVisuals).toHaveLength(1);
+    expect(hairVisuals[0]?.partId).toBe("crown");
   });
 
   it("does not hide skin legs for legacy-only leg overlays", () => {
@@ -218,6 +268,24 @@ describe("M8 vertical slice items", () => {
     expect(ids.has("part__knee_r")).toBe(true);
   });
 
+  it("keeps the base head visible when V2 hair is equipped", () => {
+    const scene = sceneFor(hair, "slot_hair", template);
+    const bodyVisuals = scene.visuals.filter(v => v.sourceKind === "bone-part");
+    const bodyBoneIds = new Set(bodyVisuals.map(v => v.boneId));
+
+    expect(bodyBoneIds.has("head")).toBe(true);
+    expect(itemVisuals(scene, hair.id)).toHaveLength(1);
+  });
+
+  it("keeps the base head visible for non-cover face overlays", () => {
+    const scene = sceneFor(faceMask, "slot_face", template);
+    const bodyVisuals = scene.visuals.filter(v => v.sourceKind === "bone-part");
+    const bodyBoneIds = new Set(bodyVisuals.map(v => v.boneId));
+
+    expect(bodyBoneIds.has("head")).toBe(true);
+    expect(itemVisuals(scene, faceMask.id)).toHaveLength(1);
+  });
+
   it("hides torso body parts for legacy torso overlays", () => {
     const scene = sceneFor(tunic, "slot_torso", template);
     const bodyVisuals = scene.visuals.filter(v => v.sourceKind === "bone-part");
@@ -228,15 +296,37 @@ describe("M8 vertical slice items", () => {
     expect(bodyBoneIds.has("chest")).toBe(false);
     expect(bodyBoneIds.has("shoulder_l")).toBe(true);
     expect(bodyBoneIds.has("shoulder_r")).toBe(true);
-    expect(bodyBoneIds.has("elbow_l")).toBe(true);
-    expect(bodyBoneIds.has("elbow_r")).toBe(true);
 
     expect(bodyBoneIds.has("pelvis")).toBe(true);
+    expect(bodyBoneIds.has("hip_l")).toBe(true);
+    expect(bodyBoneIds.has("hip_r")).toBe(true);
+    expect(bodyBoneIds.has("knee_l")).toBe(true);
+    expect(bodyBoneIds.has("knee_r")).toBe(true);
     expect(bodyBoneIds.has("hand_l")).toBe(true);
     expect(bodyBoneIds.has("hand_r")).toBe(true);
     expect(tunicVisual).toBeDefined();
     expect((tunicVisual!.localBounds.maxX - tunicVisual!.localBounds.minX)).toBe(64);
     expect((tunicVisual!.localBounds.maxY - tunicVisual!.localBounds.minY)).toBe(64);
+  });
+
+  it("still hides the base head for head-cover items", () => {
+    const scene = sceneFor(helm, "slot_head_cover", template);
+    const bodyVisuals = scene.visuals.filter(v => v.sourceKind === "bone-part");
+    const bodyBoneIds = new Set(bodyVisuals.map(v => v.boneId));
+
+    expect(bodyBoneIds.has("head")).toBe(false);
+    expect(itemVisuals(scene, helm.id)).toHaveLength(1);
+  });
+
+  it("binds legacy torso overlays to the slot bone instead of scene origin", () => {
+    const scene = sceneFor(tunic, "slot_torso", template);
+    const tunicVisual = scene.visuals.find(v => v.itemId === tunic.id);
+    const chestBone = evaluateRestSkeleton(template.bones).bones.get("chest");
+
+    expect(tunicVisual).toBeDefined();
+    expect(chestBone).toBeDefined();
+    expect(tunicVisual!.worldMatrix[4]).toBe(chestBone!.x);
+    expect(tunicVisual!.worldMatrix[5]).toBe(chestBone!.y);
   });
 
   it("does not emit legacy svgLayers when V2 parts are present", () => {
@@ -326,6 +416,43 @@ describe("M8 vertical slice items", () => {
     expect(pantsScene.visuals.every((visual, index, arr) => index === 0 || arr[index - 1].zIndex <= visual.zIndex)).toBe(true);
     expect(bootsScene.visuals.every(visual => visual.localBounds.maxX > visual.localBounds.minX)).toBe(true);
     expect(pantsScene.visuals.every(visual => visual.localBounds.maxY > visual.localBounds.minY)).toBe(true);
+  });
+
+  it("suppresses stale body-clone entity visuals when template bone parts already exist", () => {
+    const entity = makeEntity("slot_hair", hair.id);
+    entity.visuals = template.boneParts.slice(0, 4).map(part => ({
+      id: `legacy_clone_${part.id}`,
+      boneId: part.boneId,
+      svgData: part.svgData,
+      metrics: {
+        viewBoxX: 0,
+        viewBoxY: 0,
+        viewBoxWidth: part.naturalWidth,
+        viewBoxHeight: part.naturalHeight,
+        visualMinX: 0,
+        visualMinY: 0,
+        visualWidth: part.naturalWidth,
+        visualHeight: part.naturalHeight,
+      },
+      pivot: {
+        x: part.naturalWidth / 2,
+        y: part.naturalHeight / 2,
+        preset: "custom" as const,
+      },
+      localTransform: {
+        x: part.localX,
+        y: part.localY,
+        rotation: 0,
+        scaleX: 1,
+        scaleY: 1,
+      },
+      zIndex: part.zOffset,
+    }));
+
+    const scene = evaluateScene(entity, template, evaluateRestSkeleton(template.bones), ITEMS);
+
+    expect(scene.visuals.some(visual => visual.id.startsWith("vis__legacy_clone_"))).toBe(false);
+    expect(scene.visuals.some(visual => visual.id === "part__head")).toBe(true);
   });
 
   describe("greave_leather behavior", () => {

@@ -16,12 +16,10 @@ import { DEFAULT_EXPORT_PROFILES } from "../src/data/exportProfiles";
 
 const sessionMocks = vi.hoisted(() => ({
   saveLastProjectSnapshot: vi.fn(),
-  restoreLastProjectSnapshot: vi.fn(),
 }));
 
 vi.mock("../src/lib/projectSession", () => ({
   saveLastProjectSnapshot: sessionMocks.saveLastProjectSnapshot,
-  restoreLastProjectSnapshot: sessionMocks.restoreLastProjectSnapshot,
 }));
 
 vi.mock("../src/pages/IDE", () => ({
@@ -76,7 +74,7 @@ function cleanupApp() {
   container = null;
 }
 
-describe("App autosave and restore", () => {
+describe("App autosave", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
@@ -103,14 +101,11 @@ describe("App autosave and restore", () => {
     });
   });
 
-  it("restores the last project snapshot from the dashboard on mount", () => {
-    sessionMocks.restoreLastProjectSnapshot.mockReturnValue(makeProject({ id: "restored-project", name: "Restored Project" }));
-
+  it("stays on the dashboard until the user chooses a project", () => {
     renderApp();
 
-    expect(sessionMocks.restoreLastProjectSnapshot).toHaveBeenCalledTimes(1);
-    expect(document.body.textContent).toContain("IDE Screen");
-    expect(useStore.getState().project.id).toBe("restored-project");
+    expect(document.body.textContent).toContain("Dashboard Screen");
+    expect(useStore.getState().editor.appState).toBe("dashboard");
   });
 
   it("does not reset autosave debounce for playback-only updates", () => {

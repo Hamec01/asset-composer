@@ -97,6 +97,37 @@ describe("history transactions", () => {
     expect(normalizeOverride(getEntity(entityId).slots.find(slot => slot.slotId === "slot_hair")?.attachmentOverride).scaleX).toBe(1.5);
   });
 
+  it("commits one history entry for one rotation gesture", () => {
+    const { entityId } = setupCharacterWithItem("slot_hair", "hair_test_v2");
+    const before = normalizeOverride(getEntity(entityId).slots.find(slot => slot.slotId === "slot_hair")?.attachmentOverride);
+    const after = { ...before, rotation: 30 };
+
+    useStore.getState().previewAttachmentOverride(entityId, "slot_hair", { rotation: 12 });
+    useStore.getState().previewAttachmentOverride(entityId, "slot_hair", { rotation: 24 });
+    expect(useStore.getState().history.past).toHaveLength(0);
+
+    useStore.getState().commitAttachmentOverride(entityId, "slot_hair", before, after, "Rotate attachment");
+
+    expect(useStore.getState().history.past).toHaveLength(1);
+    expect(normalizeOverride(getEntity(entityId).slots.find(slot => slot.slotId === "slot_hair")?.attachmentOverride).rotation).toBe(30);
+  });
+
+  it("undoes and redoes item rotation", () => {
+    const { entityId } = setupCharacterWithItem("slot_hair", "hair_test_v2");
+    const before = normalizeOverride(getEntity(entityId).slots.find(slot => slot.slotId === "slot_hair")?.attachmentOverride);
+    const after = { ...before, rotation: -45 };
+
+    useStore.getState().previewAttachmentOverride(entityId, "slot_hair", after);
+    useStore.getState().commitAttachmentOverride(entityId, "slot_hair", before, after, "Rotate attachment");
+    expect(normalizeOverride(getEntity(entityId).slots.find(slot => slot.slotId === "slot_hair")?.attachmentOverride).rotation).toBe(-45);
+
+    useStore.getState().undo();
+    expect(normalizeOverride(getEntity(entityId).slots.find(slot => slot.slotId === "slot_hair")?.attachmentOverride).rotation).toBe(0);
+
+    useStore.getState().redo();
+    expect(normalizeOverride(getEntity(entityId).slots.find(slot => slot.slotId === "slot_hair")?.attachmentOverride).rotation).toBe(-45);
+  });
+
   it("undoes all sibling parts through one SlotAssignment override", () => {
     const { entityId, template } = setupCharacterWithItem("slot_legs", "pants_leather");
     const beforeScene = sceneForEntity(entityId, template.id);
@@ -190,5 +221,41 @@ describe("history transactions", () => {
 
     useStore.getState().commitAttachmentOverride(entityId, "slot_hair", before, secondAfter, "Scale attachment");
     expect(useStore.getState().history.future).toHaveLength(0);
+  });
+
+  it("undoes and redoes saving a template-scoped item fit profile", () => {
+    const { entityId, template } = setupCharacterWithItem("slot_hair", "hair_test_v2");
+    const item = useStore.getState().project.items.find(candidate => candidate.id === "hair_test_v2")!;
+
+    useStore.getState().saveItemPartFitProfile(
+      item,
+      template,
+      "slot_hair",
+      "crown",
+      { x: 9, y: -4, rotation: 3, scaleX: 1.1, scaleY: 0.95 },
+      "template",
+      "hair_top",
+    );
+
+    expect(useStore.getState().project.itemFitProfiles.some(profile =>
+      profile.templateId === template.id &&
+      profile.slotId === "slot_hair" &&
+      profile.partTransforms.crown?.x === 9,
+    )).toBe(true);
+
+    useStore.getState().undo();
+    expect(useStore.getState().project.itemFitProfiles.some(profile =>
+      profile.templateId === template.id &&
+      profile.slotId === "slot_hair" &&
+      profile.partTransforms.crown?.x === 9,
+    )).toBe(false);
+
+    useStore.getState().redo();
+    expect(useStore.getState().project.itemFitProfiles.some(profile =>
+      profile.templateId === template.id &&
+      profile.slotId === "slot_hair" &&
+      profile.partTransforms.crown?.x === 9,
+    )).toBe(true);
+    expect(getEntity(entityId).id).toBe(entityId);
   });
 });

@@ -3,12 +3,13 @@ import { useStore } from "@/store";
 import { resolveTemplate } from "@/data/templates";
 import { sanitizeSvg } from "@/lib/sanitize";
 import { SKIN_PRESETS, getPresetsByStyleSet } from "@/data/skinPresets";
+import { getVisibleTemplateSlots } from "@/lib/slotVisibility";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, ChevronRight, X, Wand2, AlertTriangle } from "lucide-react";
+import { Plus, Search, ChevronRight, X, Wand2, AlertTriangle, Eye, EyeOff, Lock, Unlock, RotateCcw } from "lucide-react";
 import type { SlotDef, ItemCategory, Item } from "@/domain/types";
 
 const CATEGORY_LABELS: Record<ItemCategory, string> = {
@@ -111,6 +112,12 @@ export function LibraryPanel() {
   const setSelectedSlot   = useStore(s => s.setSelectedSlot);
   const setEntitySlot     = useStore(s => s.setEntitySlot);
   const applyOutfitPreset = useStore(s => s.applyOutfitPreset);
+  const setSlotGizmoHidden = useStore(s => s.setSlotGizmoHidden);
+  const setSlotGizmoLocked = useStore(s => s.setSlotGizmoLocked);
+  const hideAllSlotGizmos = useStore(s => s.hideAllSlotGizmos);
+  const showAllSlotGizmos = useStore(s => s.showAllSlotGizmos);
+  const unlockAllSlotGizmos = useStore(s => s.unlockAllSlotGizmos);
+  const updateTemplateSlotTransform = useStore(s => s.updateTemplateSlotTransform);
   const getActiveEntity   = useStore(s => s.getActiveEntity);
   const getActiveTemplate = useStore(s => s.getActiveTemplate);
 
@@ -120,7 +127,12 @@ export function LibraryPanel() {
   const activeEntity = getActiveEntity();
   const template     = getActiveTemplate();
 
-  const slots: SlotDef[] = template?.slots ?? [];
+  const slots: SlotDef[] = template ? getVisibleTemplateSlots(template) : [];
+  const slotEditorState = template
+    ? project.editorMeta.slotEditorByTemplateId[template.id] ?? { hiddenSlotIds: [], lockedSlotIds: [] }
+    : { hiddenSlotIds: [], lockedSlotIds: [] };
+  const hiddenSlotIds = new Set(slotEditorState.hiddenSlotIds);
+  const lockedSlotIds = new Set(slotEditorState.lockedSlotIds);
   const selectedSlot = slots.find(s => s.id === editor.selectedSlotId);
   const selectedSlotAssignment = activeEntity?.slots.find(s => s.slotId === editor.selectedSlotId);
 
@@ -143,10 +155,16 @@ export function LibraryPanel() {
   const gridItems = useMemo(() => {
     if (!selectedSlot) return displayedItems;
     const entitySpecies = activeEntity?.species ?? "";
+    const isSplitLimbSlot =
+      selectedSlot.id.includes("slot_foot_") ||
+      selectedSlot.id.includes("slot_hand_");
     return displayedItems.filter(item => {
       const slotMatch =
-        item.allowedSlots.includes(selectedSlot.id) ||
-        selectedSlot.allowedCategories.some(c => item.category === c);
+        item.allowedSlots.length === 0
+          ? (isSplitLimbSlot
+              ? false
+              : selectedSlot.allowedCategories.some(c => item.category === c))
+          : item.allowedSlots.includes(selectedSlot.id);
       const familyMatch =
         !entityFamily ||
         item.compatibility.skeletonFamilies.length === 0 ||
@@ -258,7 +276,19 @@ export function LibraryPanel() {
               Select an entity to view its slots.
             </div>
           ) : (
-            <ScrollArea className="flex-1 ide-scroll">
+            <>
+              {template && (
+                <div className="px-2 pt-1.5 pb-1 flex-shrink-0 space-y-1">
+                  <div className="grid grid-cols-2 gap-1">
+                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => showAllSlotGizmos(template.id)}>Show All Slots</Button>
+                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => hideAllSlotGizmos(template.id)}>Hide All Slots</Button>
+                  </div>
+                  <Button size="sm" variant="outline" className="h-7 w-full text-[10px]" onClick={() => unlockAllSlotGizmos(template.id)}>
+                    Unlock All Slots
+                  </Button>
+                </div>
+              )}
+              <ScrollArea className="flex-1 ide-scroll">
               <div className="px-2 py-1.5 space-y-0.5">
                 {Object.entries(slotsByCategory).map(([cat, catSlots]) => (
                   <div key={cat} className="mb-2">
@@ -270,20 +300,31 @@ export function LibraryPanel() {
                       const hasItem    = !!assignment?.itemId;
                       const item       = hasItem ? project.items.find(i => i.id === assignment?.itemId) : null;
                       const isSelected = slot.id === editor.selectedSlotId;
+                      const isHidden = hiddenSlotIds.has(slot.id);
+                      const isLocked = lockedSlotIds.has(slot.id);
                       // Warn if item incompatible with entity family
                       const hasIncompat = item && entityFamily &&
                         item.compatibility.skeletonFamilies.length > 0 &&
                         !item.compatibility.skeletonFamilies.includes(entityFamily);
                       return (
-                        <button
+                        <div
                           key={slot.id}
                           data-testid={`slot-btn-${slot.id}`}
                           onClick={() => setSelectedSlot(isSelected ? null : slot.id)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setSelectedSlot(isSelected ? null : slot.id);
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
                           className={[
                             "w-full flex items-center gap-2 rounded px-2 py-1 text-left transition-colors mb-0.5",
                             isSelected
                               ? "bg-primary/15 border border-primary/40"
                               : "hover:bg-accent border border-transparent",
+                            isHidden ? "opacity-60" : "",
                           ].join(" ")}
                         >
                           <span className={`slot-chip ${hasItem ? "slot-chip-filled" : "slot-chip-empty"}`}>
@@ -297,13 +338,60 @@ export function LibraryPanel() {
                           {!item && (
                             <span className="text-[10px] text-muted-foreground">{slot.required ? "Required" : "Empty"}</span>
                           )}
-                        </button>
+                          {template && (
+                            <div className="ml-1 flex items-center gap-0.5">
+                              <button
+                                type="button"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setSlotGizmoHidden(template.id, slot.id, !isHidden);
+                                }}
+                                className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                                data-testid={`slot-hide-${slot.id}`}
+                                title={isHidden ? "Show gizmo" : "Hide gizmo"}
+                              >
+                                {isHidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setSlotGizmoLocked(template.id, slot.id, !isLocked);
+                                }}
+                                className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                                data-testid={`slot-lock-${slot.id}`}
+                                title={isLocked ? "Unlock gizmo" : "Lock gizmo"}
+                              >
+                                {isLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  updateTemplateSlotTransform(template.id, slot.id, {
+                                    x: 0,
+                                    y: 0,
+                                    rotation: 0,
+                                    scaleX: 1,
+                                    scaleY: 1,
+                                  });
+                                }}
+                                className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                                data-testid={`slot-reset-${slot.id}`}
+                                title="Reset slot transform"
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
                 ))}
               </div>
             </ScrollArea>
+            </>
           )}
         </TabsContent>
 

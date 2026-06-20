@@ -26,23 +26,25 @@
  *                   × inverse(partLocalM)
  */
 
-import { Canvas, FabricImage, Rect, FabricText, Circle } from "fabric";
-import type { Template, Item, LocalTransform, AttachmentOverride, CanvasMode, EditorSelection, ItemFitProfile } from "@/domain/types";
+import { Canvas, FabricImage, Rect, FabricText, Circle, util as fabricUtil } from "fabric";
+import type { Template, Item, LocalTransform, AttachmentOverride, CanvasMode, EditorSelection, ItemFitProfile, SlotEditorState } from "@/domain/types";
 import type { EvaluatedScene, EvaluatedSkeleton } from "@/lib/evaluationPipeline";
 import type { EvaluatedVisual } from "@/domain/types";
 import { svgToDataUrl, scaleSvgToFit } from "@/lib/svgUtils";
 import {
-  decompose, identity, inverse, multiply, localTransformToMatrix, transformPoint,
+  decompose, identity, inverse, multiply, localTransformToMatrix, transformPoint, worldBoneToMatrix,
 } from "@/lib/matrixUtils";
 import { computeSceneBounds, fitSceneToViewport, type CameraState } from "@/lib/sceneUtils";
 import {
   getTemplateSlotTransformFromWorldCenter,
   getTemplateSlotWorldCenter,
 } from "@/lib/templateSlotTransforms";
+import { getVisibleTemplateSlots } from "@/lib/slotVisibility";
 import {
   evaluateSkeleton, evaluateScene,
   buildMultiClipPose, resolveItemPartBinding,
 } from "@/lib/evaluationPipeline";
+import { resolveItemFitPartTransform } from "@/lib/itemFitProfiles";
 import { animController } from "@/core-v2/AnimationController";
 import type { Entity } from "@/domain/types";
 import type { BoneTransformMap } from "@/lib/animationRuntime";
@@ -59,6 +61,27 @@ export interface CanvasEngineOptions {
     slotId: string,
     beforeOverride: AttachmentOverride,
     afterOverride: AttachmentOverride,
+  ) => void;
+  isEditingFitTransform?: (
+    entityId: string,
+    slotId: string,
+    itemId: string,
+    partId: string,
+  ) => boolean;
+  onItemFitPreview?: (
+    entityId: string,
+    slotId: string,
+    itemId: string,
+    partId: string,
+    transform: LocalTransform,
+  ) => void;
+  onItemFitCommit?: (
+    entityId: string,
+    slotId: string,
+    itemId: string,
+    partId: string,
+    beforeTransform: LocalTransform,
+    afterTransform: LocalTransform,
   ) => void;
   onSlotTransformPreview?: (slotId: string, transform: LocalTransform) => void;
   onSlotTransformCommit?: (
@@ -77,6 +100,7 @@ interface TaggedFabricImage extends FabricImage {
   __zIndex?:      number;
   __pixW?:        number;
   __pixH?:        number;
+  __generation?:  number;
   __sourceKind?:  string;
   __slotId?:      string;
   __itemId?:      string;
@@ -91,6 +115,7 @@ interface TaggedRect extends Rect {
   __zIndex?:       number;
   __defaultLeft?:  number;
   __defaultTop?:   number;
+  __locked?:       boolean;
 }
 
 interface TaggedText extends FabricText {
@@ -101,6 +126,14 @@ interface AttachmentTransformGestureSnapshot {
   entityId: string;
   slotId: string;
   beforeOverride: AttachmentOverride;
+}
+
+interface FitTransformGestureSnapshot {
+  entityId: string;
+  slotId: string;
+  itemId: string;
+  partId: string;
+  beforeTransform: LocalTransform;
 }
 
 interface SlotTransformGestureSnapshot {
@@ -157,6 +190,28 @@ function sameLocalTransform(a: LocalTransform, b: LocalTransform): boolean {
   );
 }
 
+function slotBoneMatrix(
+  skeleton: EvaluatedSkeleton | null,
+  slotDef: Template["slots"][number],
+) {
+  const worldBone = skeleton?.bones.get(slotDef.boneId);
+  return worldBone ? worldBoneToMatrix(worldBone) : identity();
+}
+
+function makeFabricImagePlacement(
+  worldMatrix: ReturnType<typeof identity>,
+  localCenterX: number,
+  localCenterY: number,
+) {
+  const centeredMatrix = multiply(worldMatrix, localTransformToMatrix(localCenterX, localCenterY, 0, 1, 1));
+  return fabricUtil.qrDecompose(centeredMatrix);
+}
+
+function devLogCanvas(event: string, details: Record<string, unknown>) {
+  if (!import.meta.env.DEV) return;
+  console.info("[asset-composer][canvas]", event, details);
+}
+
 // ── CanvasEngine ──────────────────────────────────────────────────────────────
 
 export class CanvasEngine {
@@ -184,7 +239,9 @@ export class CanvasEngine {
   private pendingReconcile: (() => Promise<void>) | null = null;
   private pointerDownAt: { x: number; y: number } | null = null;
   private activeAttachmentGesture: AttachmentTransformGestureSnapshot | null = null;
+  private activeFitGesture: FitTransformGestureSnapshot | null = null;
   private activeSlotGesture: SlotTransformGestureSnapshot | null = null;
+  private reconcileGeneration = 0;
 
   constructor(opts: CanvasEngineOptions) {
     this.opts   = opts;
@@ -220,7 +277,13 @@ export class CanvasEngine {
     });
     this.canvas.on("object:rotating", (ev) => {
       this.isTransforming = true;
-      this._handleTransformPreview(ev.target as (TaggedFabricImage & TaggedRect) | undefined);
+      const target = ev.target as (TaggedFabricImage & TaggedRect) | undefined;
+      const shiftHeld = Boolean((ev as any)?.e?.shiftKey);
+      if (shiftHeld && target && typeof target.angle === "number") {
+        target.set({ angle: Math.round(target.angle / 15) * 15 });
+        target.setCoords();
+      }
+      this._handleTransformPreview(target);
     });
     this.canvas.on("object:scaling",  (ev) => {
       this.isTransforming = true;
@@ -241,6 +304,7 @@ export class CanvasEngine {
         }
       }
       this.activeAttachmentGesture = null;
+      this.activeFitGesture = null;
       this.activeSlotGesture = null;
       this._flushPendingReconcile();
     });
@@ -314,8 +378,8 @@ export class CanvasEngine {
       zone.set({
         selectable:    isEditTemplateSlots || isSelectMode,
         evented:       isEditTemplateSlots || isSelectMode,
-        lockMovementX: !movable,
-        lockMovementY: !movable,
+        lockMovementX: !movable || Boolean(zone.__locked),
+        lockMovementY: !movable || Boolean(zone.__locked),
         hasControls:   false,
         hasBorders:    isEditTemplateSlots,
       });
@@ -339,10 +403,12 @@ export class CanvasEngine {
     items:             Item[] = [],
     fitProfiles:       ItemFitProfile[] = [],
     entity:            Entity | null = null,
+    slotEditorState:   SlotEditorState = { hiddenSlotIds: [], lockedSlotIds: [] },
   ): Promise<void> {
+    const generation = ++this.reconcileGeneration;
     if (this.isTransforming) {
       this.pendingReconcile = () =>
-        this.reconcileSceneStructure(scene, template, highlightedSlotId, items, fitProfiles, entity);
+        this.reconcileSceneStructure(scene, template, highlightedSlotId, items, fitProfiles, entity, slotEditorState);
       return;
     }
 
@@ -373,15 +439,21 @@ export class CanvasEngine {
       const cached = this.svgCache.get(visual.id);
       if (this.fabricImages.has(visual.id) && cached === visual.svgData) continue;
       const old = this.fabricImages.get(visual.id);
-      if (old) this.canvas.remove(old);
-      loads.push(this._loadVisual(visual));
+      if (old) {
+        this.canvas.remove(old);
+        this.fabricImages.delete(visual.id);
+        this.svgCache.delete(visual.id);
+      }
+      loads.push(this._loadVisual(visual, generation));
     }
     await Promise.all(loads);
+    if (generation !== this.reconcileGeneration) return;
+    this._pruneOrphanedFabricObjects(newIds);
 
     // ── 3. Sort canvas objects by zIndex (bottom → top) ───────────────────────
 
     // ── 4. Rebuild slot zones ─────────────────────────────────────────────────
-    this._rebuildSlotZones(scene.skeleton, template, highlightedSlotId);
+    this._rebuildSlotZones(scene.skeleton, template, highlightedSlotId, slotEditorState);
 
     // ── 5. Rebuild anchor gizmos ──────────────────────────────────────────────
     this._rebuildAnchorGizmos(scene.skeleton, template);
@@ -417,7 +489,7 @@ export class CanvasEngine {
       .sort((a: any, b: any) => (a.__zIndex ?? 0) - (b.__zIndex ?? 0));
   }
 
-  private async _loadVisual(visual: EvaluatedVisual): Promise<void> {
+  private async _loadVisual(visual: EvaluatedVisual, generation: number): Promise<void> {
     const vW   = visual.localBounds.maxX - visual.localBounds.minX;
     const vH   = visual.localBounds.maxY - visual.localBounds.minY;
     const pixW = Math.max(2, Math.round(vW));
@@ -428,15 +500,16 @@ export class CanvasEngine {
       const imgEl  = await FabricImage.fromURL(svgToDataUrl(sized));
       const localCenterX = (visual.localBounds.minX + visual.localBounds.maxX) / 2;
       const localCenterY = (visual.localBounds.minY + visual.localBounds.maxY) / 2;
-      const centerPoint = transformPoint(visual.worldMatrix, localCenterX, localCenterY);
-      const d      = decompose(visual.worldMatrix);
+      const placement = makeFabricImagePlacement(visual.worldMatrix, localCenterX, localCenterY);
 
       imgEl.set({
-        left:      centerPoint.x,
-        top:       centerPoint.y,
-        angle:     d.rotation,
-        scaleX:    d.scaleX,
-        scaleY:    d.scaleY,
+        left:      placement.translateX,
+        top:       placement.translateY,
+        angle:     placement.angle,
+        scaleX:    placement.scaleX,
+        scaleY:    placement.scaleY,
+        skewX:     placement.skewX ?? 0,
+        skewY:     placement.skewY ?? 0,
         originX:   "center",
         originY:   "center",
         selectable:     false,
@@ -452,6 +525,7 @@ export class CanvasEngine {
       tagged.__zIndex           = visual.zIndex;
       tagged.__pixW             = pixW;
       tagged.__pixH             = pixH;
+      tagged.__generation       = generation;
       tagged.__sourceKind       = visual.sourceKind;
       tagged.__slotId           = visual.slotId;
       tagged.__itemId           = visual.itemId;
@@ -460,10 +534,42 @@ export class CanvasEngine {
       tagged.__centerX          = localCenterX;
       tagged.__centerY          = localCenterY;
 
+      if (generation !== this.reconcileGeneration) {
+        devLogCanvas("skip-stale-visual-load", {
+          visualId: visual.id,
+          loadGeneration: generation,
+          currentGeneration: this.reconcileGeneration,
+        });
+        return;
+      }
+
       this.fabricImages.set(visual.id, tagged);
       this.svgCache.set(visual.id, visual.svgData);
       this.canvas.add(tagged);
     } catch { /* silently skip broken SVGs */ }
+  }
+
+  private _pruneOrphanedFabricObjects(validIds: Set<string>): void {
+    for (const object of this.canvas.getObjects()) {
+      const image = object as TaggedFabricImage;
+      const visualId = image.__visualId;
+      if (!visualId) continue;
+
+      const tracked = this.fabricImages.get(visualId);
+      const isTrackedInstance = tracked === image;
+      if (isTrackedInstance && validIds.has(visualId)) continue;
+
+      devLogCanvas("prune-orphan-visual", {
+        visualId,
+        trackedInstance: isTrackedInstance,
+        hasValidId: validIds.has(visualId),
+      });
+      this.canvas.remove(image);
+      if (tracked === image) {
+        this.fabricImages.delete(visualId);
+        this.svgCache.delete(visualId);
+      }
+    }
   }
 
   // ── Fast transform update (sync — every animation tick) ──────────────────
@@ -476,11 +582,18 @@ export class CanvasEngine {
       if (!img) continue;
       const localCenterX = (visual.localBounds.minX + visual.localBounds.maxX) / 2;
       const localCenterY = (visual.localBounds.minY + visual.localBounds.maxY) / 2;
-      const centerPoint = transformPoint(visual.worldMatrix, localCenterX, localCenterY);
-      const d = decompose(visual.worldMatrix);
+      const placement = makeFabricImagePlacement(visual.worldMatrix, localCenterX, localCenterY);
       img.__centerX = localCenterX;
       img.__centerY = localCenterY;
-      img.set({ left: centerPoint.x, top: centerPoint.y, angle: d.rotation, scaleX: d.scaleX, scaleY: d.scaleY });
+      img.set({
+        left: placement.translateX,
+        top: placement.translateY,
+        angle: placement.angle,
+        scaleX: placement.scaleX,
+        scaleY: placement.scaleY,
+        skewX: placement.skewX ?? 0,
+        skewY: placement.skewY ?? 0,
+      });
       img.setCoords();
     }
 
@@ -488,14 +601,15 @@ export class CanvasEngine {
     this.currentScene = scene;
 
     if (scene.skeleton && this.currentTemplate) {
+      const visibleSlots = getVisibleTemplateSlots(this.currentTemplate);
       const boneGroups = new Map<string, string[]>();
-      for (const slotDef of this.currentTemplate.slots) {
+      for (const slotDef of visibleSlots) {
         const group = boneGroups.get(slotDef.boneId) ?? [];
         group.push(slotDef.id);
         boneGroups.set(slotDef.boneId, group);
       }
 
-      for (const slotDef of this.currentTemplate.slots) {
+      for (const slotDef of visibleSlots) {
         const zone = this.slotZones.get(slotDef.id);
         if (!zone) continue;
 
@@ -544,6 +658,7 @@ export class CanvasEngine {
     skeleton:          EvaluatedSkeleton,
     template:          Template,
     highlightedSlotId: string | null,
+    slotEditorState:   SlotEditorState = { hiddenSlotIds: [], lockedSlotIds: [] },
   ): void {
     for (const zone of this.slotZones.values()) this.canvas.remove(zone);
     for (const lbl of this.slotLabels.values()) this.canvas.remove(lbl);
@@ -554,13 +669,18 @@ export class CanvasEngine {
     const hitH = Math.max(4, template.previewHeight * 0.06);
 
     const boneGroups = new Map<string, string[]>();
-    for (const s of template.slots) {
+    const visibleSlots = getVisibleTemplateSlots(template);
+    for (const s of visibleSlots) {
       const g = boneGroups.get(s.boneId) ?? [];
       g.push(s.id);
       boneGroups.set(s.boneId, g);
     }
 
-    for (const slotDef of template.slots) {
+    const hiddenSlotIds = new Set(slotEditorState.hiddenSlotIds);
+    const lockedSlotIds = new Set(slotEditorState.lockedSlotIds);
+
+    for (const slotDef of visibleSlots) {
+      if (hiddenSlotIds.has(slotDef.id)) continue;
       const wb    = skeleton.bones.get(slotDef.boneId);
       const center = getTemplateSlotWorldCenter(slotDef, wb);
 
@@ -575,6 +695,7 @@ export class CanvasEngine {
       const cy = center.y;
 
       const isEditSlots = this.mode === "edit-template-slots";
+      const isLocked = lockedSlotIds.has(slotDef.id);
       const zone = new Rect({
         left:            cx,
         top:             cy,
@@ -596,13 +717,14 @@ export class CanvasEngine {
         lockScalingX:  true,
         lockScalingY:  true,
         lockRotation:  true,
-        lockMovementX: !isEditSlots,
-        lockMovementY: !isEditSlots,
+        lockMovementX: !isEditSlots || isLocked,
+        lockMovementY: !isEditSlots || isLocked,
       }) as TaggedRect;
       zone.__slotId      = slotDef.id;
       zone.__zIndex      = slotDef.zIndex - 0.25;
       zone.__defaultLeft = cx;
       zone.__defaultTop  = cy;
+      zone.__locked      = isLocked;
 
       this.slotZones.set(slotDef.id, zone);
       this.canvas.add(zone);
@@ -668,6 +790,20 @@ export class CanvasEngine {
     if (!target) return;
 
     if (this.mode === "edit-attachment" && target.__sourceKind === "item-part") {
+      if (this._isEditingFitTransform(target)) {
+        this._ensureFitGestureSnapshot(target);
+        const transform = this._computePartTransformFromFabricImage(target);
+        if (transform && this.currentEntityId && target.__slotId && target.__itemId && target.__partId) {
+          this.opts.onItemFitPreview?.(
+            this.currentEntityId,
+            target.__slotId,
+            target.__itemId,
+            target.__partId,
+            transform,
+          );
+        }
+        return;
+      }
       this._ensureAttachmentGestureSnapshot(target);
       this._previewMultiPartAttachment(target);
       const override = this._computeOverrideFromFabricImage(target);
@@ -697,6 +833,46 @@ export class CanvasEngine {
     };
   }
 
+  private _isEditingFitTransform(img: TaggedFabricImage): boolean {
+    return Boolean(
+      this.currentEntityId &&
+      img.__slotId &&
+      img.__itemId &&
+      img.__partId &&
+      this.opts.isEditingFitTransform?.(this.currentEntityId, img.__slotId, img.__itemId, img.__partId),
+    );
+  }
+
+  private _getEffectivePartTransform(
+    item: Item,
+    slotDef: Template["slots"][number],
+    part: NonNullable<Item["parts"]>[number],
+  ): LocalTransform {
+    return resolveItemFitPartTransform(
+      item,
+      this.currentTemplate!,
+      slotDef,
+      part.id,
+      this.currentFitProfiles,
+    ) ?? part.localTransform;
+  }
+
+  private _ensureFitGestureSnapshot(img: TaggedFabricImage): void {
+    if (this.activeFitGesture || !this.currentEntityId || !this.currentTemplate || !this.currentEntity) return;
+    if (!img.__slotId || !img.__itemId || !img.__partId) return;
+    const slotDef = this.currentTemplate.slots.find(slot => slot.id === img.__slotId);
+    const item = this.currentItems.find(candidate => candidate.id === img.__itemId);
+    const part = item?.parts?.find(candidate => candidate.id === img.__partId);
+    if (!slotDef || !item || !part) return;
+    this.activeFitGesture = {
+      entityId: this.currentEntityId,
+      slotId: img.__slotId,
+      itemId: img.__itemId,
+      partId: img.__partId,
+      beforeTransform: normalizeLocalTransform(this._getEffectivePartTransform(item, slotDef, part)),
+    };
+  }
+
   private _ensureSlotGestureSnapshot(zone: TaggedRect): void {
     if (this.activeSlotGesture || !this.currentTemplate || !zone.__slotId) return;
     const slotDef = this.currentTemplate.slots.find(slot => slot.id === zone.__slotId);
@@ -711,6 +887,31 @@ export class CanvasEngine {
 
   private _handleItemModified(img: TaggedFabricImage): void {
     if (!img.__slotId || !this.currentEntityId) return;
+    if (this._isEditingFitTransform(img)) {
+      const snapshot = this.activeFitGesture;
+      const afterTransform = this._computePartTransformFromFabricImage(img);
+      if (snapshot && afterTransform) {
+        if (
+          snapshot.entityId === this.currentEntityId &&
+          snapshot.slotId === img.__slotId &&
+          snapshot.itemId === img.__itemId &&
+          snapshot.partId === img.__partId
+        ) {
+          if (!sameLocalTransform(snapshot.beforeTransform, afterTransform)) {
+            this.opts.onItemFitCommit?.(
+              snapshot.entityId,
+              snapshot.slotId,
+              snapshot.itemId,
+              snapshot.partId,
+              snapshot.beforeTransform,
+              afterTransform,
+            );
+          }
+        }
+      }
+      return;
+    }
+
     const snapshot = this.activeAttachmentGesture;
     const afterOverride = this._computeOverrideFromFabricImage(img);
     if (snapshot && afterOverride) {
@@ -743,7 +944,11 @@ export class CanvasEngine {
       const defaultTransformMatrix = dt
         ? localTransformToMatrix(dt.x, dt.y, dt.rotation, dt.scaleX, dt.scaleY)
         : identity();
-      const overrideM_legacy = multiply(inverse(defaultTransformMatrix), worldOriginM);
+      const parentMatrix = slotBoneMatrix(this.currentScene.skeleton, slotDef);
+      const overrideM_legacy = multiply(
+        inverse(multiply(parentMatrix, defaultTransformMatrix)),
+        worldOriginM,
+      );
       const d_legacy = decompose(overrideM_legacy);
       this.opts.onItemModified?.(entityId, img.__slotId!, {
         offsetX:  d_legacy.tx,
@@ -770,13 +975,15 @@ export class CanvasEngine {
   }
 
   private _getFabricImageWorldOriginMatrix(img: TaggedFabricImage): ReturnType<typeof localTransformToMatrix> {
-    const worldM = localTransformToMatrix(
-      img.left  ?? 0,
-      img.top   ?? 0,
-      img.angle ?? 0,
-      img.scaleX ?? 1,
-      img.scaleY ?? 1,
-    );
+    const worldM = fabricUtil.composeMatrix({
+      translateX: img.left ?? 0,
+      translateY: img.top ?? 0,
+      angle: img.angle ?? 0,
+      scaleX: img.scaleX ?? 1,
+      scaleY: img.scaleY ?? 1,
+      skewX: img.skewX ?? 0,
+      skewY: img.skewY ?? 0,
+    }) as ReturnType<typeof localTransformToMatrix>;
     const centerX = img.__centerX ?? 0;
     const centerY = img.__centerY ?? 0;
     return multiply(worldM, localTransformToMatrix(-centerX, -centerY, 0, 1, 1));
@@ -790,7 +997,7 @@ export class CanvasEngine {
     img: TaggedFabricImage,
   ) {
     if (!this.currentEntity || !this.currentTemplate || !this.currentScene) return null;
-    const lt  = part.localTransform;
+    const lt  = this._getEffectivePartTransform(item, slotDef, part);
     const piv = part.pivot;
     const partLocalM = localTransformToMatrix(lt.x, lt.y, lt.rotation, lt.scaleX, lt.scaleY, piv.x, piv.y);
     const binding = resolveItemPartBinding(
@@ -808,6 +1015,53 @@ export class CanvasEngine {
       inverse(multiply(binding.parentMatrix, multiply(binding.anchorMatrix, binding.defaultTransformMatrix))),
       multiply(worldOriginM, inverse(partLocalM)),
     );
+  }
+
+  private _computePartTransformFromFabricImage(img: TaggedFabricImage): LocalTransform | null {
+    if (!img.__slotId || !img.__itemId || !img.__partId) return null;
+    if (!this.currentScene || !this.currentTemplate || !this.currentEntity) return null;
+
+    const slotDef = this.currentTemplate.slots.find(slot => slot.id === img.__slotId);
+    if (!slotDef) return null;
+    const item = this.currentItems.find(candidate => candidate.id === img.__itemId);
+    if (!item) return null;
+    const slotAssign = this.currentEntity.slots.find(slot => slot.slotId === img.__slotId);
+    if (!slotAssign) return null;
+    const part = item.parts?.find(candidate => candidate.id === img.__partId);
+    if (!part || part.coordinateMode !== "bone_local") return null;
+
+    const binding = resolveItemPartBinding(
+      this.currentEntity,
+      this.currentTemplate,
+      this.currentScene.skeleton,
+      item,
+      slotAssign,
+      slotDef,
+      part,
+      this.currentFitProfiles,
+    );
+    const override = normalizeAttachmentOverride(slotAssign.attachmentOverride);
+    const attachmentOverrideMatrix = localTransformToMatrix(
+      override.offsetX,
+      override.offsetY,
+      override.rotation,
+      override.scaleX,
+      override.scaleY,
+    );
+    const worldOriginM = this._getFabricImageWorldOriginMatrix(img);
+    const partLocalM = multiply(
+      inverse(multiply(binding.parentMatrix, multiply(binding.anchorMatrix, multiply(binding.defaultTransformMatrix, attachmentOverrideMatrix)))),
+      worldOriginM,
+    );
+    const pivotWorld = transformPoint(partLocalM, part.pivot.x, part.pivot.y);
+    const decomposed = decompose(partLocalM);
+    return {
+      x: pivotWorld.x,
+      y: pivotWorld.y,
+      rotation: decomposed.rotation,
+      scaleX: decomposed.scaleX,
+      scaleY: decomposed.scaleY,
+    };
   }
 
   private _computeOverrideFromFabricImage(img: TaggedFabricImage): AttachmentOverride | null {
@@ -832,7 +1086,11 @@ export class CanvasEngine {
       const defaultTransformMatrix = dt
         ? localTransformToMatrix(dt.x, dt.y, dt.rotation, dt.scaleX, dt.scaleY)
         : identity();
-      const overrideM = multiply(inverse(defaultTransformMatrix), worldOriginM);
+      const parentMatrix = slotBoneMatrix(this.currentScene.skeleton, slotDef);
+      const overrideM = multiply(
+        inverse(multiply(parentMatrix, defaultTransformMatrix)),
+        worldOriginM,
+      );
       const d = decompose(overrideM);
       return {
         ...current,
@@ -844,6 +1102,16 @@ export class CanvasEngine {
       };
     }
 
+    const binding = resolveItemPartBinding(
+      this.currentEntity,
+      this.currentTemplate,
+      this.currentScene.skeleton,
+      item,
+      slotAssign,
+      slotDef,
+      part,
+      this.currentFitProfiles,
+    );
     const overrideM = this._computeAttachmentOverrideMatrix(slotDef, item, slotAssign, part, img);
     if (!overrideM) return null;
     const d = decompose(overrideM);
@@ -892,7 +1160,7 @@ export class CanvasEngine {
         siblingPart,
         this.currentFitProfiles,
       );
-      const lt = siblingPart.localTransform;
+      const lt = this._getEffectivePartTransform(item, slotDef, siblingPart);
       const piv = siblingPart.pivot;
       const partLocalM = localTransformToMatrix(lt.x, lt.y, lt.rotation, lt.scaleX, lt.scaleY, piv.x, piv.y);
       const worldM = multiply(
@@ -907,19 +1175,20 @@ export class CanvasEngine {
       );
       const localCenterX = (siblingVisual.localBounds.minX + siblingVisual.localBounds.maxX) / 2;
       const localCenterY = (siblingVisual.localBounds.minY + siblingVisual.localBounds.maxY) / 2;
-      const centerPoint = transformPoint(worldM, localCenterX, localCenterY);
-      const d = decompose(worldM);
-      siblingImg.__centerX = localCenterX;
-      siblingImg.__centerY = localCenterY;
-      siblingImg.set({
-        left: centerPoint.x,
-        top: centerPoint.y,
-        angle: d.rotation,
-        scaleX: d.scaleX,
-        scaleY: d.scaleY,
-      });
-      siblingImg.setCoords();
-    }
+        const placement = makeFabricImagePlacement(worldM, localCenterX, localCenterY);
+        siblingImg.__centerX = localCenterX;
+        siblingImg.__centerY = localCenterY;
+        siblingImg.set({
+          left: placement.translateX,
+          top: placement.translateY,
+          angle: placement.angle,
+          scaleX: placement.scaleX,
+          scaleY: placement.scaleY,
+          skewX: placement.skewX ?? 0,
+          skewY: placement.skewY ?? 0,
+        });
+        siblingImg.setCoords();
+      }
 
     this.canvas.requestRenderAll();
   }
@@ -938,6 +1207,7 @@ export class CanvasEngine {
   // ── Slot zone drag for Edit Template Slots mode ───────────────────────────
 
   private _handleSlotZoneModified(zone: TaggedRect): void {
+    if (zone.__locked) return;
     const snapshot = this.activeSlotGesture;
     const nextTransform = this._getSlotTransformFromZone(zone);
     if (snapshot && nextTransform && zone.__slotId === snapshot.slotId) {

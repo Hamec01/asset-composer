@@ -29,7 +29,7 @@ import { Upload, ChevronRight, ChevronLeft, Check, AlertCircle } from "lucide-re
 import { useStore } from "@/store";
 import { resolveTemplate } from "@/data/templates";
 import type { EntityVisual } from "@/domain/types";
-import { identity } from "@/lib/matrixUtils";
+import { buildImportedEntityVisual, getDefaultImportPivot } from "@/lib/entityVisualImport";
 
 type ImportMode = "full_vector" | "bone_part";
 
@@ -65,17 +65,6 @@ const DEFAULT: WizardState = {
   error:    null,
 };
 
-function parseSvgViewBox(svgText: string): { w: number; h: number } {
-  const vb = svgText.match(/viewBox=["']([^"']+)["']/);
-  if (vb) {
-    const parts = vb[1].trim().split(/[\s,]+/).map(Number);
-    if (parts.length === 4) return { w: parts[2], h: parts[3] };
-  }
-  const w = Number(svgText.match(/width=["']([0-9.]+)["']/)?.[1] ?? 64);
-  const h = Number(svgText.match(/height=["']([0-9.]+)["']/)?.[1] ?? 64);
-  return { w, h };
-}
-
 export function ImportWizard({ open, onClose, activeEntityId }: Props) {
   const [ws, setWs] = useState<WizardState>({ ...DEFAULT });
   const dropRef     = useRef<HTMLDivElement>(null);
@@ -102,11 +91,14 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
     }
     const text = await file.text();
     const baseName = file.name.replace(/\.svg$/i, "").replace(/[_-]/g, " ").trim();
+    const defaultPivot = getDefaultImportPivot(text, "center");
     setWs(w => ({
       ...w,
       svgData:  text,
       fileName: file.name,
       name:     baseName,
+      pivotX:   defaultPivot.x,
+      pivotY:   defaultPivot.y,
       error:    null,
       step:     2,
     }));
@@ -141,26 +133,15 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
   function handleConfirm() {
     if (!activeEntityId || !ws.svgData) return;
 
-    const { w: svgW, h: svgH } = parseSvgViewBox(ws.svgData);
-
-    const visual: EntityVisual = {
-      id:          crypto.randomUUID(),
-      boneId:      ws.mode === "full_vector" ? "root" : ws.boneId,
-      svgData:     ws.svgData,
-      pivot:        { x: ws.pivotX, y: ws.pivotY, preset: "custom" },
-      localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
-      metrics: {
-        viewBoxX:     0,
-        viewBoxY:     0,
-        viewBoxWidth: svgW,
-        viewBoxHeight: svgH,
-        visualMinX:   0,
-        visualMinY:   0,
-        visualWidth:  svgW,
-        visualHeight: svgH,
-      },
-      zIndex:      ws.zIndex,
-    };
+    const visual: EntityVisual = buildImportedEntityVisual({
+      id: crypto.randomUUID(),
+      boneId: ws.mode === "full_vector" ? "root" : ws.boneId,
+      svgData: ws.svgData,
+      zIndex: ws.zIndex,
+      pivotPreset: "custom",
+      pivotX: ws.pivotX,
+      pivotY: ws.pivotY,
+    });
 
     addEntityVisual(activeEntityId, visual);
     close();

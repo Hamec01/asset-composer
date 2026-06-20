@@ -44,11 +44,15 @@ const humanoidTopdownBones: Bone[] = [
 ];
 
 const humanoidTopdownSlots: SlotDef[] = [
+  { id: "slot_foot_l", name: "Left Foot", boneId: "foot_l", zIndex: 0, allowedCategories: ["feet"], required: false, defaultItemId: null },
+  { id: "slot_foot_r", name: "Right Foot", boneId: "foot_r", zIndex: 0.05, allowedCategories: ["feet"], required: false, defaultItemId: null },
   { id: "slot_feet", name: "Feet", boneId: "foot_l", zIndex: 0, allowedCategories: ["feet"], required: false, defaultItemId: null },
   { id: "slot_legs", name: "Legs", boneId: "pelvis", zIndex: 1, allowedCategories: ["legs"], required: false, defaultItemId: null },
   { id: "slot_waist", name: "Waist", boneId: "pelvis", zIndex: 2, allowedCategories: ["waist"], required: false, defaultItemId: null },
   { id: "slot_torso", name: "Torso", boneId: "chest", zIndex: 3, allowedCategories: ["torso"], required: false, defaultItemId: null },
   { id: "slot_arms", name: "Arms", boneId: "shoulder_l", zIndex: 4, allowedCategories: ["arms"], required: false, defaultItemId: null },
+  { id: "slot_hand_l", name: "Left Hand", boneId: "hand_l", zIndex: 5, allowedCategories: ["hands"], required: false, defaultItemId: null },
+  { id: "slot_hand_r", name: "Right Hand", boneId: "hand_r", zIndex: 5.05, allowedCategories: ["hands"], required: false, defaultItemId: null },
   { id: "slot_hands", name: "Hands", boneId: "hand_l", zIndex: 5, allowedCategories: ["hands"], required: false, defaultItemId: null },
   { id: "slot_neck", name: "Neck", boneId: "neck", zIndex: 6, allowedCategories: ["neck", "amulet"], required: false, defaultItemId: null },
   { id: "slot_cloak", name: "Cloak", boneId: "chest", zIndex: 7, allowedCategories: ["cloak"], required: false, defaultItemId: null },

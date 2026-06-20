@@ -25,6 +25,8 @@ import { applyPaletteToSvg } from "./svgUtils";
 import { parseMetrics } from "./svgMetrics";
 import { refreshCanonicalBuiltInTypedItems } from "./canonicalItems";
 import { resolveItemFitAnchorOverride, resolveItemFitPartTransform } from "./itemFitProfiles";
+import { isLegacyBodyCloneVisual } from "./projectNormalization";
+import { ITEM_SOURCE_PALETTE } from "@/data/items";
 import {
   identity, multiply, translation, worldBoneToMatrix,
   localTransformToMatrix, transformAABB,
@@ -216,38 +218,84 @@ function makeSlotDefaultTransformMatrix(slotDef: SlotDef): Matrix2D {
 const LEGACY_BODY_COVERAGE_BY_CATEGORY: Partial<Record<ItemCategory, string[]>> = {
   torso: ["spine", "chest"],
   arms: ["shoulder_l", "shoulder_r", "elbow_l", "elbow_r"],
-  hands: ["hand_l", "hand_r"],
   head_cover: ["head"],
 };
 
+const V2_BODY_COVERAGE_CATEGORIES = new Set<ItemCategory>([
+  "torso",
+  "arms",
+  "legs",
+  "feet",
+]);
+
+const BODY_CLONE_REGIONS: Partial<Record<string, "core" | "arms" | "legs" | "feet" | "hands" | "head">> = {
+  pelvis: "core",
+  spine: "core",
+  chest: "core",
+  neck: "head",
+  head: "head",
+  shoulder_l: "arms",
+  shoulder_r: "arms",
+  elbow_l: "arms",
+  elbow_r: "arms",
+  hand_l: "hands",
+  hand_r: "hands",
+  hip_l: "legs",
+  hip_r: "legs",
+  knee_l: "legs",
+  knee_r: "legs",
+  foot_l: "feet",
+  foot_r: "feet",
+};
+
+function getLegacyOverlayFrameSize(
+  _item: Item,
+  _template: Template,
+  svgData: string,
+): { width: number; height: number } {
+  const metrics = parseMetrics(svgData);
+  return {
+    width: metrics.viewBoxWidth,
+    height: metrics.viewBoxHeight,
+  };
+}
+
+function getSlotBoneMatrix(
+  skeleton: EvaluatedSkeleton,
+  slotDef: SlotDef,
+): Matrix2D {
+  const slotBone = skeleton.bones.get(slotDef.boneId);
+  return slotBone ? worldBoneToMatrix(slotBone) : identity();
+}
+
 function getCoveredBodyBoneIds(entity: Entity, template: Template, items: Item[]): Set<string> {
   const covered = new Set<string>();
+  const existingBoneIds = new Set(template.bones.map(bone => bone.id));
   for (const slotAssign of entity.slots) {
     if (!slotAssign.itemId) continue;
     const item = items.find(i => i.id === slotAssign.itemId);
     if (!item) continue;
-    const slotDef = template.slots.find(slot => slot.id === slotAssign.slotId);
 
-    for (const part of item.parts ?? []) {
-      if (part.coordinateMode === "bone_local") {
-        covered.add(part.boneId);
+    const hasV2Parts = item.parts?.some(part => part.coordinateMode === "bone_local") ?? false;
+    if (hasV2Parts) {
+      if (!V2_BODY_COVERAGE_CATEGORIES.has(item.category)) continue;
+      for (const part of item.parts ?? []) {
+        if (part.coordinateMode === "bone_local" && existingBoneIds.has(part.boneId)) {
+          covered.add(part.boneId);
+        }
       }
+      continue;
     }
 
-    if ((item.parts?.length ?? 0) > 0) continue;
     if (item.coordinateMode === "bone_local") continue;
 
     const legacyCoverage = LEGACY_BODY_COVERAGE_BY_CATEGORY[item.category];
     if (!legacyCoverage?.length) continue;
 
     for (const boneId of legacyCoverage) {
-      if (template.bones.some(bone => bone.id === boneId)) {
+      if (existingBoneIds.has(boneId)) {
         covered.add(boneId);
       }
-    }
-
-    if (slotDef?.boneId && template.bones.some(bone => bone.id === slotDef.boneId)) {
-      covered.add(slotDef.boneId);
     }
   }
   return covered;
@@ -328,6 +376,18 @@ function visualFitModeForItemPart(part: ItemPart): "legacy_full_frame" | "v2_vec
   return part.coordinateMode === "legacy_full_frame" ? "legacy_full_frame" : "v2_vector";
 }
 
+function getRenderableEntityVisuals(entity: Entity, template: Template) {
+  if (!template.boneParts || template.boneParts.length === 0) {
+    return entity.visuals ?? [];
+  }
+
+  const visuals = entity.visuals ?? [];
+  if (visuals.length === 0) {
+    return visuals;
+  }
+  return visuals.filter(visual => !isLegacyBodyCloneVisual(visual, template));
+}
+
 // ── evaluateScene ─────────────────────────────────────────────────────────────
 
 export function evaluateScene(
@@ -346,7 +406,7 @@ export function evaluateScene(
   const fh = template.previewHeight;
 
   // ── 1. Entity visuals (full-vector body, v2.0) ─────────────────────────────
-  for (const visual of entity.visuals ?? []) {
+  for (const visual of getRenderableEntityVisuals(entity, template)) {
     const svgData = applyPaletteToSvg(visual.svgData, template.paletteTokens, entity.palette);
 
     const wb = skeleton.bones.get(visual.boneId);
@@ -415,7 +475,7 @@ export function evaluateScene(
         naturalWidth: part.naturalWidth, naturalHeight: part.naturalHeight,
       });
     }
-  } else if ((entity.visuals ?? []).length === 0) {
+  } else if (getRenderableEntityVisuals(entity, template).length === 0) {
     // Fallback: full-frame base body layers (no boneParts, no entity.visuals)
     for (const bodyLayer of template.baseBodyLayers) {
       const svgData = applyPaletteToSvg(bodyLayer.svgData, template.paletteTokens, entity.palette);
@@ -455,17 +515,19 @@ export function evaluateScene(
     if (item.parts && item.parts.length > 0) {
       // v2.0: multi-bone item parts
       for (const part of item.parts) {
-        const svgData = applyPaletteToSvg(part.svgData, template.paletteTokens, effectivePalette);
+        const svgData = applyPaletteToSvg(part.svgData, ITEM_SOURCE_PALETTE, effectivePalette);
         const zIndex  = slotDef.zIndex + part.zOffset;
         const vid     = `slot__${slotAssign.slotId}__${item.id}__${part.id}`;
 
         if (part.coordinateMode === "legacy_full_frame") {
-          const metrics = parseMetrics(svgData);
-          const frameWidth = metrics.viewBoxWidth;
-          const frameHeight = metrics.viewBoxHeight;
+          const { width: frameWidth, height: frameHeight } = getLegacyOverlayFrameSize(item, template, svgData);
+          const slotBoneMatrix = getSlotBoneMatrix(skeleton, slotDef);
           const worldM = multiply(
-            makeSlotDefaultTransformMatrix(slotDef),
-            makeAttachmentOverrideMatrix(slotAssign.attachmentOverride),
+            slotBoneMatrix,
+            multiply(
+              makeSlotDefaultTransformMatrix(slotDef),
+              makeAttachmentOverrideMatrix(slotAssign.attachmentOverride),
+            ),
           );
           const localBounds = makeLocalBounds(frameWidth, frameHeight);
           const worldBounds = transformAABB(worldM, localBounds);
@@ -531,14 +593,16 @@ export function evaluateScene(
     } else {
       // Legacy: item has only svgLayers → full-frame overlays
       for (const svgLayer of item.svgLayers) {
-        const svgData = applyPaletteToSvg(svgLayer.svgData, template.paletteTokens, effectivePalette);
+        const svgData = applyPaletteToSvg(svgLayer.svgData, ITEM_SOURCE_PALETTE, effectivePalette);
         const zIndex  = slotDef.zIndex + svgLayer.zOffset;
-        const metrics = parseMetrics(svgData);
-        const frameWidth = metrics.viewBoxWidth;
-        const frameHeight = metrics.viewBoxHeight;
+        const { width: frameWidth, height: frameHeight } = getLegacyOverlayFrameSize(item, template, svgData);
+        const slotBoneMatrix = getSlotBoneMatrix(skeleton, slotDef);
         const worldM = multiply(
-          makeSlotDefaultTransformMatrix(slotDef),
-          makeAttachmentOverrideMatrix(slotAssign.attachmentOverride),
+          slotBoneMatrix,
+          multiply(
+            makeSlotDefaultTransformMatrix(slotDef),
+            makeAttachmentOverrideMatrix(slotAssign.attachmentOverride),
+          ),
         );
         const localBounds = makeLocalBounds(frameWidth, frameHeight);
         const worldBounds = transformAABB(worldM, localBounds);

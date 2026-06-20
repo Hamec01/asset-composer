@@ -6,6 +6,7 @@ import {
   getLastProjectSnapshotName,
   getRecentProjectFolderPath,
   getRecentProjectSessions,
+  getSessionDebugLog,
   loadProjectSession,
   restoreLastProjectSnapshot,
   saveLastProjectSnapshot,
@@ -37,6 +38,18 @@ export function Dashboard() {
       return;
     }
     loadProject(restored);
+    saveLastProjectSnapshot(restored);
+  }
+
+  async function handleCopySessionDebugLog() {
+    const log = getSessionDebugLog();
+    const text = JSON.stringify(log, null, 2);
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("Session debug log copied to clipboard.");
+    } catch {
+      alert(text || "No session debug events recorded yet.");
+    }
   }
 
   function handleOpenRecentProject(projectId: string) {
@@ -65,6 +78,7 @@ export function Dashboard() {
       return;
     }
     loadProject(restored);
+    saveLastProjectSnapshot(restored);
   }
 
   async function handleCreateProjectFolder() {
@@ -214,6 +228,14 @@ export function Dashboard() {
         >
           <FolderOpen className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-medium text-foreground">Open Project Folder</span>
+        </button>
+        <button
+          data-testid="dashboard-copy-session-debug"
+          onClick={handleCopySessionDebugLog}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-card hover:bg-card/80 transition-colors"
+        >
+          <Layers className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground">Copy Session Debug</span>
         </button>
       </div>
 

@@ -54,6 +54,8 @@ export function CanvasPanel() {
   const setSelectedSlot           = useStore(s => s.setSelectedSlot);
   const previewAttachmentOverride = useStore(s => s.previewAttachmentOverride);
   const commitAttachmentOverride  = useStore(s => s.commitAttachmentOverride);
+  const previewItemPartFitTransform = useStore(s => s.previewItemPartFitTransform);
+  const commitItemPartFitTransform = useStore(s => s.commitItemPartFitTransform);
   const setCanvasMode             = useStore(s => s.setCanvasMode);
   const setEditorSelection        = useStore(s => s.setEditorSelection);
   const previewTemplateSlotTransform = useStore(s => s.previewTemplateSlotTransform);
@@ -87,6 +89,9 @@ export function CanvasPanel() {
   const template     = activeEntity
     ? resolveTemplate(project, activeEntity.templateId)
     : undefined;
+  const slotEditorState = template
+    ? project.editorMeta.slotEditorByTemplateId[template.id] ?? { hiddenSlotIds: [], lockedSlotIds: [] }
+    : { hiddenSlotIds: [], lockedSlotIds: [] };
 
   // Detect entity switch → mark camera dirty
   if (prevEntityIdRef.current !== project.activeEntityId) {
@@ -120,6 +125,50 @@ export function CanvasPanel() {
       },
       onItemCommit: (entityId, slotId, beforeOverride, afterOverride) => {
         commitAttachmentOverride(entityId, slotId, beforeOverride, afterOverride);
+      },
+      isEditingFitTransform: (entityId, slotId, itemId, partId) => {
+        const fitAuthoring = useStore.getState().editor.fitAuthoring;
+        return Boolean(
+          fitAuthoring &&
+          fitAuthoring.entityId === entityId &&
+          fitAuthoring.slotId === slotId &&
+          fitAuthoring.itemId === itemId &&
+          fitAuthoring.partId === partId
+        );
+      },
+      onItemFitPreview: (entityId, slotId, itemId, partId, transform) => {
+        const store = useStore.getState();
+        const fitAuthoring = store.editor.fitAuthoring;
+        const entity = store.project.entities.find(candidate => candidate.id === entityId);
+        const template = entity ? resolveTemplate(store.project, entity.templateId) : undefined;
+        const item = store.project.items.find(candidate => candidate.id === itemId);
+        if (!fitAuthoring || !template || !item) return;
+        if (
+          fitAuthoring.entityId !== entityId ||
+          fitAuthoring.slotId !== slotId ||
+          fitAuthoring.itemId !== itemId ||
+          fitAuthoring.partId !== partId
+        ) {
+          return;
+        }
+        previewItemPartFitTransform(item, template, slotId, partId, transform, fitAuthoring.scope);
+      },
+      onItemFitCommit: (entityId, slotId, itemId, partId, before, after) => {
+        const store = useStore.getState();
+        const fitAuthoring = store.editor.fitAuthoring;
+        const entity = store.project.entities.find(candidate => candidate.id === entityId);
+        const template = entity ? resolveTemplate(store.project, entity.templateId) : undefined;
+        const item = store.project.items.find(candidate => candidate.id === itemId);
+        if (!fitAuthoring || !template || !item) return;
+        if (
+          fitAuthoring.entityId !== entityId ||
+          fitAuthoring.slotId !== slotId ||
+          fitAuthoring.itemId !== itemId ||
+          fitAuthoring.partId !== partId
+        ) {
+          return;
+        }
+        commitItemPartFitTransform(item, template, slotId, partId, before, after, fitAuthoring.scope, null, "Adjust default fit");
       },
       onSlotTransformPreview: (slotId, transform) => {
         const st = useStore.getState();
@@ -203,6 +252,7 @@ export function CanvasPanel() {
         itemsArr,
         store.project.itemFitProfiles,
         liveEntity,
+        store.project.editorMeta.slotEditorByTemplateId[liveTemplate.id] ?? { hiddenSlotIds: [], lockedSlotIds: [] },
       );
 
       // Re-apply viewport after reconcile (new visuals reset internal state)
@@ -226,6 +276,7 @@ export function CanvasPanel() {
     JSON.stringify(activeEntity?.palette),
     JSON.stringify(activeEntity?.visuals),
     JSON.stringify(template?.slots),
+    JSON.stringify(slotEditorState),
     activeEntity?.styleSetId,
     editor.selectedSlotId,
   ]);

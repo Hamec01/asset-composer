@@ -479,6 +479,15 @@ export interface ExportProfile {
   atlasMode: "per_entity" | "combined";
 }
 
+export interface SlotEditorState {
+  hiddenSlotIds: string[];
+  lockedSlotIds: string[];
+}
+
+export interface ProjectEditorMeta {
+  slotEditorByTemplateId: Record<string, SlotEditorState>;
+}
+
 export interface Entity {
   id: string;
   name: string;
@@ -512,6 +521,7 @@ export interface Project {
   stateMachines: StateMachine[];
   styleSets: StyleSet[];
   exportProfiles: ExportProfile[];
+  editorMeta: ProjectEditorMeta;
   activeEntityId: string | null;
   createdAt: number;
   updatedAt: number;

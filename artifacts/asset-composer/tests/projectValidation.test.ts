@@ -119,4 +119,46 @@ describe("project validation", () => {
 
     expect(() => parseProjectSnapshot(project)).toThrow(/missing bone "missing_bone"/i);
   });
+
+  it("normalizes legacy shared limb slots during parse", () => {
+    const project = makeProject();
+    project.entities[0].slots = [{
+      slotId: "slot_feet",
+      itemId: "boots_chain",
+      paletteOverride: {},
+      attachmentOverride: {},
+    }];
+
+    const parsed = parseProjectSnapshot(JSON.parse(JSON.stringify(project)));
+
+    expect(parsed.entities[0].slots.map(slot => slot.slotId)).toEqual(["slot_foot_l", "slot_foot_r"]);
+    expect(parsed.entities[0].slots.map(slot => slot.itemId)).toEqual(["boot_chain_l", "boot_chain_r"]);
+  });
+
+  it("prunes root-level full body clone visuals during parse", () => {
+    const project = makeProject();
+    const baseLayer = template.baseBodyLayers[0]!;
+
+    project.entities[0].visuals = [{
+      id: "legacy-root-clone",
+      boneId: "root",
+      svgData: baseLayer.svgData,
+      metrics: {
+        viewBoxX: 0,
+        viewBoxY: 0,
+        viewBoxWidth: template.previewWidth,
+        viewBoxHeight: template.previewHeight,
+        visualMinX: 0,
+        visualMinY: 0,
+        visualWidth: template.previewWidth,
+        visualHeight: template.previewHeight,
+      },
+      pivot: { x: template.previewWidth / 2, y: template.previewHeight / 2, preset: "custom" },
+      localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+      zIndex: 0,
+    }];
+
+    const parsed = parseProjectSnapshot(JSON.parse(JSON.stringify(project)));
+    expect(parsed.entities[0].visuals).toEqual([]);
+  });
 });

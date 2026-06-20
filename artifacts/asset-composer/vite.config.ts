@@ -4,10 +4,25 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-const rawPort = process.env.PORT;
-const port = rawPort && !Number.isNaN(Number(rawPort)) && Number(rawPort) > 0
-  ? Number(rawPort)
-  : 5173;
+function resolveRequestedPort() {
+  const cliArgs = process.argv;
+  const portIndex = cliArgs.findIndex(arg => arg === "--port");
+  const cliPortValue =
+    portIndex >= 0 && portIndex + 1 < cliArgs.length
+      ? cliArgs[portIndex + 1]
+      : null;
+
+  const rawPort =
+    cliPortValue ??
+    process.env.npm_config_port ??
+    process.env.PORT ??
+    null;
+
+  const parsed = rawPort ? Number(rawPort) : Number.NaN;
+  return !Number.isNaN(parsed) && parsed > 0 ? parsed : 5173;
+}
+
+const port = resolveRequestedPort();
 
 const basePath = process.env.BASE_PATH ?? "/";
 

@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { resolveTemplate } from "@/data/templates";
 import { getStyleSetById, STYLE_SETS } from "@/data/styleSets";
+import { resolveItemFitPartTransform } from "@/lib/itemFitProfiles";
 import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
-import type { PaletteTokens, Item } from "@/domain/types";
+import type { PaletteTokens, Item, LocalTransform } from "@/domain/types";
 
 const COMMON_SPECIES = [
   "human","elf","orc","dwarf","halfling","gnome",
@@ -146,6 +147,7 @@ function TransactionalNumberInput({
           const delta = (e.shiftKey ? step * 10 : e.altKey ? step * 0.1 : step) * (e.key === "ArrowUp" ? 1 : -1);
           const next = Number((base + delta).toFixed(4));
           setDraft(String(next));
+          draftRef.current = String(next);
           onPreview(next);
         }
       }}
@@ -175,11 +177,17 @@ export function InspectorPanel() {
   const setEntityPaletteToken = useStore(s => s.setEntityPaletteToken);
   const setEntityStyleSet    = useStore(s => s.setEntityStyleSet);
   const setEntitySlot        = useStore(s => s.setEntitySlot);
-  const setAttachmentOverride = useStore(s => s.setAttachmentOverride);
+  const previewAttachmentOverride = useStore(s => s.previewAttachmentOverride);
   const removeEntityVisual   = useStore(s => s.removeEntityVisual);
-  const updateTemplateSlotTransform = useStore(s => s.updateTemplateSlotTransform);
+  const previewTemplateSlotTransform = useStore(s => s.previewTemplateSlotTransform);
   const getActiveEntity      = useStore(s => s.getActiveEntity);
   const animPlayback         = useStore(s => s.animPlayback);
+  const beginItemPartFitAuthoring = useStore(s => s.beginItemPartFitAuthoring);
+  const clearItemPartFitAuthoring = useStore(s => s.clearItemPartFitAuthoring);
+  const saveItemPartFitProfile = useStore(s => s.saveItemPartFitProfile);
+  const resetItemPartFitProfile = useStore(s => s.resetItemPartFitProfile);
+  const previewItemPartFitTransform = useStore(s => s.previewItemPartFitTransform);
+  const commitItemPartFitTransform = useStore(s => s.commitItemPartFitTransform);
 
   const setEntitySpecies = useStore(s => s.setEntitySpecies);
 
@@ -199,6 +207,7 @@ export function InspectorPanel() {
   const [nameValue,      setNameValue]      = useState("");
   const [speciesValue,   setSpeciesValue]   = useState("");
   const [editingSpecies, setEditingSpecies] = useState(false);
+  const [attachmentLockAspect, setAttachmentLockAspect] = useState(false);
 
   const selectedSlotId =
     editor.selection.kind === "item-part" || editor.selection.kind === "template-slot" || editor.selection.kind === "equipped-item"
@@ -230,6 +239,24 @@ export function InspectorPanel() {
   const selectedItemAnchor = selectedItemAnchorId
     ? template?.anchors?.[selectedItemAnchorId]
     : undefined;
+  const fitAuthoring = editor.fitAuthoring;
+  const isEditingDefaultFit = Boolean(
+    fitAuthoring &&
+    selection.kind === "item-part" &&
+    selection.entityId === fitAuthoring.entityId &&
+    selection.slotId === fitAuthoring.slotId &&
+    selection.itemId === fitAuthoring.itemId &&
+    selection.partId === fitAuthoring.partId
+  );
+  const fitTransformValues = selectedItem && selectedSlotDef && selectedPart && template
+    ? (resolveItemFitPartTransform(selectedItem, template, selectedSlotDef, selectedPart.id, project.itemFitProfiles) ?? selectedPart.localTransform)
+    : {
+        x: 0,
+        y: 0,
+        rotation: 0,
+        scaleX: 1,
+        scaleY: 1,
+      };
   const attachmentValues = {
     offsetX: selectedAssign?.attachmentOverride?.offsetX ?? 0,
     offsetY: selectedAssign?.attachmentOverride?.offsetY ?? 0,
@@ -237,6 +264,15 @@ export function InspectorPanel() {
     scaleX: selectedAssign?.attachmentOverride?.scaleX ?? 1,
     scaleY: selectedAssign?.attachmentOverride?.scaleY ?? 1,
   };
+  const itemPartTransformValues = isEditingDefaultFit
+    ? fitTransformValues
+    : {
+        x: attachmentValues.offsetX,
+        y: attachmentValues.offsetY,
+        rotation: attachmentValues.rotation,
+        scaleX: attachmentValues.scaleX,
+        scaleY: attachmentValues.scaleY,
+      };
   const slotTransformValues = {
     x: selectedSlotDef?.defaultTransform?.x ?? 0,
     y: selectedSlotDef?.defaultTransform?.y ?? 0,
@@ -251,7 +287,7 @@ export function InspectorPanel() {
     scaleX: 1,
     scaleY: 1,
   };
-  const attachmentBeforeRef = useRef(attachmentValues);
+  const attachmentBeforeRef = useRef(itemPartTransformValues);
   const slotBeforeRef = useRef(slotTransformValues);
   const visualBeforeRef = useRef(visualValues);
 
@@ -329,36 +365,198 @@ export function InspectorPanel() {
 
   // Keep slot-derived UI aligned with the actual active selection.
 
-  function buildAttachmentOverride(values: typeof attachmentValues) {
+  function buildAttachmentOverride(values: typeof itemPartTransformValues) {
     return {
       anchorId: selectedAssign?.attachmentOverride.anchorId ?? "",
       bindMode: selectedAssign?.attachmentOverride.bindMode ?? "",
-      offsetX: values.offsetX,
-      offsetY: values.offsetY,
+      offsetX: values.x,
+      offsetY: values.y,
       rotation: values.rotation,
       scaleX: values.scaleX,
       scaleY: values.scaleY,
     };
   }
 
-  function patchAttachment<K extends keyof typeof attachmentValues>(key: K, value: number) {
-    if (!activeEntity || !selectedSlotDef || !selectedAssign) return;
-    setAttachmentOverride(activeEntity.id, selectedSlotDef.id, { [key]: value });
+  function buildItemPartTransform(values: typeof itemPartTransformValues): LocalTransform {
+    return {
+      x: values.x,
+      y: values.y,
+      rotation: values.rotation,
+      scaleX: values.scaleX,
+      scaleY: values.scaleY,
+    };
   }
 
-  function commitAttachmentField<K extends keyof typeof attachmentValues>(key: K, value: number) {
+  function patchAttachment<K extends keyof typeof itemPartTransformValues>(key: K, value: number) {
     if (!activeEntity || !selectedSlotDef || !selectedAssign) return;
+    if (isEditingDefaultFit && selectedItem && selectedPart && template && fitAuthoring) {
+      previewItemPartFitTransform(
+        selectedItem,
+        template,
+        selectedSlotDef.id,
+        selectedPart.id,
+        buildItemPartTransform({
+          ...itemPartTransformValues,
+          [key]: value,
+        }),
+        fitAuthoring.scope,
+        selectedItemAnchor?.id ?? null,
+      );
+      return;
+    }
+    const overrideKey = key === "x" ? "offsetX" : key === "y" ? "offsetY" : key;
+    previewAttachmentOverride(activeEntity.id, selectedSlotDef.id, { [overrideKey]: value });
+  }
+
+  function patchAttachmentValues(nextValues: Partial<typeof itemPartTransformValues>) {
+    if (!activeEntity || !selectedSlotDef || !selectedAssign) return;
+    if (isEditingDefaultFit && selectedItem && selectedPart && template && fitAuthoring) {
+      previewItemPartFitTransform(
+        selectedItem,
+        template,
+        selectedSlotDef.id,
+        selectedPart.id,
+        buildItemPartTransform({
+          ...itemPartTransformValues,
+          ...nextValues,
+        }),
+        fitAuthoring.scope,
+        selectedItemAnchor?.id ?? null,
+      );
+      return;
+    }
+    const overridePatch: Record<string, number> = {};
+    if (nextValues.x !== undefined) overridePatch.offsetX = nextValues.x;
+    if (nextValues.y !== undefined) overridePatch.offsetY = nextValues.y;
+    if (nextValues.rotation !== undefined) overridePatch.rotation = nextValues.rotation;
+    if (nextValues.scaleX !== undefined) overridePatch.scaleX = nextValues.scaleX;
+    if (nextValues.scaleY !== undefined) overridePatch.scaleY = nextValues.scaleY;
+    previewAttachmentOverride(activeEntity.id, selectedSlotDef.id, overridePatch);
+  }
+
+  function buildAttachmentScalePatch<K extends "scaleX" | "scaleY">(
+    key: K,
+    value: number,
+    source: typeof itemPartTransformValues,
+  ): Pick<typeof itemPartTransformValues, "scaleX" | "scaleY"> {
+    if (!attachmentLockAspect) {
+      return key === "scaleX"
+        ? { scaleX: value, scaleY: source.scaleY }
+        : { scaleX: source.scaleX, scaleY: value };
+    }
+
+    const primary = source[key];
+    const secondaryKey = key === "scaleX" ? "scaleY" : "scaleX";
+    const secondary = source[secondaryKey];
+    const nextSecondary = primary === 0
+      ? (secondary === 0 ? value : Number((Math.sign(secondary || 1) * Math.abs(value)).toFixed(4)))
+      : Number((secondary * (value / primary)).toFixed(4));
+
+    return key === "scaleX"
+      ? { scaleX: value, scaleY: nextSecondary }
+      : { scaleX: nextSecondary, scaleY: value };
+  }
+
+  function previewAttachmentScale<K extends "scaleX" | "scaleY">(key: K, value: number) {
+    patchAttachmentValues(buildAttachmentScalePatch(key, value, itemPartTransformValues));
+  }
+
+  function cancelAttachmentScale<K extends "scaleX" | "scaleY">(key: K) {
+    patchAttachmentValues(buildAttachmentScalePatch(key, attachmentBeforeRef.current[key], attachmentBeforeRef.current));
+  }
+
+  function commitAttachmentField<K extends keyof typeof itemPartTransformValues>(key: K, value: number) {
+    if (!activeEntity || !selectedSlotDef || !selectedAssign) return;
+    if (isEditingDefaultFit && selectedItem && selectedPart && template && fitAuthoring) {
+      commitItemPartFitTransform(
+        selectedItem,
+        template,
+        selectedSlotDef.id,
+        selectedPart.id,
+        buildItemPartTransform(attachmentBeforeRef.current),
+        buildItemPartTransform({
+          ...itemPartTransformValues,
+          [key]: value,
+        }),
+        fitAuthoring.scope,
+        selectedItemAnchor?.id ?? null,
+      );
+      return;
+    }
     const beforeFull = buildAttachmentOverride(attachmentBeforeRef.current);
     const afterFull = buildAttachmentOverride({
-      ...attachmentValues,
+      ...itemPartTransformValues,
       [key]: value,
     });
     useStore.getState().commitAttachmentOverride(activeEntity.id, selectedSlotDef.id, beforeFull, afterFull);
   }
 
+  function commitAttachmentScale<K extends "scaleX" | "scaleY">(key: K, value: number) {
+    if (!activeEntity || !selectedSlotDef || !selectedAssign) return;
+    if (isEditingDefaultFit && selectedItem && selectedPart && template && fitAuthoring) {
+      const afterPatch = buildAttachmentScalePatch(key, value, itemPartTransformValues);
+      commitItemPartFitTransform(
+        selectedItem,
+        template,
+        selectedSlotDef.id,
+        selectedPart.id,
+        buildItemPartTransform(attachmentBeforeRef.current),
+        buildItemPartTransform({
+          ...itemPartTransformValues,
+          ...afterPatch,
+        }),
+        fitAuthoring.scope,
+        selectedItemAnchor?.id ?? null,
+        "Scale fit transform",
+      );
+      return;
+    }
+    const beforeFull = buildAttachmentOverride(attachmentBeforeRef.current);
+    const afterPatch = buildAttachmentScalePatch(key, value, itemPartTransformValues);
+    const afterFull = buildAttachmentOverride({
+      ...itemPartTransformValues,
+      ...afterPatch,
+    });
+    useStore.getState().commitAttachmentOverride(activeEntity.id, selectedSlotDef.id, beforeFull, afterFull, "Scale attachment");
+  }
+
+  function commitAttachmentValues(
+    nextValues: Partial<typeof itemPartTransformValues>,
+    label: string,
+  ) {
+    if (!activeEntity || !selectedSlotDef || !selectedAssign) return;
+    if (isEditingDefaultFit && selectedItem && selectedPart && template && fitAuthoring) {
+      commitItemPartFitTransform(
+        selectedItem,
+        template,
+        selectedSlotDef.id,
+        selectedPart.id,
+        buildItemPartTransform(itemPartTransformValues),
+        buildItemPartTransform({
+          ...itemPartTransformValues,
+          ...nextValues,
+        }),
+        fitAuthoring.scope,
+        selectedItemAnchor?.id ?? null,
+        label,
+      );
+      return;
+    }
+    const beforeFull = buildAttachmentOverride(itemPartTransformValues);
+    const afterFull = buildAttachmentOverride({
+      ...itemPartTransformValues,
+      x: nextValues.x ?? itemPartTransformValues.x,
+      y: nextValues.y ?? itemPartTransformValues.y,
+      rotation: nextValues.rotation ?? itemPartTransformValues.rotation,
+      scaleX: nextValues.scaleX ?? itemPartTransformValues.scaleX,
+      scaleY: nextValues.scaleY ?? itemPartTransformValues.scaleY,
+    });
+    useStore.getState().commitAttachmentOverride(activeEntity.id, selectedSlotDef.id, beforeFull, afterFull, label);
+  }
+
   function patchSlotTransform<K extends keyof typeof slotTransformValues>(key: K, value: number) {
     if (!template || !selectedSlotDef) return;
-    updateTemplateSlotTransform(template.id, selectedSlotDef.id, {
+    previewTemplateSlotTransform(template.id, selectedSlotDef.id, {
       ...slotTransformValues,
       [key]: value,
     });
@@ -370,6 +568,23 @@ export function InspectorPanel() {
       ...slotTransformValues,
       [key]: value,
     });
+  }
+
+  function commitSlotTransformValues(
+    nextValues: Partial<typeof slotTransformValues>,
+    label: string,
+  ) {
+    if (!template || !selectedSlotDef) return;
+    useStore.getState().commitTemplateSlotTransform(
+      template.id,
+      selectedSlotDef.id,
+      slotTransformValues,
+      {
+        ...slotTransformValues,
+        ...nextValues,
+      },
+      label,
+    );
   }
 
   function patchVisualTransform<K extends keyof typeof visualValues>(key: K, value: number) {
@@ -386,6 +601,31 @@ export function InspectorPanel() {
       ...visualValues,
       [key]: value,
     });
+  }
+
+  function saveSelectedPartFit(scope: "template" | "family") {
+    if (!selectedItem || !selectedPart || !selectedSlotDef || !template) return;
+    saveItemPartFitProfile(
+      selectedItem,
+      template,
+      selectedSlotDef.id,
+      selectedPart.id,
+      {
+        x: itemPartTransformValues.x,
+        y: itemPartTransformValues.y,
+        rotation: itemPartTransformValues.rotation,
+        scaleX: itemPartTransformValues.scaleX,
+        scaleY: itemPartTransformValues.scaleY,
+      },
+      scope,
+      selectedItemAnchor?.id ?? null,
+    );
+  }
+
+  function resetSelectedPartFitToDefault() {
+    if (!selectedItem || !selectedPart || !selectedSlotDef || !template) return;
+    resetItemPartFitProfile(selectedItem, template, selectedSlotDef.id, selectedPart.id, "template");
+    resetItemPartFitProfile(selectedItem, template, selectedSlotDef.id, selectedPart.id, "family");
   }
 
   return (
@@ -608,40 +848,42 @@ export function InspectorPanel() {
                   <div className="flex justify-between"><span>Slot</span><span className="text-foreground">{selectedSlotDef.name}</span></div>
                   <div className="flex justify-between"><span>Bone</span><span className="text-foreground">{selectedPart?.boneId ?? selectedSlotDef.boneId}</span></div>
                   <div className="flex justify-between"><span>Anchor</span><span className="text-foreground">{selectedItemAnchor?.id ?? "none"}</span></div>
+                  <div className="flex justify-between"><span>Pivot</span><span className="text-foreground">{selectedPart ? `${selectedPart.pivot.x}, ${selectedPart.pivot.y}` : "n/a"}</span></div>
+                  <div className="flex justify-between"><span>Z Offset</span><span className="text-foreground">{selectedPart?.zOffset ?? 0}</span></div>
                 </div>
                 <Separator className="bg-border" />
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Attachment Transform
+                  {isEditingDefaultFit ? "Default Fit Transform" : "Attachment Transform"}
                 </Label>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">X</label>
                     <TransactionalNumberInput
                       testId="inspector-attach-x"
-                      value={attachmentValues.offsetX}
-                      onBeginEdit={() => { attachmentBeforeRef.current = attachmentValues; }}
-                      onPreview={v => patchAttachment("offsetX", v)}
-                      onCommit={v => commitAttachmentField("offsetX", v)}
-                      onCancel={() => patchAttachment("offsetX", attachmentBeforeRef.current.offsetX)}
+                      value={itemPartTransformValues.x}
+                      onBeginEdit={() => { attachmentBeforeRef.current = itemPartTransformValues; }}
+                      onPreview={v => patchAttachment("x", v)}
+                      onCommit={v => commitAttachmentField("x", v)}
+                      onCancel={() => patchAttachment("x", attachmentBeforeRef.current.x)}
                     />
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">Y</label>
                     <TransactionalNumberInput
                       testId="inspector-attach-y"
-                      value={attachmentValues.offsetY}
-                      onBeginEdit={() => { attachmentBeforeRef.current = attachmentValues; }}
-                      onPreview={v => patchAttachment("offsetY", v)}
-                      onCommit={v => commitAttachmentField("offsetY", v)}
-                      onCancel={() => patchAttachment("offsetY", attachmentBeforeRef.current.offsetY)}
+                      value={itemPartTransformValues.y}
+                      onBeginEdit={() => { attachmentBeforeRef.current = itemPartTransformValues; }}
+                      onPreview={v => patchAttachment("y", v)}
+                      onCommit={v => commitAttachmentField("y", v)}
+                      onCancel={() => patchAttachment("y", attachmentBeforeRef.current.y)}
                     />
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">Rotation</label>
                     <TransactionalNumberInput
                       testId="inspector-attach-rotation"
-                      value={attachmentValues.rotation}
-                      onBeginEdit={() => { attachmentBeforeRef.current = attachmentValues; }}
+                      value={itemPartTransformValues.rotation}
+                      onBeginEdit={() => { attachmentBeforeRef.current = itemPartTransformValues; }}
                       onPreview={v => patchAttachment("rotation", v)}
                       onCommit={v => commitAttachmentField("rotation", v)}
                       onCancel={() => patchAttachment("rotation", attachmentBeforeRef.current.rotation)}
@@ -651,75 +893,104 @@ export function InspectorPanel() {
                     <label className="text-[10px] text-muted-foreground">Scale X</label>
                     <TransactionalNumberInput
                       testId="inspector-attach-scale-x"
-                      value={attachmentValues.scaleX}
-                      onBeginEdit={() => { attachmentBeforeRef.current = attachmentValues; }}
-                      onPreview={v => patchAttachment("scaleX", v)}
-                      onCommit={v => commitAttachmentField("scaleX", v)}
-                      onCancel={() => patchAttachment("scaleX", attachmentBeforeRef.current.scaleX)}
+                      value={itemPartTransformValues.scaleX}
+                      onBeginEdit={() => { attachmentBeforeRef.current = itemPartTransformValues; }}
+                      onPreview={v => previewAttachmentScale("scaleX", v)}
+                      onCommit={v => commitAttachmentScale("scaleX", v)}
+                      onCancel={() => cancelAttachmentScale("scaleX")}
                     />
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] text-muted-foreground">Scale Y</label>
                     <TransactionalNumberInput
                       testId="inspector-attach-scale-y"
-                      value={attachmentValues.scaleY}
-                      onBeginEdit={() => { attachmentBeforeRef.current = attachmentValues; }}
-                      onPreview={v => patchAttachment("scaleY", v)}
-                      onCommit={v => commitAttachmentField("scaleY", v)}
-                      onCancel={() => patchAttachment("scaleY", attachmentBeforeRef.current.scaleY)}
+                      value={itemPartTransformValues.scaleY}
+                      onBeginEdit={() => { attachmentBeforeRef.current = itemPartTransformValues; }}
+                      onPreview={v => previewAttachmentScale("scaleY", v)}
+                      onCommit={v => commitAttachmentScale("scaleY", v)}
+                      onCancel={() => cancelAttachmentScale("scaleY")}
                     />
                   </div>
                 </div>
                 <button
-                  onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
-                    offsetX: 0,
-                    offsetY: 0,
-                  })}
+                  data-testid="inspector-lock-aspect"
+                  onClick={() => setAttachmentLockAspect(value => !value)}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                >
+                  {attachmentLockAspect ? "Lock Aspect: On" : "Lock Aspect: Off"}
+                </button>
+                <button
+                  onClick={() => commitAttachmentValues({
+                    x: 0,
+                    y: 0,
+                  }, isEditingDefaultFit ? "Reset fit position" : "Reset attachment position")}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
                   Reset Position
                 </button>
                 <button
-                  onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
-                    rotation: 0,
-                  })}
+                  onClick={() => {
+                    if (isEditingDefaultFit && selectedItem && selectedPart && template && fitAuthoring) {
+                      commitItemPartFitTransform(
+                        selectedItem,
+                        template,
+                        selectedSlotDef.id,
+                        selectedPart.id,
+                        buildItemPartTransform(itemPartTransformValues),
+                        buildItemPartTransform({
+                          ...itemPartTransformValues,
+                          rotation: 0,
+                        }),
+                        fitAuthoring.scope,
+                        selectedItemAnchor?.id ?? null,
+                        "Reset fit rotation",
+                      );
+                      return;
+                    }
+                    const beforeFull = buildAttachmentOverride(itemPartTransformValues);
+                    const afterFull = buildAttachmentOverride({
+                      ...itemPartTransformValues,
+                      rotation: 0,
+                    });
+                    useStore.getState().commitAttachmentOverride(activeEntity.id, selectedSlotDef.id, beforeFull, afterFull, "Reset rotation");
+                  }}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
                   Reset Rotation
                 </button>
                 <button
-                  onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
-                    offsetX: 0,
-                    offsetY: 0,
+                  onClick={() => commitAttachmentValues({
+                    x: 0,
+                    y: 0,
                     rotation: 0,
                     scaleX: 1,
                     scaleY: 1,
-                  })}
+                  }, isEditingDefaultFit ? "Reset fit transform" : "Reset attachment transform")}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
                   Reset All
                 </button>
                 <button
-                  onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
-                    scaleX: -Math.abs(attachmentValues.scaleX || 1),
-                  })}
+                  onClick={() => commitAttachmentValues({
+                    scaleX: -Math.abs(itemPartTransformValues.scaleX || 1),
+                  }, isEditingDefaultFit ? "Flip fit horizontally" : "Flip attachment horizontally")}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
                   Flip X
                 </button>
                 <button
-                  onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
-                    scaleY: -Math.abs(attachmentValues.scaleY || 1),
-                  })}
+                  onClick={() => commitAttachmentValues({
+                    scaleY: -Math.abs(itemPartTransformValues.scaleY || 1),
+                  }, isEditingDefaultFit ? "Flip fit vertically" : "Flip attachment vertically")}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
                   Flip Y
                 </button>
                 <button
-                  onClick={() => setAttachmentOverride(activeEntity.id, selectedSlotDef.id, {
+                  onClick={() => commitAttachmentValues({
                     scaleX: 1,
                     scaleY: 1,
-                  })}
+                  }, isEditingDefaultFit ? "Reset fit scale" : "Reset attachment scale")}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
                   Reset Scale
@@ -729,6 +1000,51 @@ export function InspectorPanel() {
                   className="text-[10px] text-destructive/70 hover:text-destructive transition-colors flex items-center gap-1"
                 >
                   <span>Remove from character</span>
+                </button>
+                <button
+                  className="text-[10px] text-primary/60 cursor-not-allowed"
+                  disabled
+                >
+                  Edit Source Asset
+                </button>
+                {isEditingDefaultFit && (
+                  <button
+                    onClick={() => clearItemPartFitAuthoring()}
+                    className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                  >
+                    Back To Attachment Override
+                  </button>
+                )}
+                <button
+                  data-testid="save-fit-template"
+                  onClick={() => {
+                    if (activeEntity && selectedSlotDef && selectedItem && selectedPart) {
+                      beginItemPartFitAuthoring("template", activeEntity.id, selectedSlotDef.id, selectedItem.id, selectedPart.id);
+                    }
+                    saveSelectedPartFit("template");
+                  }}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                >
+                  Save Fit For This Template
+                </button>
+                <button
+                  data-testid="save-fit-family"
+                  onClick={() => {
+                    if (activeEntity && selectedSlotDef && selectedItem && selectedPart) {
+                      beginItemPartFitAuthoring("family", activeEntity.id, selectedSlotDef.id, selectedItem.id, selectedPart.id);
+                    }
+                    saveSelectedPartFit("family");
+                  }}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                >
+                  Save Fit For Skeleton Family
+                </button>
+                <button
+                  data-testid="reset-fit-default"
+                  onClick={() => resetSelectedPartFitToDefault()}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                >
+                  Reset To Item Default
                 </button>
               </div>
             </>
@@ -746,7 +1062,23 @@ export function InspectorPanel() {
                   <div className="flex justify-between"><span>Slot</span><span className="text-foreground">{selectedSlotDef.name}</span></div>
                   <div className="flex justify-between"><span>Anchor</span><span className="text-foreground">{selectedItemAnchor?.id ?? "none"}</span></div>
                   <div className="flex justify-between"><span>Shared Attachment Override</span><span className="text-foreground">active</span></div>
+                  <div className="flex justify-between"><span>Default Fit Editing</span><span className="text-foreground">{fitAuthoring && fitAuthoring.slotId === selectedSlotDef.id && fitAuthoring.itemId === selectedItem.id ? fitAuthoring.scope : "off"}</span></div>
                   <div className="flex justify-between"><span>Palette Override</span><span className="text-foreground">{Object.keys(selectedAssign.paletteOverride ?? {}).length ? "custom" : "default"}</span></div>
+                  {import.meta.env.DEV && (
+                    <div className="flex flex-col gap-1">
+                      <span>Attachment Override</span>
+                      <span className="text-[9px] text-foreground break-words">
+                        {JSON.stringify({
+                          x: selectedAssign.attachmentOverride?.offsetX ?? 0,
+                          y: selectedAssign.attachmentOverride?.offsetY ?? 0,
+                          rotation: selectedAssign.attachmentOverride?.rotation ?? 0,
+                          scaleX: selectedAssign.attachmentOverride?.scaleX ?? 1,
+                          scaleY: selectedAssign.attachmentOverride?.scaleY ?? 1,
+                          anchorId: selectedAssign.attachmentOverride?.anchorId ?? "",
+                        })}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => setEntitySlot(activeEntity.id, selectedSlotDef.id, null)}
@@ -756,6 +1088,11 @@ export function InspectorPanel() {
                 </button>
                 <button
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                  onClick={() => {
+                    const firstPart = selectedItem.parts?.[0];
+                    if (!firstPart) return;
+                    beginItemPartFitAuthoring("template", activeEntity.id, selectedSlotDef.id, selectedItem.id, firstPart.id);
+                  }}
                 >
                   Edit Default Fit
                 </button>
@@ -840,13 +1177,13 @@ export function InspectorPanel() {
                   </div>
                 </div>
                 <button
-                  onClick={() => updateTemplateSlotTransform(template.id, selectedSlotDef.id, {
+                  onClick={() => commitSlotTransformValues({
                     x: 0,
                     y: 0,
                     rotation: 0,
                     scaleX: 1,
                     scaleY: 1,
-                  })}
+                  }, "Reset slot transform")}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
                   Reset slot transform
@@ -1114,6 +1451,36 @@ export function InspectorPanel() {
                 <span>License</span>
                 <span className="text-foreground">{activeEntity.licenseMeta.licenseType}</span>
               </div>
+              {import.meta.env.DEV && (
+                <>
+                  <div className="flex justify-between">
+                    <span>Entity Visuals</span>
+                    <span className="text-foreground">{activeEntity.visuals?.length ?? 0}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span>Visual Bones</span>
+                    <span className="text-[9px] text-foreground break-words">
+                      {(activeEntity.visuals ?? []).map(visual => visual.boneId).join(", ") || "none"}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span>Slot Overrides</span>
+                    <span className="text-[9px] text-foreground break-words">
+                      {activeEntity.slots
+                        .filter(slot => slot.itemId)
+                        .map(slot => `${slot.slotId}:${JSON.stringify({
+                          x: slot.attachmentOverride?.offsetX ?? 0,
+                          y: slot.attachmentOverride?.offsetY ?? 0,
+                          rotation: slot.attachmentOverride?.rotation ?? 0,
+                          scaleX: slot.attachmentOverride?.scaleX ?? 1,
+                          scaleY: slot.attachmentOverride?.scaleY ?? 1,
+                          anchorId: slot.attachmentOverride?.anchorId ?? "",
+                        })}`)
+                        .join(" | ") || "none"}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

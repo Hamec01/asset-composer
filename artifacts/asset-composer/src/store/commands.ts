@@ -1,4 +1,4 @@
-import type { Entity, SlotAssignment, PaletteTokens, EntityVisual, LocalTransform, AttachmentOverride } from "@/domain/types";
+import type { Entity, SlotAssignment, PaletteTokens, EntityVisual, LocalTransform, ItemFitProfile } from "@/domain/types";
 
 export type CommandType =
   | "SET_SLOT"
@@ -12,15 +12,16 @@ export type CommandType =
   | "SET_TEMPLATE_SLOT_TRANSFORM"
   | "SET_ENTITY_VISUAL_TRANSFORM"
   | "ADD_ENTITY_VISUAL"
-  | "REMOVE_ENTITY_VISUAL";
+  | "REMOVE_ENTITY_VISUAL"
+  | "SET_ITEM_FIT_PROFILES";
 
 export interface Command {
   type: CommandType;
   entityId?: string;
   templateId?: string;
   slotId?: string;
-  before: Partial<Entity> & { defaultTransform?: LocalTransform };
-  after: Partial<Entity> & { defaultTransform?: LocalTransform };
+  before: Partial<Entity> & { defaultTransform?: LocalTransform; itemFitProfiles?: ItemFitProfile[] };
+  after: Partial<Entity> & { defaultTransform?: LocalTransform; itemFitProfiles?: ItemFitProfile[] };
   label: string;
 }
 
@@ -120,6 +121,19 @@ export function makeSetTemplateSlotTransformCommand(
     slotId,
     before: { defaultTransform: before },
     after: { defaultTransform: after },
+    label,
+  };
+}
+
+export function makeSetItemFitProfilesCommand(
+  before: ItemFitProfile[],
+  after: ItemFitProfile[],
+  label = "Update item fit profiles",
+): Command {
+  return {
+    type: "SET_ITEM_FIT_PROFILES",
+    before: { itemFitProfiles: before },
+    after: { itemFitProfiles: after },
     label,
   };
 }

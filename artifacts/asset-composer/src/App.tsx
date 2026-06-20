@@ -2,23 +2,12 @@ import { useEffect, useRef } from "react";
 import { useStore } from "@/store";
 import { IDE } from "@/pages/IDE";
 import { Dashboard } from "@/pages/Dashboard";
-import { restoreLastProjectSnapshot, saveLastProjectSnapshot } from "@/lib/projectSession";
+import { saveLastProjectSnapshot } from "@/lib/projectSession";
 
 function App() {
   const appState = useStore(s => s.editor.appState);
-  const loadProject = useStore(s => s.loadProject);
   const saveTimerRef = useRef<number | null>(null);
-  const restoreAttemptedRef = useRef(false);
   const lastQueuedProjectRef = useRef<{ id: string; updatedAt: number } | null>(null);
-
-  useEffect(() => {
-    if (restoreAttemptedRef.current || appState !== "dashboard") return;
-    restoreAttemptedRef.current = true;
-    const restored = restoreLastProjectSnapshot();
-    if (restored) {
-      loadProject(restored);
-    }
-  }, [appState, loadProject]);
 
   useEffect(() => {
     const unsubscribe = useStore.subscribe((state) => {

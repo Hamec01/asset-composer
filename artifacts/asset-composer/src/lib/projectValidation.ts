@@ -1,6 +1,10 @@
 import { ProjectSchema } from "@/domain/schema";
 import type { Project, Template } from "@/domain/types";
 import { migrateProject } from "@/lib/projectMigration";
+import {
+  normalizeLegacySharedLimbAssignments,
+  pruneLegacyBodyCloneVisualsFromEntity,
+} from "@/lib/projectNormalization";
 
 function formatSchemaErrors(message: string): string {
   return `Project schema validation failed: ${message}`;
@@ -134,10 +138,22 @@ export function parseProjectSnapshot(raw: unknown): Project {
   }
 
   const project = parsed.data as Project;
-  const referenceErrors = validateProjectReferences(project);
+  const templateById = new Map(project.templates.map(template => [template.id, template]));
+  const normalizedEntities = project.entities.map(entity => {
+    const template = templateById.get(entity.templateId);
+    const splitEntity = normalizeLegacySharedLimbAssignments(entity, template, project.items);
+    return pruneLegacyBodyCloneVisualsFromEntity(splitEntity, template);
+  });
+  const normalizedProject = normalizedEntities === project.entities
+    ? project
+    : {
+        ...project,
+        entities: normalizedEntities,
+      };
+  const referenceErrors = validateProjectReferences(normalizedProject);
   if (referenceErrors.length > 0) {
     throw new Error(referenceErrors.join(" "));
   }
 
-  return project;
+  return normalizedProject;
 }

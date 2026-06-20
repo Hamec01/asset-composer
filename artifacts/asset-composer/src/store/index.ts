@@ -3,13 +3,13 @@ import { immer } from "zustand/middleware/immer";
 import type {
   Entity, Project, EntityType, PaletteTokens, SlotAssignment,
   AnimationClip, EntityVisual, AttachmentOverride,
-  CanvasMode, EditorSelection, LocalTransform, Template,
+  CanvasMode, EditorSelection, LocalTransform, Template, SlotEditorState, Item, ItemFitProfile,
 } from "@/domain/types";
 import type { Command } from "./commands";
 import {
   makeSetSlotCommand, makeSetPaletteCommand, makeRenameCommand,
   makeAddEntityVisualCommand, makeRemoveEntityVisualCommand,
-  makeSetAttachmentOverrideCommand, makeSetTemplateSlotTransformCommand,
+  makeSetAttachmentOverrideCommand, makeSetTemplateSlotTransformCommand, makeSetItemFitProfilesCommand,
 } from "./commands";
 import { cloneTemplates, resolveTemplate } from "@/data/templates";
 import { STYLE_SETS, DEFAULT_STYLE_SET_ID, getStyleSetById } from "@/data/styleSets";
@@ -20,6 +20,7 @@ import { getPresetById } from "@/data/skinPresets";
 import { PRESET_ANIMATIONS, getClipById } from "@/data/presetAnimations";
 import { PRESET_STATE_MACHINES } from "@/data/presetStateMachines";
 import { animController } from "@/core-v2/AnimationController";
+import { resetItemFitProfilePartToItemDefault, upsertItemFitProfilePartTransform } from "@/lib/itemFitProfileMutations";
 import { parseProjectSnapshot } from "@/lib/projectValidation";
 
 type ActivePanel = "library" | "inspector" | "animation" | "export" | "none";
@@ -48,6 +49,13 @@ interface EditorState {
   isImportWizardOpen:   boolean;
   canvasMode:           CanvasMode;
   selection:            EditorSelection;
+  fitAuthoring: {
+    scope: "template" | "family";
+    entityId: string;
+    slotId: string;
+    itemId: string;
+    partId: string;
+  } | null;
 }
 
 interface HistoryState {
@@ -109,6 +117,14 @@ interface AppStore {
   closeImportWizard: () => void;
   setCanvasMode:          (mode: CanvasMode) => void;
   setEditorSelection:     (sel: EditorSelection) => void;
+  beginItemPartFitAuthoring: (
+    scope: "template" | "family",
+    entityId: string,
+    slotId: string,
+    itemId: string,
+    partId: string,
+  ) => void;
+  clearItemPartFitAuthoring: () => void;
   updateTemplateSlotTransform: (templateId: string, slotId: string, transform: LocalTransform) => void;
   previewTemplateSlotTransform: (templateId: string, slotId: string, transform: LocalTransform) => void;
   commitTemplateSlotTransform: (
@@ -118,6 +134,48 @@ interface AppStore {
     after: LocalTransform,
     label?: string,
   ) => void;
+  saveItemPartFitProfile: (
+    item: Item,
+    template: Template,
+    slotId: string,
+    partId: string,
+    transform: LocalTransform,
+    scope: "template" | "family",
+    anchorId?: string | null,
+  ) => void;
+  resetItemPartFitProfile: (
+    item: Item,
+    template: Template,
+    slotId: string,
+    partId: string,
+    scope: "template" | "family",
+  ) => void;
+  previewItemPartFitTransform: (
+    item: Item,
+    template: Template,
+    slotId: string,
+    partId: string,
+    transform: LocalTransform,
+    scope: "template" | "family",
+    anchorId?: string | null,
+  ) => void;
+  commitItemPartFitTransform: (
+    item: Item,
+    template: Template,
+    slotId: string,
+    partId: string,
+    before: LocalTransform,
+    after: LocalTransform,
+    scope: "template" | "family",
+    anchorId?: string | null,
+    label?: string,
+  ) => void;
+  setSlotGizmoHidden: (templateId: string, slotId: string, hidden: boolean) => void;
+  setSlotGizmoLocked: (templateId: string, slotId: string, locked: boolean) => void;
+  hideAllSlotGizmos: (templateId: string) => void;
+  showAllSlotGizmos: (templateId: string) => void;
+  unlockAllSlotGizmos: (templateId: string) => void;
+  getSlotEditorState: (templateId: string) => SlotEditorState;
 
   undo:        () => void;
   redo:        () => void;
@@ -201,6 +259,30 @@ function normalizeLocalTransform(transform: LocalTransform | undefined): LocalTr
   };
 }
 
+function cloneItemFitProfiles(profiles: ItemFitProfile[]): ItemFitProfile[] {
+  return profiles.map(profile => ({
+    ...profile,
+    partTransforms: Object.fromEntries(
+      Object.entries(profile.partTransforms).map(([partId, transform]) => [partId, { ...transform }]),
+    ),
+    anchorOverrides: profile.anchorOverrides ? { ...profile.anchorOverrides } : undefined,
+  }));
+}
+
+function selectionMatchesFitAuthoring(
+  selection: EditorSelection,
+  fitAuthoring: EditorState["fitAuthoring"],
+) {
+  return (
+    selection.kind === "item-part" &&
+    fitAuthoring != null &&
+    selection.entityId === fitAuthoring.entityId &&
+    selection.slotId === fitAuthoring.slotId &&
+    selection.itemId === fitAuthoring.itemId &&
+    selection.partId === fitAuthoring.partId
+  );
+}
+
 function sameEntityVisualTransform(a?: LocalTransform, b?: LocalTransform) {
   return sameLocalTransform(a, b);
 }
@@ -219,10 +301,35 @@ function makeDefaultProject(): Project {
     stateMachines:   PRESET_STATE_MACHINES,
     styleSets:       STYLE_SETS,
     exportProfiles:  DEFAULT_EXPORT_PROFILES,
+    editorMeta:      { slotEditorByTemplateId: {} },
     activeEntityId:  null,
     createdAt:       Date.now(),
     updatedAt:       Date.now(),
   };
+}
+
+function normalizeSlotEditorState(state?: Partial<SlotEditorState>): SlotEditorState {
+  return {
+    hiddenSlotIds: Array.isArray(state?.hiddenSlotIds) ? [...state.hiddenSlotIds] : [],
+    lockedSlotIds: Array.isArray(state?.lockedSlotIds) ? [...state.lockedSlotIds] : [],
+  };
+}
+
+function withSlotEditorState(
+  project: Project,
+  templateId: string,
+  updater: (state: SlotEditorState) => SlotEditorState,
+) {
+  const current = normalizeSlotEditorState(project.editorMeta.slotEditorByTemplateId[templateId]);
+  const next = updater(current);
+  project.editorMeta = {
+    ...project.editorMeta,
+    slotEditorByTemplateId: {
+      ...project.editorMeta.slotEditorByTemplateId,
+      [templateId]: normalizeSlotEditorState(next),
+    },
+  };
+  project.updatedAt = Date.now();
 }
 
 function applyEntityCommand(entities: Entity[], cmd: Command, direction: "do" | "undo"): Entity[] {
@@ -251,6 +358,19 @@ function applyTemplateCommand(templates: Template[], cmd: Command, direction: "d
   });
 }
 
+function applyProjectCommand(project: Project, cmd: Command, direction: "do" | "undo"): Project {
+  if (cmd.type === "SET_ITEM_FIT_PROFILES") {
+    return {
+      ...project,
+      itemFitProfiles: cloneItemFitProfiles(
+        (direction === "do" ? cmd.after.itemFitProfiles : cmd.before.itemFitProfiles) ?? project.itemFitProfiles,
+      ),
+    };
+  }
+
+  return project;
+}
+
 function startClipPlayback(allClips: AnimationClip[], clipId: string | null, looping: boolean) {
   const clip = clipId ? allClips.find(c => c.id === clipId) : null;
   if (clip) {
@@ -259,6 +379,96 @@ function startClipPlayback(allClips: AnimationClip[], clipId: string | null, loo
     animController.seek(0);
     animController.play();
   }
+}
+
+function hydratePlaybackForEntity(
+  project: Project,
+  entityId: string | null,
+  playback: AnimPlayback,
+): AnimPlayback {
+  const nextPlayback: AnimPlayback = { ...DEFAULT_ANIM_PLAYBACK, looping: playback.looping };
+  if (!entityId) {
+    animController.pause();
+    return nextPlayback;
+  }
+
+  const entity = project.entities.find(candidate => candidate.id === entityId) ?? null;
+  const template = entity ? resolveTemplate(project, entity.templateId) : undefined;
+  if (!entity || !template) {
+    animController.pause();
+    return nextPlayback;
+  }
+
+  const activeStateMachineId =
+    entity.activeStateMachineId ??
+    PRESET_STATE_MACHINES.find(machine => machine.skeletonFamily === template.skeletonFamily)?.id ??
+    null;
+  const activeStateMachine = activeStateMachineId
+    ? PRESET_STATE_MACHINES.find(machine => machine.id === activeStateMachineId) ?? null
+    : null;
+
+  let activeClipId = entity.activeAnimationClipId ?? null;
+  let selectedStateId: string | null = null;
+  let shouldPlay = false;
+
+  if (activeStateMachine) {
+    selectedStateId = activeStateMachine.entryStateId;
+    const entryState = activeStateMachine.states.find(state => state.id === activeStateMachine.entryStateId) ?? null;
+    if (entryState?.clipId) {
+      activeClipId = entryState.clipId;
+      shouldPlay = true;
+    }
+  }
+
+  if (!activeClipId) {
+    const firstLoop = project.animationClips.find(
+      clip => clip.skeletonFamily === template.skeletonFamily && clip.loops,
+    ) ?? null;
+    if (firstLoop) {
+      activeClipId = firstLoop.id;
+      shouldPlay = true;
+    }
+  }
+
+  if (activeClipId) {
+    startClipPlayback(project.animationClips as AnimationClip[], activeClipId, nextPlayback.looping);
+  } else {
+    animController.pause();
+  }
+
+  return {
+    ...nextPlayback,
+    activeClipId,
+    activeStateMachineId,
+    selectedStateId,
+    playing: shouldPlay,
+    timeMs: 0,
+  };
+}
+
+function debugLogProjectState(project: Project) {
+  if (typeof window === "undefined" || !import.meta.env.DEV) return;
+  const activeEntity = project.entities.find(entity => entity.id === project.activeEntityId) ?? null;
+  const activeTemplate = activeEntity
+    ? project.templates.find(template => template.id === activeEntity.templateId) ?? null
+    : null;
+  const payload = {
+    projectId: project.id,
+    projectName: project.name,
+    activeEntityId: project.activeEntityId,
+    activeEntity: activeEntity
+      ? {
+          id: activeEntity.id,
+          name: activeEntity.name,
+          slots: activeEntity.slots,
+          visualsCount: activeEntity.visuals?.length ?? 0,
+        }
+      : null,
+    activeTemplateSlots: activeTemplate?.slots ?? null,
+    itemFitProfiles: project.itemFitProfiles,
+  };
+
+  console.info("[asset-composer][restore-debug]", JSON.stringify(payload));
 }
 
 const DEFAULT_ANIM_PLAYBACK: AnimPlayback = {
@@ -287,6 +497,7 @@ export const useStore = create<AppStore>()(
       isImportWizardOpen: false,
       canvasMode:         "select" as CanvasMode,
       selection:          { kind: "none" } as EditorSelection,
+      fitAuthoring:       null,
     },
     history: { past: [], future: [], maxDepth: 100 },
     animPlayback: { ...DEFAULT_ANIM_PLAYBACK },
@@ -507,6 +718,7 @@ export const useStore = create<AppStore>()(
     loadProject: (raw: unknown) => {
       animController.pause();
       const migrated = parseProjectSnapshot(raw);
+      debugLogProjectState(migrated as Project);
       set(state => {
         state.project = migrated as Project;
         state.history.past = [];
@@ -516,7 +728,12 @@ export const useStore = create<AppStore>()(
         state.editor.isWizardOpen = false;
         state.editor.canvasMode = "select";
         state.editor.selection = { kind: "none" };
-        state.animPlayback = { ...DEFAULT_ANIM_PLAYBACK };
+        state.editor.fitAuthoring = null;
+        state.animPlayback = hydratePlaybackForEntity(
+          migrated as Project,
+          (migrated as Project).activeEntityId,
+          state.animPlayback,
+        );
       });
     },
 
@@ -531,6 +748,7 @@ export const useStore = create<AppStore>()(
         state.editor.isWizardOpen = false;
         state.editor.canvasMode = "select";
         state.editor.selection = { kind: "none" };
+        state.editor.fitAuthoring = null;
         state.animPlayback = { ...DEFAULT_ANIM_PLAYBACK };
       });
     },
@@ -638,16 +856,25 @@ export const useStore = create<AppStore>()(
       const selection = state.editor.selection;
       if (slotId === null) {
         state.editor.selection = { kind: "none" };
+        state.editor.fitAuthoring = null;
         return;
       }
 
       if (selection.kind === "item-part" && selection.slotId !== slotId) {
         state.editor.selection = { kind: "none" };
+        state.editor.fitAuthoring = null;
+        return;
+      }
+      if (selection.kind === "item-part" && selection.slotId === slotId) {
         return;
       }
 
       if (selection.kind === "template-slot" && selection.slotId !== slotId) {
         state.editor.selection = { kind: "none" };
+        state.editor.fitAuthoring = null;
+        return;
+      }
+      if (selection.kind === "template-slot" && selection.slotId === slotId) {
         return;
       }
 
@@ -657,6 +884,8 @@ export const useStore = create<AppStore>()(
       ) {
         return;
       }
+
+      state.editor.fitAuthoring = null;
 
       const activeEntity = state.project.entities.find(entity => entity.id === state.project.activeEntityId);
       const assignment = activeEntity?.slots.find(slot => slot.slotId === slotId);
@@ -679,8 +908,27 @@ export const useStore = create<AppStore>()(
     closeExport:         ()          => set(state => { state.editor.isExportOpen = false; }),
     openImportWizard:    ()          => set(state => { state.editor.isImportWizardOpen = true; }),
     closeImportWizard:   ()          => set(state => { state.editor.isImportWizardOpen = false; }),
-    setCanvasMode:       (mode)      => set(state => { state.editor.canvasMode = mode; }),
-    setEditorSelection:  (sel)       => set(state => { state.editor.selection = sel; }),
+    setCanvasMode:       (mode)      => set(state => {
+      state.editor.canvasMode = mode;
+      if (mode !== "edit-attachment") {
+        state.editor.fitAuthoring = null;
+      }
+    }),
+    setEditorSelection:  (sel)       => set(state => {
+      state.editor.selection = sel;
+      if (!selectionMatchesFitAuthoring(sel, state.editor.fitAuthoring)) {
+        state.editor.fitAuthoring = null;
+      }
+    }),
+    beginItemPartFitAuthoring: (scope, entityId, slotId, itemId, partId) => set(state => {
+      state.editor.fitAuthoring = { scope, entityId, slotId, itemId, partId };
+      state.editor.canvasMode = "edit-attachment";
+      state.editor.selectedSlotId = slotId;
+      state.editor.selection = { kind: "item-part", entityId, slotId, itemId, partId };
+    }),
+    clearItemPartFitAuthoring: () => set(state => {
+      state.editor.fitAuthoring = null;
+    }),
     updateTemplateSlotTransform: (templateId, slotId, transform) => set(state => {
       const tmpl = state.project.templates.find(t => t.id === templateId);
       if (!tmpl) return;
@@ -719,10 +967,118 @@ export const useStore = create<AppStore>()(
     }),
 
     // ── History Actions ──────────────────────────────────────────────────────
+    previewItemPartFitTransform: (item, template, slotId, partId, transform, scope, anchorId = null) => {
+      set(state => {
+        state.project.itemFitProfiles = upsertItemFitProfilePartTransform(state.project.itemFitProfiles, {
+          item,
+          template,
+          slotId,
+          partId,
+          transform,
+          scope,
+          anchorId,
+        });
+      });
+    },
+    commitItemPartFitTransform: (item, template, slotId, partId, before, after, scope, anchorId = null, label) => {
+      const beforeProfiles = upsertItemFitProfilePartTransform(cloneItemFitProfiles(get().project.itemFitProfiles), {
+        item,
+        template,
+        slotId,
+        partId,
+        transform: before,
+        scope,
+        anchorId,
+      });
+      const afterProfiles = upsertItemFitProfilePartTransform(cloneItemFitProfiles(get().project.itemFitProfiles), {
+        item,
+        template,
+        slotId,
+        partId,
+        transform: after,
+        scope,
+        anchorId,
+      });
+      if (JSON.stringify(beforeProfiles) === JSON.stringify(afterProfiles)) return;
+      get().pushCommand(makeSetItemFitProfilesCommand(
+        beforeProfiles,
+        afterProfiles,
+        label ?? (scope === "template" ? "Adjust template fit" : "Adjust skeleton family fit"),
+      ));
+    },
+    saveItemPartFitProfile: (item, template, slotId, partId, transform, scope, anchorId = null) => {
+      const before = cloneItemFitProfiles(get().project.itemFitProfiles);
+      const after = upsertItemFitProfilePartTransform(before, {
+        item,
+        template,
+        slotId,
+        partId,
+        transform,
+        scope,
+        anchorId,
+      });
+      if (JSON.stringify(before) === JSON.stringify(after)) return;
+      get().pushCommand(makeSetItemFitProfilesCommand(
+        before,
+        after,
+        scope === "template" ? "Save fit for template" : "Save fit for skeleton family",
+      ));
+    },
+    resetItemPartFitProfile: (item, template, slotId, partId, scope) => {
+      const before = cloneItemFitProfiles(get().project.itemFitProfiles);
+      const after = resetItemFitProfilePartToItemDefault(before, {
+        item,
+        template,
+        slotId,
+        partId,
+        scope,
+      });
+      if (JSON.stringify(before) === JSON.stringify(after)) return;
+      get().pushCommand(makeSetItemFitProfilesCommand(before, after, "Reset fit to item default"));
+    },
+    setSlotGizmoHidden: (templateId, slotId, hidden) => set(state => {
+      withSlotEditorState(state.project, templateId, current => ({
+        ...current,
+        hiddenSlotIds: hidden
+          ? [...new Set([...current.hiddenSlotIds, slotId])]
+          : current.hiddenSlotIds.filter(id => id !== slotId),
+      }));
+    }),
+    setSlotGizmoLocked: (templateId, slotId, locked) => set(state => {
+      withSlotEditorState(state.project, templateId, current => ({
+        ...current,
+        lockedSlotIds: locked
+          ? [...new Set([...current.lockedSlotIds, slotId])]
+          : current.lockedSlotIds.filter(id => id !== slotId),
+      }));
+    }),
+    hideAllSlotGizmos: (templateId) => set(state => {
+      const tmpl = state.project.templates.find(t => t.id === templateId);
+      if (!tmpl) return;
+      withSlotEditorState(state.project, templateId, current => ({
+        ...current,
+        hiddenSlotIds: tmpl.slots.map(slot => slot.id),
+      }));
+    }),
+    showAllSlotGizmos: (templateId) => set(state => {
+      withSlotEditorState(state.project, templateId, current => ({
+        ...current,
+        hiddenSlotIds: [],
+      }));
+    }),
+    unlockAllSlotGizmos: (templateId) => set(state => {
+      withSlotEditorState(state.project, templateId, current => ({
+        ...current,
+        lockedSlotIds: [],
+      }));
+    }),
+    getSlotEditorState: (templateId) => normalizeSlotEditorState(get().project.editorMeta.slotEditorByTemplateId[templateId]),
+
     pushCommand: (cmd) => {
       set(state => {
         state.project.entities = applyEntityCommand(state.project.entities as Entity[], cmd, "do");
         state.project.templates = applyTemplateCommand(state.project.templates as Template[], cmd, "do");
+        state.project = applyProjectCommand(state.project, cmd, "do");
         state.history.past.push(cmd);
         if (state.history.past.length > state.history.maxDepth) state.history.past.shift();
         state.history.future = [];
@@ -737,6 +1093,7 @@ export const useStore = create<AppStore>()(
       set(state => {
         state.project.entities = applyEntityCommand(state.project.entities as Entity[], cmd, "undo");
         state.project.templates = applyTemplateCommand(state.project.templates as Template[], cmd, "undo");
+        state.project = applyProjectCommand(state.project, cmd, "undo");
         state.history.past.pop();
         state.history.future.unshift(cmd);
         state.project.updatedAt = Date.now();
@@ -750,6 +1107,7 @@ export const useStore = create<AppStore>()(
       set(state => {
         state.project.entities = applyEntityCommand(state.project.entities as Entity[], cmd, "do");
         state.project.templates = applyTemplateCommand(state.project.templates as Template[], cmd, "do");
+        state.project = applyProjectCommand(state.project, cmd, "do");
         state.history.future.shift();
         state.history.past.push(cmd);
         state.project.updatedAt = Date.now();
@@ -856,7 +1214,14 @@ export const useStore = create<AppStore>()(
 
 // ── Keyboard shortcuts ─────────────────────────────────────────────────────────
 if (typeof window !== "undefined") {
-  if (import.meta.env.DEV) {
+  const debugHosts = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
+  const hostname = window.location.hostname;
+  const isPrivateLanHost =
+    hostname.startsWith("192.168.") ||
+    hostname.startsWith("10.") ||
+    hostname.startsWith("172.");
+
+  if (import.meta.env.DEV || debugHosts.has(hostname) || isPrivateLanHost) {
     (window as typeof window & { __assetComposerStore?: typeof useStore }).__assetComposerStore = useStore;
   }
 

@@ -8,7 +8,7 @@ import { migrateProject } from "@/lib/projectMigration";
 import { triggerDownload } from "@/lib/download";
 import { getRecentProjectFolderPath, saveLastProjectSnapshot } from "@/lib/projectSession";
 import {
-  Plus, Save, FolderOpen, Undo2, Redo2, Download, Layers, Upload,
+  Plus, Save, FolderOpen, Undo2, Redo2, Download, Layers, Upload, Home,
 } from "lucide-react";
 import { ImportWizard } from "@/components/wizard/ImportWizard";
 
@@ -24,6 +24,7 @@ export function Toolbar() {
   const redo              = useStore(s => s.redo);
   const setProjectName    = useStore(s => s.setProjectName);
   const setProjectStyleSet = useStore(s => s.setProjectStyleSet);
+  const setAppState       = useStore(s => s.setAppState);
   const getActiveEntity   = useStore(s => s.getActiveEntity);
   const loadProject       = useStore(s => s.loadProject);
 
@@ -121,6 +122,11 @@ export function Toolbar() {
     applyStyleSetCssVars(styleSetId);
   }
 
+  function handleBackToDashboard() {
+    saveLastProjectSnapshot(project, getRecentProjectFolderPath(project.id) ?? undefined);
+    setAppState("dashboard");
+  }
+
   return (
     <>
       <header
@@ -144,6 +150,19 @@ export function Toolbar() {
         />
 
         <div className="w-px h-5 bg-border mx-1" />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              data-testid="toolbar-back-dashboard"
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={handleBackToDashboard}
+            ><Home className="w-3.5 h-3.5" /></Button>
+          </TooltipTrigger>
+          <TooltipContent>Back to Main Menu</TooltipContent>
+        </Tooltip>
 
         {/* New Entity */}
         <Tooltip>
