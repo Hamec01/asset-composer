@@ -64,9 +64,46 @@ const EntityVisualSchema = z.object({
   pivot:          PivotSchema,
   localTransform: LocalTransformSchema,
   zIndex:         z.number(),
+  source: z.object({
+    format: z.enum(["svg", "png"]),
+    name: z.string(),
+    originalFileName: z.string(),
+    mimeType: z.string(),
+    dataUri: z.string().optional(),
+  }).optional(),
+  editorDocumentId: z.string().nullable().optional(),
 });
 
 const CoordinateModeSchema = z.enum(["bone_local", "legacy_full_frame"]);
+const FacingPolicySchema = z.enum(["profile_mirror", "directional_4", "directional_5", "directional_8"]);
+const ViewKeySchema = z.enum([
+  "south",
+  "south_east",
+  "east",
+  "north_east",
+  "north",
+  "north_west",
+  "west",
+  "south_west",
+]);
+
+const TemplateViewSchema = z.object({
+  key: ViewKeySchema,
+  viewProfile: z.string(),
+  mirrorOf: ViewKeySchema.optional(),
+  thumbnailSvg: z.string().optional(),
+});
+
+const TemplateViewsSchema = z.object({
+  south: TemplateViewSchema.optional(),
+  south_east: TemplateViewSchema.optional(),
+  east: TemplateViewSchema.optional(),
+  north_east: TemplateViewSchema.optional(),
+  north: TemplateViewSchema.optional(),
+  north_west: TemplateViewSchema.optional(),
+  west: TemplateViewSchema.optional(),
+  south_west: TemplateViewSchema.optional(),
+});
 
 const ItemPartSchema = z.object({
   id:             z.string(),
@@ -77,6 +114,144 @@ const ItemPartSchema = z.object({
   localTransform: LocalTransformSchema,
   coordinateMode: CoordinateModeSchema,
   zOffset:        z.number(),
+  source: z.object({
+    format: z.enum(["svg", "png"]),
+    name: z.string(),
+    originalFileName: z.string(),
+    mimeType: z.string(),
+    dataUri: z.string().optional(),
+  }).optional(),
+  editorDocumentId: z.string().nullable().optional(),
+});
+
+const BodyMorphValuesSchema = z.object({
+  headSize: z.number().default(1),
+  neckLength: z.number().default(1),
+  torsoHeight: z.number().default(1),
+  torsoWidth: z.number().default(1),
+  armLength: z.number().default(1),
+  forearmLength: z.number().default(1),
+  handSize: z.number().default(1),
+  legLength: z.number().default(1),
+  shinLength: z.number().default(1),
+  footSize: z.number().default(1),
+  pelvisWidth: z.number().default(1),
+  overallHeightScale: z.number().default(1),
+});
+
+const BodyMorphRegionSchema = z.enum(["head", "torso", "arms", "legs", "global"]);
+const BodyAuthoringIntentSchema = z.enum(["morph", "inspect", "preview"]);
+const BodyAuthoringViewportModeSchema = z.enum(["full_body", "focus_region"]);
+const FaceOverlayRoleSchema = z.enum(["base", "line", "detail", "shadow", "highlight"]);
+const SpriteEditorSymmetryModeSchema = z.enum(["none", "mirror_x"]);
+const FaceAuthoringToolSchema = z.enum(["select", "pencil", "closed-pencil", "fill", "eraser"]);
+const FaceCanvasFocusModeSchema = z.enum(["document", "head"]);
+const SpriteEditorPaintTargetSchema = z.enum(["fill", "stroke", "both"]);
+const FaceAuthoringWorkflowModeSchema = z.enum(["feature", "overlay"]);
+
+const BodyAuthoringStateSchema = z.object({
+  focusRegion: BodyMorphRegionSchema.default("global"),
+  activeBoneId: z.string().nullable().optional(),
+  activeSlotId: z.string().nullable().optional(),
+  intent: BodyAuthoringIntentSchema.optional().default("morph"),
+  viewportMode: BodyAuthoringViewportModeSchema.optional().default("focus_region"),
+  regionPresetIds: z.object({
+    head: z.string().nullable().optional(),
+    torso: z.string().nullable().optional(),
+    arms: z.string().nullable().optional(),
+    legs: z.string().nullable().optional(),
+    global: z.string().nullable().optional(),
+  }).optional(),
+});
+
+const FaceFeatureTransformSchema = z.object({
+  x: z.number().default(0),
+  y: z.number().default(0),
+  rotation: z.number().default(0),
+  scaleX: z.number().default(1),
+  scaleY: z.number().default(1),
+});
+
+const FaceFeatureConfigSchema = z.object({
+  presetId: z.string().default("none"),
+  color: z.string().default("#000000"),
+  visible: z.boolean().default(false),
+  transform: FaceFeatureTransformSchema.default({
+    x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1,
+  }),
+});
+
+const FaceOverlaySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  featureTag: z.enum(["generic", "eyes", "mouth", "brows", "beard", "hair"]).optional(),
+  overlayRole: FaceOverlayRoleSchema.optional(),
+  symmetryMode: SpriteEditorSymmetryModeSchema.optional().default("none"),
+  paintTarget: SpriteEditorPaintTargetSchema.optional().default("both"),
+  svgData: z.string(),
+  zOffset: z.number(),
+  pivot: PivotSchema,
+  metrics: VectorAssetMetricsSchema,
+  localTransform: LocalTransformSchema,
+  source: z.object({
+    format: z.enum(["svg", "png"]),
+    name: z.string(),
+    originalFileName: z.string(),
+    mimeType: z.string(),
+    dataUri: z.string().optional(),
+  }).optional(),
+  editorDocumentId: z.string().nullable().optional(),
+});
+
+const FaceCustomizationSchema = z.object({
+  eyes: FaceFeatureConfigSchema.default({
+    presetId: "round_kawaii",
+    color: "#2B1D18",
+    visible: true,
+    transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+  }),
+  mouth: FaceFeatureConfigSchema.default({
+    presetId: "soft_smile",
+    color: "#1A1A1A",
+    visible: true,
+    transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+  }),
+  brows: FaceFeatureConfigSchema.default({
+    presetId: "soft_arc",
+    color: "#3B2314",
+    visible: false,
+    transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+  }),
+  beard: FaceFeatureConfigSchema.default({
+    presetId: "none",
+    color: "#3B2314",
+    visible: false,
+    transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+  }),
+  hair: FaceFeatureConfigSchema.default({
+    presetId: "none",
+    color: "#3B2314",
+    visible: false,
+    transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+  }),
+  overlays: z.array(FaceOverlaySchema).default([]),
+});
+
+const FaceAuthoringStateSchema = z.object({
+  activeFeatureKey: z.enum(["eyes", "mouth", "brows", "beard", "hair", "generic"]).nullable().default(null),
+  overlayFilter: z.enum(["all", "eyes", "mouth", "brows", "beard", "hair", "generic"]).default("all"),
+  selectedOverlayId: z.string().nullable().optional(),
+  activeBoneId: z.string().nullable().optional(),
+  activeSlotId: z.string().nullable().optional(),
+  workflowMode: FaceAuthoringWorkflowModeSchema.optional().default("feature"),
+  draftOverlayRole: FaceOverlayRoleSchema.optional().default("detail"),
+  draftPaintTarget: SpriteEditorPaintTargetSchema.optional().default("both"),
+  draftSymmetryMode: SpriteEditorSymmetryModeSchema.optional().default("none"),
+  overlayRoleFilter: FaceOverlayRoleSchema.or(z.literal("all")).optional().default("all"),
+  paintTargetFilter: SpriteEditorPaintTargetSchema.or(z.literal("all")).optional().default("all"),
+  overlayGrouping: z.enum(["feature", "feature_role", "feature_role_paint"]).optional().default("feature"),
+  drawMode: FaceAuthoringToolSchema.nullable().optional().default(null),
+  focusMode: FaceCanvasFocusModeSchema.optional().default("document"),
 });
 
 const BonePartSchema = z.object({
@@ -127,6 +302,38 @@ export const EntitySchema = z.object({
   palette: PaletteTokensSchema,
   slots: z.array(SlotAssignmentSchema),
   visuals: z.array(EntityVisualSchema).optional().default([]),
+  bodyMorphs: BodyMorphValuesSchema.optional().default({
+    headSize: 1,
+    neckLength: 1,
+    torsoHeight: 1,
+    torsoWidth: 1,
+    armLength: 1,
+    forearmLength: 1,
+    handSize: 1,
+    legLength: 1,
+    shinLength: 1,
+    footSize: 1,
+    pelvisWidth: 1,
+    overallHeightScale: 1,
+  }),
+  bodyMorphPresetId: z.string().nullable().optional(),
+  bodyAuthoring: BodyAuthoringStateSchema.optional().default({
+    focusRegion: "global",
+    regionPresetIds: {},
+  }),
+  faceCustomization: FaceCustomizationSchema.optional().default({
+    eyes: { presetId: "round_kawaii", color: "#2B1D18", visible: true, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } },
+    mouth: { presetId: "soft_smile", color: "#1A1A1A", visible: true, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } },
+    brows: { presetId: "soft_arc", color: "#3B2314", visible: false, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } },
+    beard: { presetId: "none", color: "#3B2314", visible: false, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } },
+    hair: { presetId: "none", color: "#3B2314", visible: false, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } },
+    overlays: [],
+  }),
+  faceAuthoring: FaceAuthoringStateSchema.optional().default({
+    activeFeatureKey: null,
+    overlayFilter: "all",
+    selectedOverlayId: null,
+  }),
   rootTransform: LocalTransformSchema.nullable().optional(),
   activeAnimationClipId: z.string().nullable(),
   activeStateMachineId: z.string().nullable(),
@@ -169,6 +376,9 @@ const TemplateSchema = z.object({
   description: z.string(),
   skeletonFamily: z.string(),
   viewProfile: z.string(),
+  rigFamilyId: z.string().optional(),
+  defaultFacing: ViewKeySchema.optional(),
+  views: TemplateViewsSchema.optional(),
   entityTypes: z.array(z.string()),
   bones: z.array(BoneSchema),
   slots: z.array(SlotDefSchema),
@@ -290,6 +500,61 @@ const SlotEditorStateSchema = z.object({
 
 const ProjectEditorMetaSchema = z.object({
   slotEditorByTemplateId: z.record(SlotEditorStateSchema).default({}),
+  spriteEditorDocuments: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    width: z.number(),
+    height: z.number(),
+    pivot: PivotSchema,
+    referenceAsset: z.object({
+      format: z.enum(["svg", "png"]),
+      name: z.string(),
+      originalFileName: z.string(),
+      mimeType: z.string(),
+      dataUri: z.string().optional(),
+    }).nullable().optional(),
+    layers: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      visible: z.boolean(),
+      zIndex: z.number(),
+      shapes: z.array(z.object({
+        id: z.string(),
+        type: z.enum(["rect", "ellipse", "path"]),
+        x: z.number(),
+        y: z.number(),
+        width: z.number(),
+        height: z.number(),
+        rotation: z.number(),
+        fill: z.string(),
+        stroke: z.string(),
+        strokeWidth: z.number(),
+        pathData: z.string().optional(),
+      })),
+    })).default([]),
+        authoringHint: z.object({
+          faceFeatureKey: z.enum(["eyes", "mouth", "brows", "beard", "hair", "generic"]).optional(),
+          faceOverlayRole: FaceOverlayRoleSchema.optional(),
+          symmetryMode: SpriteEditorSymmetryModeSchema.optional(),
+          paintTarget: SpriteEditorPaintTargetSchema.optional(),
+          paintToolPreset: z.enum(["vector_brush", "shape_stamp"]).optional(),
+          bodyMorphPresetId: z.string().nullable().optional(),
+        }).optional(),
+    target: z.object({
+      kind: z.enum(["item-part", "face-overlay", "entity-visual"]),
+      entityId: z.string().optional(),
+      itemId: z.string().optional(),
+      partId: z.string().optional(),
+      overlayId: z.string().optional(),
+      visualId: z.string().optional(),
+    }),
+    updatedAt: z.number(),
+  })).default([]),
+  activeSpriteDocumentId: z.string().nullable().optional(),
+  activeAuthoringMode: z.enum(["asset-import", "sprite-editor", "body-morph", "face-editor"]).nullable().optional(),
+  activeFaceCanvasOverlayId: z.string().nullable().optional(),
+  activeFaceCanvasTool: FaceAuthoringToolSchema.nullable().optional(),
+  activeFaceCanvasFocusMode: FaceCanvasFocusModeSchema.nullable().optional(),
 });
 
 const ItemFitProfileSchema = z.object({
@@ -317,7 +582,7 @@ export const ProjectSchema = z.object({
   stateMachines: z.array(StateMachineSchema),
   styleSets: z.array(StyleSetSchema),
   exportProfiles: z.array(ExportProfileSchema),
-  editorMeta: ProjectEditorMetaSchema.default({ slotEditorByTemplateId: {} }),
+  editorMeta: ProjectEditorMetaSchema.default({ slotEditorByTemplateId: {}, spriteEditorDocuments: [], activeSpriteDocumentId: null, activeAuthoringMode: null, activeFaceCanvasOverlayId: null, activeFaceCanvasTool: null, activeFaceCanvasFocusMode: null }),
   activeEntityId: z.string().nullable(),
   createdAt: z.number(),
   updatedAt: z.number(),

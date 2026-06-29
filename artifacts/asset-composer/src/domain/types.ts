@@ -21,6 +21,33 @@ export type ViewProfile =
   | "front_view"
   | "static";
 
+export type FacingPolicy =
+  | "profile_mirror"
+  | "directional_4"
+  | "directional_5"
+  | "directional_8";
+
+export type ViewKey =
+  | "south"
+  | "south_east"
+  | "east"
+  | "north_east"
+  | "north"
+  | "north_west"
+  | "west"
+  | "south_west";
+
+export type RigFamilyId =
+  | SkeletonFamilyId
+  | "biped_profile_v1"
+  | "biped_directional_v1"
+  | "quadruped_profile_v1"
+  | "quadruped_directional_v1"
+  | "serpent_profile_v1"
+  | "serpent_directional_v1"
+  | "dragon_directional_v1"
+  | "centaur_directional_v1";
+
 export type LayerMask = "full_body" | "upper_body" | "lower_body" | "additive";
 
 export type ShadingMode = "flat" | "cel" | "textured";
@@ -140,6 +167,8 @@ export interface EntityVisual {
   pivot:          Pivot;
   localTransform: LocalTransform;
   zIndex:         number;
+  source?:        ImportedAssetSource;
+  editorDocumentId?: string | null;
 }
 
 // ── Item part (single rigid piece of multi-bone equipment) ────────────────────
@@ -163,6 +192,162 @@ export interface ItemPart {
   localTransform: LocalTransform;
   coordinateMode: CoordinateMode;
   zOffset:        number;
+  source?:        ImportedAssetSource;
+  editorDocumentId?: string | null;
+}
+
+export type AssetSourceFormat = "svg" | "png";
+
+export interface ImportedAssetSource {
+  format: AssetSourceFormat;
+  name: string;
+  originalFileName: string;
+  mimeType: string;
+  dataUri?: string;
+}
+
+export interface BodyMorphValues {
+  headSize: number;
+  neckLength: number;
+  torsoHeight: number;
+  torsoWidth: number;
+  armLength: number;
+  forearmLength: number;
+  handSize: number;
+  legLength: number;
+  shinLength: number;
+  footSize: number;
+  pelvisWidth: number;
+  overallHeightScale: number;
+}
+
+export type BodyMorphRegionId = "head" | "torso" | "arms" | "legs" | "global";
+export type BodyAuthoringIntent = "morph" | "inspect" | "preview";
+export type BodyAuthoringViewportMode = "full_body" | "focus_region";
+
+export type FaceFeatureKey = "eyes" | "mouth" | "brows" | "beard" | "hair";
+export type FaceOverlayRole = "base" | "line" | "detail" | "shadow" | "highlight";
+export type SpriteEditorSymmetryMode = "none" | "mirror_x";
+export type FaceAuthoringTool = "select" | "pencil" | "closed-pencil" | "fill" | "eraser";
+export type FaceCanvasFocusMode = "document" | "head";
+export type SpriteEditorPaintTarget = "fill" | "stroke" | "both";
+export type FaceAuthoringWorkflowMode = "feature" | "overlay";
+
+export interface BodyAuthoringState {
+  focusRegion: BodyMorphRegionId;
+  activeBoneId?: string | null;
+  activeSlotId?: string | null;
+  intent?: BodyAuthoringIntent;
+  viewportMode?: BodyAuthoringViewportMode;
+  regionPresetIds?: Partial<Record<BodyMorphRegionId, string | null>>;
+}
+
+export interface FaceFeatureTransform {
+  x: number;
+  y: number;
+  rotation: number;
+  scaleX: number;
+  scaleY: number;
+}
+
+export interface FaceFeatureConfig {
+  presetId: string;
+  color: string;
+  visible: boolean;
+  transform: FaceFeatureTransform;
+}
+
+export interface FaceOverlay {
+  id: string;
+  name: string;
+  featureTag?: "generic" | "eyes" | "mouth" | "brows" | "beard" | "hair";
+  overlayRole?: FaceOverlayRole;
+  symmetryMode?: SpriteEditorSymmetryMode;
+  paintTarget?: SpriteEditorPaintTarget;
+  svgData: string;
+  zOffset: number;
+  pivot: Pivot;
+  metrics: VectorAssetMetrics;
+  localTransform: LocalTransform;
+  source?: ImportedAssetSource;
+  editorDocumentId?: string | null;
+}
+
+export interface FaceCustomization {
+  eyes: FaceFeatureConfig;
+  mouth: FaceFeatureConfig;
+  brows: FaceFeatureConfig;
+  beard: FaceFeatureConfig;
+  hair: FaceFeatureConfig;
+  overlays: FaceOverlay[];
+}
+
+export interface FaceAuthoringState {
+  activeFeatureKey: FaceFeatureKey | "generic" | null;
+  overlayFilter: FaceFeatureKey | "generic" | "all";
+  selectedOverlayId?: string | null;
+  activeBoneId?: string | null;
+  activeSlotId?: string | null;
+  workflowMode?: FaceAuthoringWorkflowMode;
+  draftOverlayRole?: FaceOverlayRole;
+  draftPaintTarget?: SpriteEditorPaintTarget;
+  draftSymmetryMode?: SpriteEditorSymmetryMode;
+  overlayRoleFilter?: FaceOverlayRole | "all";
+  paintTargetFilter?: SpriteEditorPaintTarget | "all";
+  overlayGrouping?: "feature" | "feature_role" | "feature_role_paint";
+  drawMode?: FaceAuthoringTool | null;
+  focusMode?: FaceCanvasFocusMode;
+}
+
+export type SpriteEditorShapeType = "rect" | "ellipse" | "path";
+
+export interface SpriteEditorShape {
+  id: string;
+  type: SpriteEditorShapeType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+  pathData?: string;
+}
+
+export interface SpriteEditorLayer {
+  id: string;
+  name: string;
+  visible: boolean;
+  zIndex: number;
+  shapes: SpriteEditorShape[];
+}
+
+export interface SpriteEditorDocument {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  pivot: Pivot;
+  referenceAsset?: ImportedAssetSource | null;
+  layers: SpriteEditorLayer[];
+  authoringHint?: {
+    faceFeatureKey?: FaceFeatureKey | "generic";
+    faceOverlayRole?: FaceOverlayRole;
+    symmetryMode?: SpriteEditorSymmetryMode;
+    paintTarget?: SpriteEditorPaintTarget;
+    paintToolPreset?: "vector_brush" | "shape_stamp";
+    bodyMorphPresetId?: string | null;
+  };
+  target: {
+    kind: "item-part" | "face-overlay" | "entity-visual";
+    entityId?: string;
+    itemId?: string;
+    partId?: string;
+    overlayId?: string;
+    visualId?: string;
+  };
+  updatedAt: number;
 }
 
 // ── Evaluated visual (output of evaluationPipeline) ──────────────────────────
@@ -214,6 +399,7 @@ export type EditorSelection =
   | { kind: "anchor";         templateId: string; boneId: string; anchorId: string }
   | { kind: "equipped-item";  entityId: string; slotId: string; itemId: string }
   | { kind: "item-part";      entityId: string; slotId: string; itemId: string; partId: string }
+  | { kind: "face-overlay";   entityId: string; overlayId: string; featureKey: FaceFeatureKey | "generic"; slotId: string | null }
   | { kind: "bone";           entityId: string; boneId: string }
   | { kind: "entity-visual";  entityId: string; visualId: string };
 
@@ -303,12 +489,30 @@ export interface BonePart {
   zOffset:       number;
 }
 
+export interface TemplateView {
+  key: ViewKey;
+  viewProfile: ViewProfile;
+  mirrorOf?: ViewKey;
+  thumbnailSvg?: string;
+}
+
+export interface RigFamilyContract {
+  id: RigFamilyId;
+  anatomy: "biped" | "quadruped" | "serpent" | "dragon" | "centaur";
+  facingPolicy: FacingPolicy;
+  logicalBoneIds: string[];
+  slotIds: string[];
+}
+
 export interface Template {
   id: string;
   name: string;
   description: string;
   skeletonFamily: SkeletonFamilyId;
   viewProfile: ViewProfile;
+  rigFamilyId?: RigFamilyId;
+  defaultFacing?: ViewKey;
+  views?: Partial<Record<ViewKey, TemplateView>>;
   entityTypes: EntityType[];
   bones: Bone[];
   slots: SlotDef[];
@@ -486,6 +690,12 @@ export interface SlotEditorState {
 
 export interface ProjectEditorMeta {
   slotEditorByTemplateId: Record<string, SlotEditorState>;
+  spriteEditorDocuments: SpriteEditorDocument[];
+  activeSpriteDocumentId?: string | null;
+  activeAuthoringMode?: "asset-import" | "sprite-editor" | "body-morph" | "face-editor" | null;
+  activeFaceCanvasOverlayId?: string | null;
+  activeFaceCanvasTool?: FaceAuthoringTool | null;
+  activeFaceCanvasFocusMode?: FaceCanvasFocusMode | null;
 }
 
 export interface Entity {
@@ -499,6 +709,11 @@ export interface Entity {
   slots: SlotAssignment[];
   /** Full-vector or assembled SVG body parts (v2.0+). */
   visuals?: EntityVisual[];
+  bodyMorphs?: BodyMorphValues;
+  bodyMorphPresetId?: string | null;
+  bodyAuthoring?: BodyAuthoringState;
+  faceCustomization?: FaceCustomization;
+  faceAuthoring?: FaceAuthoringState;
   /** Entity-level root transform for moving/scaling the whole entity (v2.0+). */
   rootTransform?: LocalTransform | null;
   activeAnimationClipId: string | null;

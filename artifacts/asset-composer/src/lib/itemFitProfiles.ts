@@ -1,5 +1,6 @@
 import type { Item, SlotDef, Template, ItemFitProfile, LocalTransform } from "@/domain/types";
 import { ITEM_FIT_PROFILES } from "@/data/itemFitProfiles";
+import { templateMatchesCompatibilityFamily } from "@/lib/templateCompatibility";
 
 export function resolveItemFitProfile(
   item: Item,
@@ -16,7 +17,8 @@ export function resolveItemFitProfile(
 
   const family = profiles.find(profile =>
     profile.fitProfile === item.fitProfile &&
-    profile.family === template.skeletonFamily &&
+    !!profile.family &&
+    templateMatchesCompatibilityFamily(template, profile.family) &&
     profile.slotId === slotDef.id
   );
   if (family) return family;

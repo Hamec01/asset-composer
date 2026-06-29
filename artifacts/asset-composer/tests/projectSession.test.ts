@@ -53,6 +53,18 @@ describe("project session persistence", () => {
     expect(restored?.name).toBe(project.name);
   });
 
+  it("restores explicit rig/view template metadata from the last snapshot", () => {
+    const project = makeProject();
+    expect(saveLastProjectSnapshot(project)).toBe(true);
+
+    const restored = restoreLastProjectSnapshot() as Project | null;
+    const template = restored?.templates.find(candidate => candidate.id === "humanoid_topdown_v1");
+
+    expect(template?.rigFamilyId).toBe("biped_directional_v1");
+    expect(template?.defaultFacing).toBe("south_east");
+    expect(template?.views?.south_east?.viewProfile).toBe("topdown_45");
+  });
+
   it("returns null when local snapshot is invalid", () => {
     window.localStorage.setItem("asset-composer:last-project:v1", "{not valid json");
     expect(restoreLastProjectSnapshot()).toBeNull();
@@ -243,6 +255,255 @@ describe("project session persistence", () => {
     const restored = restoreLastProjectSnapshot() as Project | null;
     expect(restored?.entities[0]?.slots.map(slot => slot.slotId)).toEqual(["slot_hand_l", "slot_hand_r"]);
     expect(restored?.entities[0]?.slots.map(slot => slot.itemId)).toEqual(["glove_leather_l", "glove_leather_r"]);
+  });
+
+  it("roundtrips body morphs and face customization through last-session storage", () => {
+    const template = TEMPLATES.find(candidate => candidate.id === "humanoid_topdown_v1")!;
+    const project: Project = {
+      ...makeProject(),
+      entities: [{
+        id: "entity-face-morph",
+        name: "Morph Hero",
+        entityType: "character",
+        templateId: template.id,
+        styleSetId: "style_default",
+        species: "",
+        palette: template.paletteTokens,
+        slots: [],
+        visuals: [],
+        bodyMorphs: {
+          headSize: 1.2,
+          neckLength: 1.1,
+          torsoHeight: 0.92,
+          torsoWidth: 1.08,
+          armLength: 1.14,
+          forearmLength: 0.96,
+          handSize: 1.05,
+          legLength: 1.18,
+          shinLength: 0.9,
+          footSize: 1.12,
+          pelvisWidth: 1.04,
+          overallHeightScale: 1.06,
+        },
+        bodyMorphPresetId: "heroic",
+        bodyAuthoring: {
+          focusRegion: "legs",
+          activeBoneId: "hip_l",
+          activeSlotId: "slot_foot_l",
+          intent: "preview",
+          viewportMode: "full_body",
+          regionPresetIds: {
+            legs: "legs_long_legs",
+            torso: "torso_broad_torso",
+          },
+        },
+        faceCustomization: {
+          eyes: {
+            presetId: "sleepy",
+            color: "#332211",
+            visible: true,
+            transform: { x: 2, y: -1, rotation: 4, scaleX: 1.1, scaleY: 0.95 },
+          },
+          mouth: {
+            presetId: "soft_smile",
+            color: "#120F0C",
+            visible: true,
+            transform: { x: 0, y: 1.4, rotation: 0, scaleX: 1, scaleY: 1 },
+          },
+          brows: {
+            presetId: "stern",
+            color: "#2B1D18",
+            visible: true,
+            transform: { x: 0, y: -3, rotation: 0, scaleX: 1, scaleY: 1 },
+          },
+          beard: {
+            presetId: "short_goatee",
+            color: "#2B1D18",
+            visible: true,
+            transform: { x: 0, y: 4, rotation: 0, scaleX: 1, scaleY: 1 },
+          },
+          hair: {
+            presetId: "fringe_short",
+            color: "#1A1208",
+            visible: true,
+            transform: { x: 0, y: -8, rotation: 0, scaleX: 1, scaleY: 1 },
+          },
+          overlays: [{
+            id: "overlay-1",
+            name: "Scar",
+            overlayRole: "line",
+            symmetryMode: "none",
+            paintTarget: "stroke",
+            svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M4 4 L16 16" stroke="#ff0000" stroke-width="2"/></svg>`,
+            zOffset: 90,
+            pivot: { x: 10, y: 10, preset: "custom" },
+            metrics: {
+              viewBoxX: 0,
+              viewBoxY: 0,
+              viewBoxWidth: 20,
+              viewBoxHeight: 20,
+              visualMinX: 4,
+              visualMinY: 4,
+              visualWidth: 12,
+              visualHeight: 12,
+            },
+            localTransform: { x: 1, y: -2, rotation: 8, scaleX: 1, scaleY: 1 },
+            source: {
+              format: "svg",
+              name: "Scar",
+              originalFileName: "scar.svg",
+              mimeType: "image/svg+xml",
+            },
+            editorDocumentId: "overlay-doc-1",
+            featureTag: "beard",
+          }],
+        },
+        faceAuthoring: {
+          activeFeatureKey: "beard",
+          overlayFilter: "beard",
+          selectedOverlayId: "overlay-face-1",
+          activeBoneId: "head",
+          activeSlotId: "slot_beard",
+          workflowMode: "overlay",
+          draftOverlayRole: "shadow",
+          draftPaintTarget: "fill",
+          draftSymmetryMode: "mirror_x",
+          overlayRoleFilter: "line",
+          paintTargetFilter: "stroke",
+          overlayGrouping: "feature_role_paint",
+          drawMode: "fill",
+          focusMode: "head",
+        },
+        rootTransform: null,
+        activeAnimationClipId: null,
+        activeStateMachineId: null,
+        licenseMeta: {
+          source: "test",
+          author: "test",
+          licenseType: "cc0",
+          aiGenerated: false,
+          commercialUseAllowed: true,
+          purchaseRef: null,
+          derivativePolicy: "unrestricted",
+        },
+        createdAt: 1,
+        updatedAt: 2,
+      }],
+      activeEntityId: "entity-face-morph",
+    };
+
+    expect(saveLastProjectSnapshot(project)).toBe(true);
+    const restored = restoreLastProjectSnapshot() as Project | null;
+    const entity = restored?.entities[0];
+
+    expect(entity?.bodyMorphs?.headSize).toBe(1.2);
+    expect(entity?.bodyMorphs?.legLength).toBe(1.18);
+    expect(entity?.bodyMorphPresetId).toBe("heroic");
+    expect(entity?.bodyAuthoring?.focusRegion).toBe("legs");
+    expect(entity?.bodyAuthoring?.activeBoneId).toBe("hip_l");
+    expect(entity?.bodyAuthoring?.activeSlotId).toBe("slot_foot_l");
+    expect(entity?.bodyAuthoring?.intent).toBe("preview");
+    expect(entity?.bodyAuthoring?.viewportMode).toBe("full_body");
+    expect(entity?.bodyAuthoring?.regionPresetIds?.legs).toBe("legs_long_legs");
+    expect(entity?.faceCustomization?.eyes.presetId).toBe("sleepy");
+    expect(entity?.faceCustomization?.eyes.transform.x).toBe(2);
+    expect(entity?.faceCustomization?.beard.visible).toBe(true);
+    expect(entity?.faceCustomization?.hair.presetId).toBe("fringe_short");
+    expect(entity?.faceCustomization?.overlays).toHaveLength(1);
+    expect(entity?.faceCustomization?.overlays[0]?.name).toBe("Scar");
+    expect(entity?.faceCustomization?.overlays[0]?.editorDocumentId).toBe("overlay-doc-1");
+    expect(entity?.faceCustomization?.overlays[0]?.featureTag).toBe("beard");
+    expect(entity?.faceCustomization?.overlays[0]?.overlayRole).toBe("line");
+    expect(entity?.faceCustomization?.overlays[0]?.paintTarget).toBe("stroke");
+    expect(entity?.faceAuthoring?.activeFeatureKey).toBe("beard");
+    expect(entity?.faceAuthoring?.overlayFilter).toBe("beard");
+    expect(entity?.faceAuthoring?.selectedOverlayId).toBe("overlay-face-1");
+    expect(entity?.faceAuthoring?.activeBoneId).toBe("head");
+    expect(entity?.faceAuthoring?.activeSlotId).toBe("slot_beard");
+    expect(entity?.faceAuthoring?.workflowMode).toBe("overlay");
+    expect(entity?.faceAuthoring?.draftOverlayRole).toBe("shadow");
+    expect(entity?.faceAuthoring?.draftPaintTarget).toBe("fill");
+    expect(entity?.faceAuthoring?.draftSymmetryMode).toBe("mirror_x");
+    expect(entity?.faceAuthoring?.overlayRoleFilter).toBe("line");
+    expect(entity?.faceAuthoring?.paintTargetFilter).toBe("stroke");
+    expect(entity?.faceAuthoring?.overlayGrouping).toBe("feature_role_paint");
+    expect(entity?.faceAuthoring?.drawMode).toBe("fill");
+    expect(entity?.faceAuthoring?.focusMode).toBe("head");
+  });
+
+  it("roundtrips sprite editor documents and active authoring mode through last-session storage", () => {
+    const project: Project = {
+      ...makeProject(),
+      editorMeta: {
+        spriteEditorDocuments: [{
+          id: "doc-1",
+          name: "Armor Plate",
+          width: 64,
+          height: 64,
+          pivot: { x: 32, y: 56, preset: "feet" },
+          referenceAsset: {
+            format: "png",
+            name: "armor_ref",
+            originalFileName: "armor_ref.png",
+            mimeType: "image/png",
+            dataUri: "data:image/png;base64,AAAA",
+          },
+          layers: [{
+            id: "layer-1",
+            name: "Layer 1",
+            visible: true,
+            zIndex: 0,
+            shapes: [{
+              id: "shape-1",
+              type: "rect",
+              x: 12,
+              y: 8,
+              width: 30,
+              height: 40,
+              rotation: 6,
+              fill: "#746A5E",
+              stroke: "#1A1208",
+              strokeWidth: 1.5,
+            }],
+          }],
+          authoringHint: {
+            faceFeatureKey: "generic",
+            faceOverlayRole: "detail",
+            symmetryMode: "mirror_x",
+            paintTarget: "both",
+            bodyMorphPresetId: "heroic",
+          },
+          target: {
+            kind: "item-part",
+            entityId: "entity-1",
+            itemId: "item-1",
+            partId: "part-1",
+          },
+          updatedAt: 123,
+        }],
+        activeSpriteDocumentId: "doc-1",
+        activeAuthoringMode: "sprite-editor",
+        activeFaceCanvasOverlayId: "overlay-1",
+        activeFaceCanvasTool: "pencil",
+        activeFaceCanvasFocusMode: "head",
+      },
+    };
+
+    expect(saveLastProjectSnapshot(project)).toBe(true);
+    const restored = restoreLastProjectSnapshot() as Project | null;
+    const doc = restored?.editorMeta?.spriteEditorDocuments?.[0];
+
+    expect(doc?.id).toBe("doc-1");
+    expect(doc?.layers[0]?.shapes[0]?.width).toBe(30);
+    expect(doc?.referenceAsset?.format).toBe("png");
+    expect(doc?.authoringHint?.bodyMorphPresetId).toBe("heroic");
+    expect(doc?.authoringHint?.symmetryMode).toBe("mirror_x");
+    expect(doc?.authoringHint?.paintTarget).toBe("both");
+    expect(restored?.editorMeta?.activeSpriteDocumentId).toBe("doc-1");
+    expect(restored?.editorMeta?.activeAuthoringMode).toBe("sprite-editor");
+    expect(restored?.editorMeta?.activeFaceCanvasOverlayId).toBe("overlay-1");
+    expect(restored?.editorMeta?.activeFaceCanvasTool).toBe("pencil");
+    expect(restored?.editorMeta?.activeFaceCanvasFocusMode).toBe("head");
   });
 
   it("strips partial limb-only body clone visuals on restore", () => {

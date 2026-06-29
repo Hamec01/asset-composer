@@ -5,6 +5,7 @@ import {
   normalizeLegacySharedLimbAssignments,
   pruneLegacyBodyCloneVisualsFromEntity,
 } from "@/lib/projectNormalization";
+import { itemSupportsTemplate } from "@/lib/templateCompatibility";
 
 function formatSchemaErrors(message: string): string {
   return `Project schema validation failed: ${message}`;
@@ -66,9 +67,7 @@ export function validateProjectReferences(project: Project): string[] {
     itemIds.add(item.id);
 
     if (!item.parts?.length) continue;
-    const matchingTemplates = project.templates.filter(template =>
-      item.compatibility.skeletonFamilies.includes(template.skeletonFamily),
-    );
+    const matchingTemplates = project.templates.filter(template => itemSupportsTemplate(item, template));
     const matchingBoneIds = new Set(matchingTemplates.flatMap(template => [...templateBoneIds(template)]));
     for (const part of item.parts) {
       if (matchingTemplates.length > 0 && !matchingBoneIds.has(part.boneId)) {

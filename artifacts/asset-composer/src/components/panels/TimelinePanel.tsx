@@ -7,7 +7,7 @@ import {
   ZoomIn, ZoomOut, AlignLeft,
 } from "lucide-react";
 import { useState, useRef, useCallback, useMemo } from "react";
-import { getClipsByFamily } from "@/data/presetAnimations";
+import { getClipsForTemplate } from "@/lib/animationCompatibility";
 import { getAllBoneIds, getKeyframesForBone, timeMsToFrame, frameToTimeMs } from "@/lib/animationRuntime";
 import { resolveTemplate } from "@/data/templates";
 import type { Keyframe } from "@/domain/types";
@@ -72,7 +72,7 @@ export function TimelinePanel() {
 
   const familyClips = useMemo(() => {
     if (!template) return animationClips;
-    return getClipsByFamily(template.skeletonFamily);
+    return getClipsForTemplate(template, animationClips);
   }, [template, animationClips]);
 
   const activeClip = useMemo(

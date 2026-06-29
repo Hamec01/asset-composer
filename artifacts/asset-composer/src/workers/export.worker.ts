@@ -11,6 +11,7 @@
  */
 
 import { resolveClipPose } from "@/lib/animationRuntime";
+import { templateSupportsAnimationFamily } from "@/lib/animationCompatibility";
 import { evaluateSkeleton, evaluateScene } from "@/lib/evaluationPipeline";
 import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
 import { packSprites } from "@/lib/spritePacker";
@@ -91,7 +92,7 @@ async function renderFrame(
     ctx.fillRect(0, 0, frameSz, frameSz);
   }
 
-  const canonicalSkeleton = evaluateSkeleton(template.bones, pose);
+  const canonicalSkeleton = evaluateSkeleton(template.bones, pose, entity.bodyMorphs);
   const canonicalScene = evaluateScene(entity, template, canonicalSkeleton, [...itemsMap.values()], fitProfiles);
   const canonicalScale = frameSz / Math.max(template.previewWidth, template.previewHeight);
 
@@ -145,7 +146,7 @@ async function renderFrame(
   const skelScale = frameSz / 220;
   const cx        = frameSz / 2;
   const cy        = frameSz / 2;
-  const skeleton  = evaluateSkeleton(template.bones, pose);
+  const skeleton  = evaluateSkeleton(template.bones, pose, entity.bodyMorphs);
 
   type DrawCall = { zIndex: number; draw: () => Promise<void> };
   const calls: DrawCall[] = [];
@@ -337,7 +338,7 @@ async function exportEntity(
   if (!needsRendering) return files;
 
   const entityClips = allClips.filter(c =>
-    c.skeletonFamily === template.skeletonFamily &&
+    templateSupportsAnimationFamily(template, c.skeletonFamily) &&
     (!selectedClipIds?.length || selectedClipIds.includes(c.id))
   );
   const renderedFrames: { frameName: string; bitmap: ImageBitmap; clipName: string }[] = [];
@@ -454,7 +455,7 @@ async function exportCombined(
     if (!template) continue;
 
     const entityClips = animationClips.filter(c =>
-      c.skeletonFamily === template.skeletonFamily &&
+      templateSupportsAnimationFamily(template, c.skeletonFamily) &&
       (!job.selectedClipIds?.length || job.selectedClipIds.includes(c.id))
     );
 
@@ -505,7 +506,7 @@ async function exportCombined(
     if (!template) continue;
 
     const entityClips = animationClips.filter(c =>
-      c.skeletonFamily === template.skeletonFamily &&
+      templateSupportsAnimationFamily(template, c.skeletonFamily) &&
       (!job.selectedClipIds?.length || job.selectedClipIds.includes(c.id))
     );
     for (const clip of entityClips) allClipsUsed.add(clip);

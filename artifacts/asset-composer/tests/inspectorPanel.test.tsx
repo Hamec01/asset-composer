@@ -165,6 +165,52 @@ function setAnchorSelection() {
   });
 }
 
+function setFaceOverlaySelection() {
+  useStore.getState().newProject();
+  useStore.getState().createEntity("character", "humanoid_topdown_v1", "Face Overlay Inspector");
+  const entityId = useStore.getState().project.activeEntityId!;
+  useStore.setState(state => {
+    const entity = state.project.entities.find(e => e.id === entityId);
+    if (!entity) return;
+    entity.faceCustomization.overlays = [{
+      id: "overlay-1",
+      name: "Scar",
+      featureTag: "beard",
+      overlayRole: "line",
+      paintTarget: "stroke",
+      symmetryMode: "mirror_x",
+      svgData: "<svg viewBox='0 0 10 10'><path d='M1 1 L9 9' stroke='#000'/></svg>",
+      zOffset: 10,
+      pivot: { x: 5, y: 5, preset: "custom" },
+      metrics: {
+        viewBoxX: 0,
+        viewBoxY: 0,
+        viewBoxWidth: 10,
+        viewBoxHeight: 10,
+        visualMinX: 1,
+        visualMinY: 1,
+        visualWidth: 8,
+        visualHeight: 8,
+      },
+      localTransform: { x: 2, y: -1, rotation: 15, scaleX: 1, scaleY: 1 },
+      source: {
+        format: "svg",
+        name: "scar",
+        originalFileName: "scar.svg",
+        mimeType: "image/svg+xml",
+      },
+    }];
+    state.editor.selection = {
+      kind: "face-overlay",
+      entityId,
+      overlayId: "overlay-1",
+      featureKey: "beard",
+      slotId: "slot_beard",
+    };
+    state.editor.selectedSlotId = "slot_beard";
+  });
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   cleanupInspector();
@@ -209,6 +255,8 @@ describe("InspectorPanel", () => {
     expect(document.body.textContent).toContain("Bone");
     expect(document.body.textContent).toContain("Rest Rotation");
     expect(document.body.textContent).toContain("Assigned Parts");
+    expect(document.body.textContent).toContain("Focus Body Region");
+    expect(document.body.textContent).toContain("Draw On Head");
   });
 
   it("shows anchor inspector for anchor selection", () => {
@@ -218,6 +266,23 @@ describe("InspectorPanel", () => {
     expect(document.body.textContent).toContain("Anchor");
     expect(document.body.textContent).toContain("Usage");
     expect(document.body.textContent).toContain("hair_top");
+  });
+
+  it("shows face-overlay inspector for face overlay selection", () => {
+    setFaceOverlaySelection();
+    renderInspector();
+
+    expect(document.body.textContent).toContain("Face Overlay");
+    expect(document.body.textContent).toContain("Scar");
+    expect(document.body.textContent).toContain("Role");
+    expect(document.body.textContent).toContain("Paint Pass");
+    expect(document.body.textContent).toContain("Symmetry");
+    expect(document.body.textContent).toContain("Target Slot");
+    expect(document.body.textContent).toContain("Target Bone");
+    expect(document.body.textContent).toContain("line");
+    expect(document.body.textContent).toContain("Line");
+    expect(document.body.textContent).toContain("mirror_x");
+    expect(getInput("inspector-face-overlay-x")).toBeTruthy();
   });
 
   it("shows equipped-item inspector for equipped-item selection", () => {

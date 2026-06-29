@@ -14,6 +14,7 @@ import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { decompose, transformPoint } from "@/lib/matrixUtils";
 import { scaleSvgToFit } from "@/lib/svgUtils";
+import { getTemplatePresentationSummary } from "@/lib/templatePresentation";
 
 // ── Bone accent colours (debug skeleton overlay) ──────────────────────────────
 const BONE_HEX: Record<string, number> = {
@@ -250,7 +251,7 @@ export function PixiPreviewPanel() {
           );
 
           // Step 2: canonical evaluated scene
-          const skeleton = evaluateSkeleton(template.bones, localPose);
+          const skeleton = evaluateSkeleton(template.bones, localPose, entity.bodyMorphs);
           const scene = evaluateScene(entity, template, skeleton, items, store.project.itemFitProfiles);
 
           // Step 3: viewport scale from template units to preview pixels
@@ -303,7 +304,7 @@ export function PixiPreviewPanel() {
 
           const visibleCount = scene.visuals.length;
           hudRef.current!.text =
-            `PixiJS v8 · ${template.skeletonFamily} · `+
+            `PixiJS v8 · ${getTemplatePresentationSummary(template)} · `+
             `${visibleCount} layers · `+
             `${Math.round(renderTime)}ms`;
         });
@@ -345,7 +346,7 @@ export function PixiPreviewPanel() {
     const template = entity ? resolveTemplate(store.project, entity.templateId) : null;
     if (!entity || !template) return;
 
-    const restSkeleton = evaluateSkeleton(template.bones, new Map());
+    const restSkeleton = evaluateSkeleton(template.bones, new Map(), entity.bodyMorphs);
     const items        = refreshCanonicalBuiltInTypedItems(store.project.items);
     const scene        = evaluateScene(entity, template, restSkeleton, items, store.project.itemFitProfiles);
 

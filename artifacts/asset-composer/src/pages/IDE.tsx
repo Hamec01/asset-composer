@@ -7,6 +7,7 @@ import { InspectorPanel } from "@/components/panels/InspectorPanel";
 import { TimelinePanel } from "@/components/panels/TimelinePanel";
 import { StateMachinePanel } from "@/components/panels/StateMachinePanel";
 import { PixiPreviewPanel } from "@/components/panels/PixiPreviewPanel";
+import { AuthoringPanel } from "@/components/panels/AuthoringPanel";
 import { NewEntityWizard } from "@/components/wizard/NewEntityWizard";
 import { ExportDialog } from "@/components/export/ExportDialog";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
@@ -25,6 +26,7 @@ const BOTTOM_TABS: { id: AnimBottomTab; label: string }[] = [
   { id: "timeline",     label: "Timeline" },
   { id: "preview",      label: "Preview" },
   { id: "statemachine", label: "State Machine" },
+  { id: "authoring",    label: "Authoring" },
 ];
 
 function useDragHandle() {
@@ -230,6 +232,7 @@ export function IDE() {
                     {activeTab === "timeline"     && <TimelinePanel />}
                     {activeTab === "preview"      && <PixiPreviewPanel />}
                     {activeTab === "statemachine" && <StateMachinePanel />}
+                    {activeTab === "authoring"    && <AuthoringPanel />}
                   </div>
                 </div>
               )}

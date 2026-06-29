@@ -4,6 +4,8 @@ import type {
   Entity, Project, EntityType, PaletteTokens, SlotAssignment,
   AnimationClip, EntityVisual, AttachmentOverride,
   CanvasMode, EditorSelection, LocalTransform, Template, SlotEditorState, Item, ItemFitProfile,
+  BodyMorphValues, BodyMorphRegionId, FaceCustomization, FaceFeatureConfig, FaceOverlay, SpriteEditorDocument, ItemPart, FaceFeatureKey,
+  FaceAuthoringState, FaceAuthoringTool, FaceCanvasFocusMode,
 } from "@/domain/types";
 import type { Command } from "./commands";
 import {
@@ -22,9 +24,14 @@ import { PRESET_STATE_MACHINES } from "@/data/presetStateMachines";
 import { animController } from "@/core-v2/AnimationController";
 import { resetItemFitProfilePartToItemDefault, upsertItemFitProfilePartTransform } from "@/lib/itemFitProfileMutations";
 import { parseProjectSnapshot } from "@/lib/projectValidation";
+import {
+  getLoopingClipForTemplate,
+  getStateMachineForTemplate,
+} from "@/lib/animationCompatibility";
 
 type ActivePanel = "library" | "inspector" | "animation" | "export" | "none";
-type AnimBottomTab = "timeline" | "preview" | "statemachine";
+type AnimBottomTab = "timeline" | "preview" | "statemachine" | "authoring";
+type AuthoringMode = "asset-import" | "sprite-editor" | "body-morph" | "face-editor" | null;
 
 interface AnimPlayback {
   activeClipId:         string | null;
@@ -81,6 +88,38 @@ interface AppStore {
   setEntityActiveAnimation: (entityId: string, clipId: string | null) => void;
   applyOutfitPreset:      (entityId: string, presetId: string) => void;
   setEntitySpecies:       (entityId: string, species: string) => void;
+  setEntityBodyMorphValue: (entityId: string, key: keyof BodyMorphValues, value: number) => void;
+  setEntityBodyMorphPreset: (entityId: string, presetId: string | null) => void;
+  setEntityBodyAuthoringFocus: (entityId: string, region: BodyMorphRegionId) => void;
+  setEntityBodyAuthoringState: (entityId: string, patch: Partial<NonNullable<Entity["bodyAuthoring"]>>) => void;
+  setEntityBodyAuthoringRegionPreset: (entityId: string, region: BodyMorphRegionId, presetId: string | null) => void;
+  setEntityFaceFeature: (entityId: string, feature: keyof Omit<FaceCustomization, "overlays">, patch: Partial<FaceFeatureConfig>) => void;
+  setEntityFaceFeatureTransform: (
+    entityId: string,
+    feature: keyof Omit<FaceCustomization, "overlays">,
+    patch: Partial<LocalTransform>,
+  ) => void;
+  setEntityFaceOverlayTransform: (
+    entityId: string,
+    overlayId: string,
+    patch: Partial<LocalTransform>,
+  ) => void;
+  addEntityFaceOverlay: (entityId: string, overlay: FaceOverlay) => void;
+  upsertEntityFaceOverlay: (entityId: string, overlay: FaceOverlay) => void;
+  removeEntityFaceOverlay: (entityId: string, overlayId: string) => void;
+    setEntityFaceAuthoringState: (
+      entityId: string,
+      patch: Partial<FaceAuthoringState>,
+    ) => void;
+  addProjectItem: (item: Item) => void;
+  updateProjectItemPart: (itemId: string, partId: string, patch: Partial<ItemPart>) => void;
+  updateEntityVisual: (entityId: string, visualId: string, patch: Partial<EntityVisual>) => void;
+  upsertSpriteEditorDocument: (doc: SpriteEditorDocument) => void;
+  setActiveSpriteDocument: (documentId: string | null) => void;
+    setActiveAuthoringMode: (mode: AuthoringMode) => void;
+    setActiveFaceCanvasOverlay: (overlayId: string | null) => void;
+    setActiveFaceCanvasTool: (tool: FaceAuthoringTool | null) => void;
+    setActiveFaceCanvasFocusMode: (mode: FaceCanvasFocusMode | null) => void;
   setProjectStyleSet:     (styleSetId: string) => void;
   setProjectName:         (name: string) => void;
   loadProject:            (project: unknown) => void;
@@ -259,6 +298,83 @@ function normalizeLocalTransform(transform: LocalTransform | undefined): LocalTr
   };
 }
 
+function makeDefaultBodyMorphs(): BodyMorphValues {
+  return {
+    headSize: 1,
+    neckLength: 1,
+    torsoHeight: 1,
+    torsoWidth: 1,
+    armLength: 1,
+    forearmLength: 1,
+    handSize: 1,
+    legLength: 1,
+    shinLength: 1,
+    footSize: 1,
+    pelvisWidth: 1,
+    overallHeightScale: 1,
+  };
+}
+
+function makeDefaultFaceFeature(
+  presetId: string,
+  color: string,
+  visible: boolean,
+): FaceFeatureConfig {
+  return {
+    presetId,
+    color,
+    visible,
+    transform: {
+      x: 0,
+      y: 0,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+    },
+  };
+}
+
+function makeDefaultFaceCustomization(): FaceCustomization {
+  return {
+    eyes: makeDefaultFaceFeature("round_kawaii", "#2B1D18", true),
+    mouth: makeDefaultFaceFeature("soft_smile", "#1A1A1A", true),
+    brows: makeDefaultFaceFeature("soft_arc", "#3B2314", false),
+    beard: makeDefaultFaceFeature("none", "#3B2314", false),
+    hair: makeDefaultFaceFeature("none", "#3B2314", false),
+    overlays: [],
+  };
+}
+
+function makeDefaultBodyAuthoringState() {
+  return {
+    focusRegion: "global" as BodyMorphRegionId,
+    activeBoneId: null as string | null,
+    activeSlotId: null as string | null,
+    intent: "morph" as const,
+    viewportMode: "focus_region" as const,
+    regionPresetIds: {},
+  };
+}
+
+function makeDefaultFaceAuthoringState() {
+  return {
+    activeFeatureKey: null as FaceFeatureKey | "generic" | null,
+    overlayFilter: "all" as FaceFeatureKey | "generic" | "all",
+    selectedOverlayId: null as string | null,
+    activeBoneId: null as string | null,
+    activeSlotId: null as string | null,
+    workflowMode: "feature" as const,
+    draftOverlayRole: "detail" as const,
+    draftPaintTarget: "both" as const,
+    draftSymmetryMode: "none" as const,
+    overlayRoleFilter: "all" as FaceOverlay["overlayRole"] | "all",
+    paintTargetFilter: "all" as FaceOverlay["paintTarget"] | "all",
+    overlayGrouping: "feature" as const,
+    drawMode: null as FaceAuthoringTool | null,
+    focusMode: "document" as FaceCanvasFocusMode,
+  };
+}
+
 function cloneItemFitProfiles(profiles: ItemFitProfile[]): ItemFitProfile[] {
   return profiles.map(profile => ({
     ...profile,
@@ -301,7 +417,15 @@ function makeDefaultProject(): Project {
     stateMachines:   PRESET_STATE_MACHINES,
     styleSets:       STYLE_SETS,
     exportProfiles:  DEFAULT_EXPORT_PROFILES,
-    editorMeta:      { slotEditorByTemplateId: {} },
+      editorMeta:      {
+        slotEditorByTemplateId: {},
+        spriteEditorDocuments: [],
+        activeSpriteDocumentId: null,
+        activeAuthoringMode: null,
+        activeFaceCanvasOverlayId: null,
+        activeFaceCanvasTool: null,
+        activeFaceCanvasFocusMode: null,
+      },
     activeEntityId:  null,
     createdAt:       Date.now(),
     updatedAt:       Date.now(),
@@ -401,7 +525,7 @@ function hydratePlaybackForEntity(
 
   const activeStateMachineId =
     entity.activeStateMachineId ??
-    PRESET_STATE_MACHINES.find(machine => machine.skeletonFamily === template.skeletonFamily)?.id ??
+    getStateMachineForTemplate(template, PRESET_STATE_MACHINES)?.id ??
     null;
   const activeStateMachine = activeStateMachineId
     ? PRESET_STATE_MACHINES.find(machine => machine.id === activeStateMachineId) ?? null
@@ -421,9 +545,7 @@ function hydratePlaybackForEntity(
   }
 
   if (!activeClipId) {
-    const firstLoop = project.animationClips.find(
-      clip => clip.skeletonFamily === template.skeletonFamily && clip.loops,
-    ) ?? null;
+    const firstLoop = getLoopingClipForTemplate(template, project.animationClips);
     if (firstLoop) {
       activeClipId = firstLoop.id;
       shouldPlay = true;
@@ -519,6 +641,11 @@ export const useStore = create<AppStore>()(
           slotId: s.id, itemId: s.defaultItemId, paletteOverride: {}, attachmentOverride: {},
         })),
         visuals:              [],
+        bodyMorphs:           makeDefaultBodyMorphs(),
+        bodyMorphPresetId:    null,
+        bodyAuthoring:        makeDefaultBodyAuthoringState(),
+        faceCustomization:    makeDefaultFaceCustomization(),
+        faceAuthoring:        makeDefaultFaceAuthoringState(),
         activeAnimationClipId: null,
         activeStateMachineId:  null,
         licenseMeta:          makeDefaultLicense(),
@@ -531,7 +658,7 @@ export const useStore = create<AppStore>()(
         state.project.updatedAt = Date.now();
         state.history.past = [];
         state.history.future = [];
-        const sm = PRESET_STATE_MACHINES.find(m => m.skeletonFamily === template.skeletonFamily);
+        const sm = getStateMachineForTemplate(template, PRESET_STATE_MACHINES);
         if (sm) {
           state.animPlayback.activeStateMachineId = sm.id;
           state.animPlayback.selectedStateId = sm.entryStateId;
@@ -543,9 +670,7 @@ export const useStore = create<AppStore>()(
             startClipPlayback(state.project.animationClips as AnimationClip[], entrySt.clipId, state.animPlayback.looping);
           }
         } else {
-          const firstLoop = state.project.animationClips.find(
-            c => c.skeletonFamily === template.skeletonFamily && c.loops
-          );
+          const firstLoop = getLoopingClipForTemplate(template, state.project.animationClips);
           if (firstLoop) {
             state.animPlayback.activeClipId = firstLoop.id;
             state.animPlayback.playing = true;
@@ -578,7 +703,7 @@ export const useStore = create<AppStore>()(
         if (entity) {
           const template = resolveTemplate(state.project, entity.templateId);
           if (template) {
-            const sm = PRESET_STATE_MACHINES.find(m => m.skeletonFamily === template.skeletonFamily);
+            const sm = getStateMachineForTemplate(template, PRESET_STATE_MACHINES);
             if (sm) {
               state.animPlayback.activeStateMachineId = sm.id;
               state.animPlayback.selectedStateId = sm.entryStateId;
@@ -589,9 +714,7 @@ export const useStore = create<AppStore>()(
                 startClipPlayback(state.project.animationClips as AnimationClip[], entrySt.clipId, state.animPlayback.looping);
               }
             } else {
-              const firstLoop = state.project.animationClips.find(
-                c => c.skeletonFamily === template.skeletonFamily && c.loops
-              );
+              const firstLoop = getLoopingClipForTemplate(template, state.project.animationClips);
               if (firstLoop) {
                 state.animPlayback.activeClipId = firstLoop.id;
                 state.animPlayback.playing = true;
@@ -679,8 +802,273 @@ export const useStore = create<AppStore>()(
         if (e) { e.species = species; e.updatedAt = Date.now(); }
       });
     },
+    setEntityBodyMorphValue: (entityId, key, value) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        e.bodyMorphs = { ...makeDefaultBodyMorphs(), ...(e.bodyMorphs ?? {}), [key]: value };
+        e.bodyMorphPresetId = null;
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    setEntityBodyMorphPreset: (entityId, presetId) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        e.bodyMorphPresetId = presetId;
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    setEntityBodyAuthoringFocus: (entityId, region) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        e.bodyAuthoring = {
+          ...makeDefaultBodyAuthoringState(),
+          ...(e.bodyAuthoring ?? {}),
+          focusRegion: region,
+        };
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    setEntityBodyAuthoringState: (entityId, patch) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        const current = e.bodyAuthoring ?? makeDefaultBodyAuthoringState();
+        e.bodyAuthoring = {
+          ...makeDefaultBodyAuthoringState(),
+          ...current,
+          ...patch,
+          regionPresetIds: {
+            ...(current.regionPresetIds ?? {}),
+            ...(((patch.regionPresetIds as Record<string, string | null | undefined> | undefined) ?? {})),
+          },
+        };
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    setEntityBodyAuthoringRegionPreset: (entityId, region, presetId) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        const current = e.bodyAuthoring ?? makeDefaultBodyAuthoringState();
+        e.bodyAuthoring = {
+          ...current,
+          regionPresetIds: {
+            ...(current.regionPresetIds ?? {}),
+            [region]: presetId,
+          },
+        };
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    setEntityFaceFeature: (entityId, feature, patch) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        const current = e.faceCustomization ?? makeDefaultFaceCustomization();
+        const currentFeature = current[feature];
+        if (!currentFeature) return;
+        e.faceCustomization = {
+          ...current,
+          [feature]: {
+            ...currentFeature,
+            ...patch,
+            transform: {
+              ...currentFeature.transform,
+              ...(patch.transform ?? {}),
+            },
+          },
+        };
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    setEntityFaceFeatureTransform: (entityId, feature, patch) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        const current = e.faceCustomization ?? makeDefaultFaceCustomization();
+        const currentFeature = current[feature];
+        if (!currentFeature) return;
+        e.faceCustomization = {
+          ...current,
+          [feature]: {
+            ...currentFeature,
+            transform: {
+              ...currentFeature.transform,
+              ...patch,
+            },
+          },
+        };
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    setEntityFaceOverlayTransform: (entityId, overlayId, patch) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        const current = e.faceCustomization ?? makeDefaultFaceCustomization();
+        const nextOverlays = current.overlays.map(overlay =>
+          overlay.id === overlayId
+            ? {
+              ...overlay,
+              localTransform: {
+                ...overlay.localTransform,
+                ...patch,
+              },
+            }
+            : overlay,
+        );
+        e.faceCustomization = {
+          ...current,
+          overlays: nextOverlays,
+        };
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    addEntityFaceOverlay: (entityId, overlay) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        const current = e.faceCustomization ?? makeDefaultFaceCustomization();
+        e.faceCustomization = {
+          ...current,
+          overlays: [...current.overlays, overlay],
+        };
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    upsertEntityFaceOverlay: (entityId, overlay) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        const current = e.faceCustomization ?? makeDefaultFaceCustomization();
+        const existingIndex = current.overlays.findIndex(candidate => candidate.id === overlay.id);
+        const nextOverlays = existingIndex >= 0
+          ? current.overlays.map(candidate => candidate.id === overlay.id ? overlay : candidate)
+          : [...current.overlays, overlay];
+        e.faceCustomization = {
+          ...current,
+          overlays: nextOverlays,
+        };
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    removeEntityFaceOverlay: (entityId, overlayId) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        const current = e.faceCustomization ?? makeDefaultFaceCustomization();
+        e.faceCustomization = {
+          ...current,
+          overlays: current.overlays.filter(overlay => overlay.id !== overlayId),
+        };
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    setEntityFaceAuthoringState: (entityId, patch) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        e.faceAuthoring = {
+          ...makeDefaultFaceAuthoringState(),
+          ...(e.faceAuthoring ?? {}),
+          ...patch,
+        };
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    addProjectItem: (item) => {
+      set(state => {
+        const existingIndex = state.project.items.findIndex(existing => existing.id === item.id);
+        if (existingIndex >= 0) {
+          state.project.items[existingIndex] = item;
+        } else {
+          state.project.items.push(item);
+        }
+        state.project.updatedAt = Date.now();
+      });
+    },
+    updateProjectItemPart: (itemId, partId, patch) => {
+      set(state => {
+        const item = state.project.items.find(existing => existing.id === itemId);
+        const part = item?.parts?.find(existing => existing.id === partId);
+        if (!item || !part || !item.parts) return;
+        item.parts = item.parts.map(existing => existing.id === partId ? { ...existing, ...patch } : existing);
+        const updatedPart = item.parts.find(existing => existing.id === partId);
+        if (updatedPart && item.svgLayers.length > 0) {
+          item.svgLayers = item.svgLayers.map((layer, index) => index === 0 ? { ...layer, svgData: updatedPart.svgData } : layer);
+        }
+        state.project.updatedAt = Date.now();
+      });
+    },
+    updateEntityVisual: (entityId, visualId, patch) => {
+      set(state => {
+        const entity = state.project.entities.find(existing => existing.id === entityId);
+        if (!entity?.visuals) return;
+        entity.visuals = entity.visuals.map(visual => visual.id === visualId ? { ...visual, ...patch } : visual);
+        entity.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    upsertSpriteEditorDocument: (doc) => {
+      set(state => {
+        const existingIndex = state.project.editorMeta.spriteEditorDocuments.findIndex(existing => existing.id === doc.id);
+        if (existingIndex >= 0) {
+          state.project.editorMeta.spriteEditorDocuments[existingIndex] = doc;
+        } else {
+          state.project.editorMeta.spriteEditorDocuments.push(doc);
+        }
+        state.project.editorMeta.activeSpriteDocumentId = doc.id;
+        state.project.editorMeta.activeAuthoringMode = "sprite-editor";
+        state.project.updatedAt = Date.now();
+      });
+    },
+    setActiveSpriteDocument: (documentId) => {
+      set(state => {
+        state.project.editorMeta.activeSpriteDocumentId = documentId;
+        state.project.updatedAt = Date.now();
+      });
+    },
+    setActiveAuthoringMode: (mode) => {
+      set(state => {
+        state.project.editorMeta.activeAuthoringMode = mode;
+        state.project.updatedAt = Date.now();
+      });
+    },
+    setActiveFaceCanvasOverlay: (overlayId) => {
+      set(state => {
+        state.project.editorMeta.activeFaceCanvasOverlayId = overlayId;
+        state.project.updatedAt = Date.now();
+      });
+    },
+      setActiveFaceCanvasTool: (tool) => {
+        set(state => {
+          state.project.editorMeta.activeFaceCanvasTool = tool;
+          state.project.updatedAt = Date.now();
+        });
+      },
+      setActiveFaceCanvasFocusMode: (mode) => {
+        set(state => {
+          state.project.editorMeta.activeFaceCanvasFocusMode = mode;
+          state.project.updatedAt = Date.now();
+        });
+      },
 
-    applyOutfitPreset: (entityId, presetId) => {
+      applyOutfitPreset: (entityId, presetId) => {
       const preset = getPresetById(presetId);
       if (!preset) return;
       const entity = get().project.entities.find(e => e.id === entityId);
@@ -885,6 +1273,13 @@ export const useStore = create<AppStore>()(
         return;
       }
 
+      if (
+        selection.kind === "face-overlay" &&
+        selection.slotId === slotId
+      ) {
+        return;
+      }
+
       state.editor.fitAuthoring = null;
 
       const activeEntity = state.project.entities.find(entity => entity.id === state.project.activeEntityId);
@@ -906,8 +1301,8 @@ export const useStore = create<AppStore>()(
     closeWizard:         ()          => set(state => { state.editor.isWizardOpen = false; }),
     openExport:          ()          => set(state => { state.editor.isExportOpen = true; }),
     closeExport:         ()          => set(state => { state.editor.isExportOpen = false; }),
-    openImportWizard:    ()          => set(state => { state.editor.isImportWizardOpen = true; }),
-    closeImportWizard:   ()          => set(state => { state.editor.isImportWizardOpen = false; }),
+    openImportWizard:    ()          => set(state => { state.editor.isImportWizardOpen = true; state.project.editorMeta.activeAuthoringMode = "asset-import"; }),
+    closeImportWizard:   ()          => set(state => { state.editor.isImportWizardOpen = false; if (state.project.editorMeta.activeAuthoringMode === "asset-import") state.project.editorMeta.activeAuthoringMode = null; }),
     setCanvasMode:       (mode)      => set(state => {
       state.editor.canvasMode = mode;
       if (mode !== "edit-attachment") {

@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStore } from "@/store";
-import { TEMPLATES } from "@/data/templates";
+import { getTemplatesForEntityType } from "@/data/templates";
 import { sanitizeSvg } from "@/lib/sanitize";
+import { getTemplatePresentationSummary } from "@/lib/templatePresentation";
 import type { EntityType } from "@/domain/types";
 import { User, Ghost, Bird, Sword, Box, Music } from "lucide-react";
 
@@ -30,7 +31,7 @@ export function NewEntityWizard() {
   const [name, setName] = useState("");
 
   const compatibleTemplates = selectedType
-    ? TEMPLATES.filter(t => t.entityTypes.includes(selectedType))
+    ? getTemplatesForEntityType(selectedType)
     : [];
 
   useEffect(() => {
@@ -108,6 +109,9 @@ export function NewEntityWizard() {
                   <div>
                     <p className="text-sm font-medium text-foreground">{t.name}</p>
                     <p className="text-xs text-muted-foreground">{t.description}</p>
+                    <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                      {getTemplatePresentationSummary(t)}
+                    </p>
                   </div>
                 </button>
               ))}

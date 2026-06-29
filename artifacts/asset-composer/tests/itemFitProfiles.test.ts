@@ -102,6 +102,26 @@ describe("item fit profiles", () => {
     expect(resolved?.id).toBe("family");
   });
 
+  it("accepts fit profiles keyed by explicit rig family ids", () => {
+    const item = ITEMS.find(candidate => candidate.id === "hair_test_v2")!;
+    const slotDef = template.slots.find(slot => slot.id === "slot_hair")!;
+    const profiles: ItemFitProfile[] = [
+      {
+        id: "rig-family",
+        fitProfile: item.fitProfile,
+        templateId: "different_template",
+        family: "biped_directional_v1",
+        slotId: "slot_hair",
+        partTransforms: {
+          crown: { x: 2, y: -3, rotation: 4, scaleX: 1.1, scaleY: 0.92 },
+        },
+      },
+    ];
+
+    const resolved = resolveItemFitProfile(item, template, slotDef, profiles);
+    expect(resolved?.id).toBe("rig-family");
+  });
+
   it("falls back to item part localTransform when no fit profile exists", () => {
     const item: Item = {
       id: "fit_profile_fallback_item",

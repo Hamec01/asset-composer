@@ -11,6 +11,7 @@ import { DEFAULT_EXPORT_PROFILES } from "@/data/exportProfiles";
 import { formatFrameName } from "@/lib/exportTypes";
 import { triggerDownload } from "@/lib/download";
 import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
+import { templateSupportsAnimationFamily } from "@/lib/animationCompatibility";
 import type { ExportProfile, Item, Template, Entity, AnimationClip } from "@/domain/types";
 import type { ExportWorkerJob, WorkerOutputMessage } from "@/lib/exportTypes";
 import ExportWorker from "@/workers/export.worker?worker";
@@ -77,7 +78,7 @@ async function prerasterizeAll(
   for (const entity of entities) {
     const template = findTemplate(entity.templateId);
     if (!template) continue;
-    const scene = evaluateScene(entity, template, evaluateRestSkeleton(template.bones), items, useStore.getState().project.itemFitProfiles);
+    const scene = evaluateScene(entity, template, evaluateRestSkeleton(template.bones, entity.bodyMorphs), items, useStore.getState().project.itemFitProfiles);
     for (const visual of scene.visuals) {
       const key = `visual:${entity.id}:${visual.id}`;
       if (cache[key]) continue;
@@ -167,12 +168,12 @@ export function ExportDialog() {
 
   // Clips available across all selected entities' skeleton families
   const availableClips = useMemo(() => {
-    const families = new Set<string>();
-    for (const entity of selectedEntities) {
-      const tmpl = resolveTemplate(project, entity.templateId);
-      if (tmpl) families.add(tmpl.skeletonFamily);
-    }
-    return project.animationClips.filter(c => families.has(c.skeletonFamily));
+    const templates = selectedEntities
+      .map(entity => resolveTemplate(project, entity.templateId))
+      .filter((template): template is Template => Boolean(template));
+    return project.animationClips.filter(clip =>
+      templates.some(template => templateSupportsAnimationFamily(template, clip.skeletonFamily)),
+    );
   }, [selectedEntities, project.animationClips, project]);
 
   // Effective clip selection: null → all available

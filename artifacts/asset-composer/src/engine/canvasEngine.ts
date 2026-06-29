@@ -1300,7 +1300,7 @@ export class CanvasEngine {
     pose:              BoneTransformMap | null,
     isAnimTick         = false,
   ): Promise<void> {
-    const skeleton = evaluateSkeleton(template.bones, pose ?? new Map());
+    const skeleton = evaluateSkeleton(template.bones, pose ?? new Map(), entity.bodyMorphs);
     const scene    = evaluateScene(entity, template, skeleton, [...items.values()], fitProfiles);
 
     if (isAnimTick) {

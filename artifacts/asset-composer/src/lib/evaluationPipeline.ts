@@ -17,7 +17,7 @@
 
 import type {
   Bone, Entity, Item, Template, PaletteTokens, SkeletonFamilyId,
-  AnimationClip, EvaluatedVisual, Matrix2D, AABB, ItemPart, SlotDef, SlotAssignment, ItemFitProfile, ItemCategory,
+  AnimationClip, EvaluatedVisual, Matrix2D, AABB, ItemPart, SlotDef, SlotAssignment, ItemFitProfile, ItemCategory, BodyMorphValues, FaceCustomization,
 } from "@/domain/types";
 import { resolveClipPose, blendPoses } from "./animationRuntime";
 import type { BoneTransformMap } from "./animationRuntime";
@@ -135,16 +135,18 @@ export function buildMultiClipPose(
 export function evaluateSkeleton(
   bones:     Bone[],
   localPose: BoneTransformMap,
+  bodyMorphs?: BodyMorphValues,
 ): EvaluatedSkeleton {
   const world = new Map<string, WorldBone>();
 
   for (const bone of bones) {
+    const restPose = applyBodyMorphToRestPose(bone, bodyMorphs);
     const anim = localPose.get(bone.id);
-    const lx   = bone.restPose.tx       + (anim?.tx       ?? 0);
-    const ly   = bone.restPose.ty       + (anim?.ty       ?? 0);
-    const lRot = bone.restPose.rotation + (anim?.rotation ?? 0);
-    const lSx  = bone.restPose.scaleX   * (anim?.scaleX   ?? 1);
-    const lSy  = bone.restPose.scaleY   * (anim?.scaleY   ?? 1);
+    const lx   = restPose.tx       + (anim?.tx       ?? 0);
+    const ly   = restPose.ty       + (anim?.ty       ?? 0);
+    const lRot = restPose.rotation + (anim?.rotation ?? 0);
+    const lSx  = restPose.scaleX   * (anim?.scaleX   ?? 1);
+    const lSy  = restPose.scaleY   * (anim?.scaleY   ?? 1);
 
     if (bone.parentId === null) {
       world.set(bone.id, { x: lx, y: ly, rotation: lRot, scaleX: lSx, scaleY: lSy });
@@ -168,8 +170,200 @@ export function evaluateSkeleton(
   return { bones: world };
 }
 
-export function evaluateRestSkeleton(bones: Bone[]): EvaluatedSkeleton {
-  return evaluateSkeleton(bones, new Map());
+export function evaluateRestSkeleton(bones: Bone[], bodyMorphs?: BodyMorphValues): EvaluatedSkeleton {
+  return evaluateSkeleton(bones, new Map(), bodyMorphs);
+}
+
+function applyBodyMorphToRestPose(bone: Bone, bodyMorphs?: BodyMorphValues): Bone["restPose"] {
+  if (!bodyMorphs) return bone.restPose;
+
+  const next = { ...bone.restPose };
+  const {
+    headSize,
+    neckLength,
+    torsoHeight,
+    torsoWidth,
+    armLength,
+    forearmLength,
+    handSize,
+    legLength,
+    shinLength,
+    footSize,
+    pelvisWidth,
+    overallHeightScale,
+  } = bodyMorphs;
+
+  if (bone.parentId !== null) {
+    next.ty *= overallHeightScale;
+  }
+
+  if (bone.id === "head") {
+    next.scaleX *= headSize;
+    next.scaleY *= headSize;
+    next.ty *= neckLength;
+  } else if (bone.id === "neck") {
+    next.ty *= torsoHeight;
+    next.scaleX *= torsoWidth;
+  } else if (bone.id === "spine" || bone.id === "chest") {
+    next.ty *= torsoHeight;
+    next.scaleX *= torsoWidth;
+  } else if (bone.id === "pelvis") {
+    next.scaleX *= pelvisWidth;
+  } else if (bone.id === "shoulder_l" || bone.id === "shoulder_r") {
+    next.tx *= torsoWidth;
+    next.scaleX *= armLength;
+  } else if (bone.id === "elbow_l" || bone.id === "elbow_r") {
+    next.tx *= armLength;
+    next.scaleX *= forearmLength;
+  } else if (bone.id === "hand_l" || bone.id === "hand_r") {
+    next.tx *= forearmLength;
+    next.scaleX *= handSize;
+    next.scaleY *= handSize;
+  } else if (bone.id === "hip_l" || bone.id === "hip_r") {
+    next.tx *= pelvisWidth;
+    next.scaleY *= legLength;
+  } else if (bone.id === "knee_l" || bone.id === "knee_r") {
+    next.ty *= legLength;
+    next.scaleY *= shinLength;
+  } else if (bone.id === "foot_l" || bone.id === "foot_r") {
+    next.ty *= shinLength;
+    next.scaleX *= footSize;
+    next.scaleY *= footSize;
+  }
+
+  return next;
+}
+
+function makeFaceFeatureSvg(feature: keyof Omit<FaceCustomization, "overlays">, presetId: string, color: string): string | null {
+  switch (feature) {
+    case "eyes":
+      if (presetId === "round_kawaii") {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -6 24 12"><ellipse cx="-4" cy="0" rx="2.5" ry="3" fill="${color}"/><ellipse cx="4" cy="0" rx="2.5" ry="3" fill="${color}"/><circle cx="-3.2" cy="-0.8" r="0.7" fill="#ffffff"/><circle cx="4.8" cy="-0.8" r="0.7" fill="#ffffff"/></svg>`;
+      }
+      if (presetId === "sleepy") {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -6 24 12"><path d="M-7 -1 Q-4 -3 -1 -1" stroke="${color}" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M1 -1 Q4 -3 7 -1" stroke="${color}" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`;
+      }
+      return null;
+    case "mouth":
+      if (presetId === "soft_smile") {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -4 16 8"><path d="M-3 -1 Q0 2 3 -1" stroke="${color}" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>`;
+      }
+      if (presetId === "frown") {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -4 16 8"><path d="M-3 1 Q0 -2 3 1" stroke="${color}" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>`;
+      }
+      return null;
+    case "brows":
+      if (presetId === "soft_arc") {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -5 24 10"><path d="M-7 1 Q-4 -1 -1 0" stroke="${color}" stroke-width="1.4" fill="none" stroke-linecap="round"/><path d="M1 0 Q4 -1 7 1" stroke="${color}" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>`;
+      }
+      if (presetId === "stern") {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -5 24 10"><path d="M-7 2 L-1 -1" stroke="${color}" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M1 -1 L7 2" stroke="${color}" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`;
+      }
+      return null;
+    case "beard":
+      if (presetId === "short_goatee") {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -2 16 12"><path d="M-3 1 Q0 8 3 1 Q2 9 0 10 Q-2 9 -3 1 Z" fill="${color}" opacity="0.95"/></svg>`;
+      }
+      if (presetId === "full_short") {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -2 24 16"><path d="M-8 1 Q-9 10 0 14 Q9 10 8 1 Q4 4 0 4 Q-4 4 -8 1 Z" fill="${color}" opacity="0.95"/></svg>`;
+      }
+      return null;
+    case "hair":
+      if (presetId === "fringe_short") {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-16 -12 32 16"><path d="M-12 2 Q-10 -8 0 -10 Q10 -8 12 2 Q7 -1 2 1 Q0 3 -2 1 Q-7 -1 -12 2 Z" fill="${color}"/></svg>`;
+      }
+      if (presetId === "fringe_long") {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-18 -14 36 22"><path d="M-14 2 Q-12 -10 0 -12 Q12 -10 14 2 Q10 -1 4 0 Q2 8 -1 8 Q-3 7 -5 1 Q-10 0 -14 2 Z" fill="${color}"/></svg>`;
+      }
+      return null;
+    default:
+      return null;
+  }
+}
+
+function makeFaceCustomizationVisuals(entity: Entity, skeleton: EvaluatedSkeleton): EvaluatedVisual[] {
+  const face = entity.faceCustomization;
+  const headBone = skeleton.bones.get("head");
+  if (!face || !headBone) return [];
+
+  const boneM = worldBoneToMatrix(headBone);
+  const visuals: EvaluatedVisual[] = [];
+  const defs: Array<{ key: keyof Omit<FaceCustomization, "overlays">; zIndex: number; x: number; y: number }> = [
+    { key: "hair", zIndex: -698, x: 0, y: -11 },
+    { key: "brows", zIndex: -697, x: 0, y: -5 },
+    { key: "eyes", zIndex: -696, x: 0, y: -2 },
+    { key: "mouth", zIndex: -695, x: 0, y: 6 },
+    { key: "beard", zIndex: -694, x: 0, y: 9 },
+  ];
+
+  for (const def of defs) {
+    const config = face[def.key];
+    if (!config?.visible || !config.presetId || config.presetId === "none") continue;
+    const svgData = makeFaceFeatureSvg(def.key, config.presetId, config.color);
+    if (!svgData) continue;
+    const metrics = parseMetrics(svgData);
+    // Face feature SVGs use centered viewBoxes like -12..12, so their pivot
+    // must be computed in the SVG's own coordinate space, not from 0..width.
+    const pivotX = metrics.viewBoxX + metrics.viewBoxWidth / 2;
+    const pivotY = metrics.viewBoxY + metrics.viewBoxHeight / 2;
+    const worldM = multiply(
+      boneM,
+      localTransformToMatrix(
+        def.x + config.transform.x,
+        def.y + config.transform.y,
+        config.transform.rotation,
+        config.transform.scaleX,
+        config.transform.scaleY,
+        pivotX,
+        pivotY,
+      ),
+    );
+    const localBounds = makeMetricBounds(metrics, pivotX, pivotY);
+    const worldBounds = transformAABB(worldM, localBounds);
+    visuals.push({
+      id: `face__${entity.id}__${def.key}`,
+      svgData,
+      zIndex: def.zIndex,
+      worldMatrix: worldM,
+      localBounds,
+      worldBounds,
+      sourceKind: "entity-visual",
+      entityVisualId: `face__${def.key}`,
+      boneId: "head",
+      svgFitMode: "v2_vector",
+    });
+  }
+
+  for (const overlay of face.overlays ?? []) {
+    const worldM = multiply(
+      boneM,
+      localTransformToMatrix(
+        overlay.localTransform.x,
+        overlay.localTransform.y,
+        overlay.localTransform.rotation,
+        overlay.localTransform.scaleX,
+        overlay.localTransform.scaleY,
+        overlay.pivot.x,
+        overlay.pivot.y,
+      ),
+    );
+    const localBounds = makeMetricBounds(overlay.metrics, overlay.pivot.x, overlay.pivot.y);
+    const worldBounds = transformAABB(worldM, localBounds);
+    visuals.push({
+      id: `face_overlay__${overlay.id}`,
+      svgData: overlay.svgData,
+      zIndex: overlay.zOffset,
+      worldMatrix: worldM,
+      localBounds,
+      worldBounds,
+      sourceKind: "entity-visual",
+      entityVisualId: overlay.id,
+      boneId: "head",
+      svgFitMode: "v2_vector",
+    });
+  }
+
+  return visuals;
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -271,6 +465,7 @@ function getSlotBoneMatrix(
 function getCoveredBodyBoneIds(entity: Entity, template: Template, items: Item[]): Set<string> {
   const covered = new Set<string>();
   const existingBoneIds = new Set(template.bones.map(bone => bone.id));
+
   for (const slotAssign of entity.slots) {
     if (!slotAssign.itemId) continue;
     const item = items.find(i => i.id === slotAssign.itemId);
@@ -504,6 +699,10 @@ export function evaluateScene(
   }
 
   // ── 3. Slot item layers ────────────────────────────────────────────────────
+  for (const faceVisual of makeFaceCustomizationVisuals(entity, skeleton)) {
+    visuals.push(faceVisual);
+  }
+
   for (const slotAssign of entity.slots) {
     if (!slotAssign.itemId) continue;
     const item    = effectiveItems.find(i => i.id === slotAssign.itemId);

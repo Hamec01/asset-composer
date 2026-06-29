@@ -8,6 +8,74 @@ import {
   pruneLegacyBodyCloneVisualsFromEntity,
 } from "@/lib/projectNormalization";
 
+const DEFAULT_BODY_MORPHS = {
+  headSize: 1,
+  neckLength: 1,
+  torsoHeight: 1,
+  torsoWidth: 1,
+  armLength: 1,
+  forearmLength: 1,
+  handSize: 1,
+  legLength: 1,
+  shinLength: 1,
+  footSize: 1,
+  pelvisWidth: 1,
+  overallHeightScale: 1,
+};
+
+const DEFAULT_BODY_AUTHORING = {
+  focusRegion: "global",
+  activeBoneId: null,
+  activeSlotId: null,
+  intent: "morph",
+  viewportMode: "focus_region",
+  regionPresetIds: {},
+};
+
+const DEFAULT_FACE_TRANSFORM = {
+  x: 0,
+  y: 0,
+  rotation: 0,
+  scaleX: 1,
+  scaleY: 1,
+};
+
+const DEFAULT_FACE_CUSTOMIZATION = {
+  eyes: { presetId: "round_kawaii", color: "#2B1D18", visible: true, transform: DEFAULT_FACE_TRANSFORM },
+  mouth: { presetId: "soft_smile", color: "#1A1A1A", visible: true, transform: DEFAULT_FACE_TRANSFORM },
+  brows: { presetId: "soft_arc", color: "#3B2314", visible: false, transform: DEFAULT_FACE_TRANSFORM },
+  beard: { presetId: "none", color: "#3B2314", visible: false, transform: DEFAULT_FACE_TRANSFORM },
+  hair: { presetId: "none", color: "#3B2314", visible: false, transform: DEFAULT_FACE_TRANSFORM },
+  overlays: [],
+};
+
+const DEFAULT_FACE_AUTHORING = {
+  activeFeatureKey: null,
+  overlayFilter: "all",
+  selectedOverlayId: null,
+  activeBoneId: null,
+  activeSlotId: null,
+  workflowMode: "feature",
+  draftOverlayRole: "detail",
+  draftPaintTarget: "both",
+  draftSymmetryMode: "none",
+  overlayRoleFilter: "all",
+  paintTargetFilter: "all",
+  overlayGrouping: "feature",
+  drawMode: null,
+  focusMode: "document",
+};
+
+const DEFAULT_EDITOR_META = {
+  slotEditorByTemplateId: {},
+  spriteEditorDocuments: [],
+  activeSpriteDocumentId: null,
+  activeAuthoringMode: null,
+  activeFaceCanvasOverlayId: null,
+  activeFaceCanvasTool: null,
+  activeFaceCanvasFocusMode: null,
+};
+
 /**
  * projectMigration.ts
  *
@@ -30,6 +98,7 @@ function normalizeMigratedItems(items: Record<string, unknown>[]) {
     anchorRules: item.anchorRules ?? {},
     parts: item.parts ?? [],
     coordinateMode: item.coordinateMode ?? "legacy_full_frame",
+    svgLayers: item.svgLayers ?? [],
   }));
 }
 
@@ -123,7 +192,19 @@ function normalizeV2Project(raw: unknown): unknown {
             }),
         ),
       }
-    : { slotEditorByTemplateId: {} };
+    : { ...DEFAULT_EDITOR_META };
+  r.editorMeta = {
+    ...DEFAULT_EDITOR_META,
+    ...(r.editorMeta as Record<string, unknown>),
+    spriteEditorDocuments: Array.isArray((r.editorMeta as Record<string, unknown>).spriteEditorDocuments)
+      ? (r.editorMeta as Record<string, unknown>).spriteEditorDocuments
+      : [],
+    activeSpriteDocumentId: (r.editorMeta as Record<string, unknown>).activeSpriteDocumentId ?? null,
+    activeAuthoringMode: (r.editorMeta as Record<string, unknown>).activeAuthoringMode ?? null,
+    activeFaceCanvasOverlayId: (r.editorMeta as Record<string, unknown>).activeFaceCanvasOverlayId ?? null,
+    activeFaceCanvasTool: (r.editorMeta as Record<string, unknown>).activeFaceCanvasTool ?? null,
+    activeFaceCanvasFocusMode: (r.editorMeta as Record<string, unknown>).activeFaceCanvasFocusMode ?? null,
+  };
 
   if (Array.isArray(r.templates)) {
     r.templates = normalizeMigratedTemplates(r.templates as Record<string, unknown>[]);
@@ -144,6 +225,72 @@ function normalizeV2Project(raw: unknown): unknown {
         visuals: e.visuals ?? [],
         rootTransform: e.rootTransform ?? null,
         species: e.species ?? "",
+        bodyMorphPresetId: e.bodyMorphPresetId ?? null,
+        bodyAuthoring: {
+          ...DEFAULT_BODY_AUTHORING,
+          ...(e.bodyAuthoring as Record<string, unknown> ?? {}),
+          regionPresetIds: {
+            ...DEFAULT_BODY_AUTHORING.regionPresetIds,
+            ...(((e.bodyAuthoring as Record<string, unknown> | undefined)?.regionPresetIds as Record<string, unknown>) ?? {}),
+          },
+        },
+        bodyMorphs: { ...DEFAULT_BODY_MORPHS, ...(e.bodyMorphs as Record<string, unknown> ?? {}) },
+        faceCustomization: {
+          ...DEFAULT_FACE_CUSTOMIZATION,
+          ...(e.faceCustomization as Record<string, unknown> ?? {}),
+          eyes: {
+            ...DEFAULT_FACE_CUSTOMIZATION.eyes,
+            ...((e.faceCustomization as Record<string, unknown> | undefined)?.eyes as Record<string, unknown> ?? {}),
+            transform: {
+              ...DEFAULT_FACE_TRANSFORM,
+              ...(((e.faceCustomization as Record<string, unknown> | undefined)?.eyes as Record<string, unknown> | undefined)?.transform as Record<string, unknown> ?? {}),
+            },
+          },
+          mouth: {
+            ...DEFAULT_FACE_CUSTOMIZATION.mouth,
+            ...((e.faceCustomization as Record<string, unknown> | undefined)?.mouth as Record<string, unknown> ?? {}),
+            transform: {
+              ...DEFAULT_FACE_TRANSFORM,
+              ...(((e.faceCustomization as Record<string, unknown> | undefined)?.mouth as Record<string, unknown> | undefined)?.transform as Record<string, unknown> ?? {}),
+            },
+          },
+          brows: {
+            ...DEFAULT_FACE_CUSTOMIZATION.brows,
+            ...((e.faceCustomization as Record<string, unknown> | undefined)?.brows as Record<string, unknown> ?? {}),
+            transform: {
+              ...DEFAULT_FACE_TRANSFORM,
+              ...(((e.faceCustomization as Record<string, unknown> | undefined)?.brows as Record<string, unknown> | undefined)?.transform as Record<string, unknown> ?? {}),
+            },
+          },
+          beard: {
+            ...DEFAULT_FACE_CUSTOMIZATION.beard,
+            ...((e.faceCustomization as Record<string, unknown> | undefined)?.beard as Record<string, unknown> ?? {}),
+            transform: {
+              ...DEFAULT_FACE_TRANSFORM,
+              ...(((e.faceCustomization as Record<string, unknown> | undefined)?.beard as Record<string, unknown> | undefined)?.transform as Record<string, unknown> ?? {}),
+            },
+          },
+            hair: {
+              ...DEFAULT_FACE_CUSTOMIZATION.hair,
+              ...((e.faceCustomization as Record<string, unknown> | undefined)?.hair as Record<string, unknown> ?? {}),
+              transform: {
+                ...DEFAULT_FACE_TRANSFORM,
+                ...(((e.faceCustomization as Record<string, unknown> | undefined)?.hair as Record<string, unknown> | undefined)?.transform as Record<string, unknown> ?? {}),
+              },
+            },
+            overlays: Array.isArray((e.faceCustomization as Record<string, unknown> | undefined)?.overlays)
+              ? ((e.faceCustomization as Record<string, unknown>).overlays as Record<string, unknown>[]).map(overlay => ({
+                ...overlay,
+                overlayRole: overlay.overlayRole ?? "detail",
+                symmetryMode: overlay.symmetryMode ?? "none",
+                paintTarget: overlay.paintTarget ?? "both",
+              }))
+              : [],
+          },
+          faceAuthoring: {
+            ...DEFAULT_FACE_AUTHORING,
+            ...(e.faceAuthoring as Record<string, unknown> ?? {}),
+        },
         slots: Array.isArray(e.slots)
           ? (e.slots as Record<string, unknown>[]).map(slot => ({
               ...slot,

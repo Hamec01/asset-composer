@@ -2,10 +2,12 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useStore } from "@/store";
 import { CanvasEngine } from "@/engine/canvasEngine";
 import { resolveTemplate } from "@/data/templates";
+import { createDocumentFromFaceOverlay } from "@/lib/spriteEditor";
 import {
   buildMultiClipPose, evaluateSkeleton, evaluateScene,
 } from "@/lib/evaluationPipeline";
 import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
+import { computeSceneBounds, fitSceneToViewport } from "@/lib/sceneUtils";
 import { animController } from "@/core-v2/AnimationController";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ZoomIn, ZoomOut, Maximize2, MousePointer2, Move, LayoutGrid } from "lucide-react";
-import type { CanvasMode } from "@/domain/types";
+import type { BodyMorphRegionId, CanvasMode, FaceAuthoringTool, FaceFeatureKey } from "@/domain/types";
 
 interface Viewport { zoom: number; panX: number; panY: number }
 const MIN_ZOOM = 0.05;
@@ -47,17 +49,98 @@ const MODE_BUTTONS: Array<{
   },
 ];
 
+const BODY_REGION_LABELS: Record<BodyMorphRegionId, string> = {
+  head: "Head",
+  torso: "Torso",
+  arms: "Arms",
+  legs: "Legs",
+  global: "Global",
+};
+
+const FACE_FEATURE_LABELS: Record<FaceFeatureKey, string> = {
+  eyes: "Eyes",
+  mouth: "Mouth",
+  brows: "Brows",
+  beard: "Beard",
+  hair: "Hair",
+};
+
+const BODY_REGION_BONE: Record<BodyMorphRegionId, string> = {
+  head: "head",
+  torso: "chest",
+  arms: "shoulder_l",
+  legs: "hip_l",
+  global: "root",
+};
+
+const FACE_FEATURE_SLOT: Record<FaceFeatureKey, string> = {
+  eyes: "slot_eyes",
+  mouth: "slot_face",
+  brows: "slot_face",
+  beard: "slot_beard",
+  hair: "slot_hair",
+};
+
+function getBodyRegionFromBoneId(boneId: string | null | undefined): BodyMorphRegionId {
+  if (!boneId) return "global";
+  if (boneId === "head" || boneId === "neck") return "head";
+  if (boneId === "root") return "global";
+  if (
+    boneId.includes("shoulder")
+    || boneId.includes("arm")
+    || boneId.includes("hand")
+  ) {
+    return "arms";
+  }
+  if (
+    boneId.includes("hip")
+    || boneId.includes("leg")
+    || boneId.includes("knee")
+    || boneId.includes("shin")
+    || boneId.includes("foot")
+  ) {
+    return "legs";
+  }
+  return "torso";
+}
+
+function getFaceFeatureFromSlotId(slotId: string | null | undefined): FaceFeatureKey | null {
+  if (!slotId) return null;
+  const found = Object.entries(FACE_FEATURE_SLOT).find(([, candidateSlotId]) => candidateSlotId === slotId);
+  return (found?.[0] as FaceFeatureKey | undefined) ?? null;
+}
+
+function visualMatchesBodyRegion(visual: { boneId?: string }, region: BodyMorphRegionId) {
+  const boneId = visual.boneId ?? "";
+  if (region === "global") return true;
+  if (region === "head") return boneId === "head" || boneId === "neck";
+  if (region === "arms") return boneId.includes("shoulder") || boneId.includes("arm") || boneId.includes("hand");
+  if (region === "legs") return boneId.includes("hip") || boneId.includes("leg") || boneId.includes("knee") || boneId.includes("shin") || boneId.includes("foot");
+  return boneId === "root" || boneId === "spine" || boneId === "chest" || boneId === "pelvis" || boneId === "neck";
+}
+
 export function CanvasPanel() {
   const project         = useStore(s => s.project);
   const editor          = useStore(s => s.editor);
   const animPlayback    = useStore(s => s.animPlayback);
   const setSelectedSlot           = useStore(s => s.setSelectedSlot);
+  const setEntityBodyAuthoringState = useStore(s => s.setEntityBodyAuthoringState);
+  const setEntityFaceAuthoringState = useStore(s => s.setEntityFaceAuthoringState);
+  const setEntityFaceFeatureTransform = useStore(s => s.setEntityFaceFeatureTransform);
+  const setEntityFaceOverlayTransform = useStore(s => s.setEntityFaceOverlayTransform);
   const previewAttachmentOverride = useStore(s => s.previewAttachmentOverride);
   const commitAttachmentOverride  = useStore(s => s.commitAttachmentOverride);
   const previewItemPartFitTransform = useStore(s => s.previewItemPartFitTransform);
   const commitItemPartFitTransform = useStore(s => s.commitItemPartFitTransform);
   const setCanvasMode             = useStore(s => s.setCanvasMode);
-  const setEditorSelection        = useStore(s => s.setEditorSelection);
+    const setEditorSelection        = useStore(s => s.setEditorSelection);
+    const setActiveAuthoringMode    = useStore(s => s.setActiveAuthoringMode);
+  const setActiveFaceCanvasOverlay = useStore(s => s.setActiveFaceCanvasOverlay);
+  const setActiveFaceCanvasTool = useStore(s => s.setActiveFaceCanvasTool);
+  const setActiveFaceCanvasFocusMode = useStore(s => s.setActiveFaceCanvasFocusMode);
+  const upsertSpriteEditorDocument = useStore(s => s.upsertSpriteEditorDocument);
+  const setActiveSpriteDocument = useStore(s => s.setActiveSpriteDocument);
+  const setAnimBottomTab = useStore(s => s.setAnimBottomTab);
   const previewTemplateSlotTransform = useStore(s => s.previewTemplateSlotTransform);
   const commitTemplateSlotTransform  = useStore(s => s.commitTemplateSlotTransform);
   const setPlaybackPlaying        = useStore(s => s.setPlaybackPlaying);
@@ -89,6 +172,31 @@ export function CanvasPanel() {
   const template     = activeEntity
     ? resolveTemplate(project, activeEntity.templateId)
     : undefined;
+  const activeAuthoringMode = project.editorMeta.activeAuthoringMode ?? null;
+  const activeFaceCanvasTool = project.editorMeta.activeFaceCanvasTool ?? null;
+  const bodyAuthoring = activeEntity?.bodyAuthoring ?? { focusRegion: "global" as BodyMorphRegionId, activeBoneId: null, activeSlotId: null, intent: "morph" as const, viewportMode: "focus_region" as const, regionPresetIds: {} };
+    const faceAuthoring = activeEntity?.faceAuthoring ?? {
+      activeFeatureKey: null as FaceFeatureKey | "generic" | null,
+      overlayFilter: "all" as FaceFeatureKey | "generic" | "all",
+      selectedOverlayId: null as string | null,
+      activeBoneId: "head" as string | null,
+      activeSlotId: null as string | null,
+      workflowMode: "feature" as const,
+      draftOverlayRole: "detail" as const,
+      draftPaintTarget: "both" as const,
+      draftSymmetryMode: "none" as const,
+      drawMode: null as FaceAuthoringTool | null,
+      focusMode: "document" as const,
+    };
+  const activeFaceFeature = faceAuthoring.activeFeatureKey && faceAuthoring.activeFeatureKey !== "generic"
+    ? faceAuthoring.activeFeatureKey
+    : null;
+  const faceOverlays = activeEntity?.faceCustomization?.overlays ?? [];
+  const visibleFaceOverlays = faceOverlays.filter(overlay => {
+    if (faceAuthoring.overlayFilter === "all") return true;
+    return (overlay.featureTag ?? "generic") === faceAuthoring.overlayFilter;
+  });
+  const activeFaceOverlay = visibleFaceOverlays.find(overlay => overlay.id === faceAuthoring.selectedOverlayId) ?? null;
   const slotEditorState = template
     ? project.editorMeta.slotEditorByTemplateId[template.id] ?? { hiddenSlotIds: [], lockedSlotIds: [] }
     : { hiddenSlotIds: [], lockedSlotIds: [] };
@@ -205,6 +313,308 @@ export function CanvasPanel() {
     }
   }, [animPlayback.playing, editor.canvasMode, setPlaybackPlaying]);
 
+  useEffect(() => {
+    if (activeAuthoringMode !== "body-morph") return;
+    if (bodyAuthoring.intent === "preview" && !animPlayback.playing) {
+      setPlaybackPlaying(true);
+      return;
+    }
+    if (bodyAuthoring.intent === "inspect" && animPlayback.playing) {
+      setPlaybackPlaying(false);
+    }
+  }, [activeAuthoringMode, animPlayback.playing, bodyAuthoring.intent, setPlaybackPlaying]);
+
+  useEffect(() => {
+    if (!activeEntity || activeAuthoringMode !== "body-morph") return;
+    if (!bodyAuthoring.activeBoneId) return;
+    const selection = editor.selection;
+    const matchesSelection = selection.kind === "bone"
+      && selection.entityId === activeEntity.id
+      && selection.boneId === bodyAuthoring.activeBoneId;
+    if (!matchesSelection) {
+      setEditorSelection({
+        kind: "bone",
+        entityId: activeEntity.id,
+        boneId: bodyAuthoring.activeBoneId,
+      });
+      setSelectedSlot(bodyAuthoring.activeSlotId ?? null);
+      setCanvasMode("select");
+    }
+  }, [
+    activeAuthoringMode,
+    activeEntity,
+    bodyAuthoring.activeBoneId,
+    bodyAuthoring.activeSlotId,
+    editor.selection,
+    setCanvasMode,
+    setEditorSelection,
+    setSelectedSlot,
+  ]);
+
+  useEffect(() => {
+    if (!activeEntity || activeAuthoringMode !== "face-editor") return;
+    const slotId = faceAuthoring.activeSlotId ?? (activeFaceFeature ? FACE_FEATURE_SLOT[activeFaceFeature] : null);
+    if (faceAuthoring.workflowMode === "overlay" && faceAuthoring.selectedOverlayId) {
+      const selection = editor.selection;
+      const matchesSelection = selection.kind === "face-overlay"
+        && selection.entityId === activeEntity.id
+        && selection.overlayId === faceAuthoring.selectedOverlayId;
+      if (!matchesSelection) {
+        setEditorSelection({
+          kind: "face-overlay",
+          entityId: activeEntity.id,
+          overlayId: faceAuthoring.selectedOverlayId,
+          featureKey: activeFaceFeature ?? "generic",
+          slotId,
+        });
+      }
+      setSelectedSlot(slotId);
+      setCanvasMode("select");
+      return;
+    }
+
+    const selection = editor.selection;
+    const matchesHeadSelection = selection.kind === "bone"
+      && selection.entityId === activeEntity.id
+      && selection.boneId === "head";
+    if (!matchesHeadSelection) {
+      setEditorSelection({
+        kind: "bone",
+        entityId: activeEntity.id,
+        boneId: "head",
+      });
+    }
+    setSelectedSlot(slotId);
+    setCanvasMode("select");
+  }, [
+    activeAuthoringMode,
+    activeEntity,
+    activeFaceFeature,
+    editor.selection,
+    faceAuthoring.activeSlotId,
+    faceAuthoring.selectedOverlayId,
+    faceAuthoring.workflowMode,
+    setCanvasMode,
+    setEditorSelection,
+    setSelectedSlot,
+  ]);
+
+  const nudgeActiveFaceOverlay = useCallback((patch: Partial<{ x: number; y: number; rotation: number; scaleX: number; scaleY: number }>) => {
+    if (!activeEntity || !activeFaceOverlay) return;
+    const featureKey = activeFaceOverlay.featureTag ?? "generic";
+    const slotId = featureKey === "generic" ? null : FACE_FEATURE_SLOT[featureKey];
+    setEntityFaceAuthoringState(activeEntity.id, {
+      activeFeatureKey: featureKey,
+      overlayFilter: featureKey,
+      selectedOverlayId: activeFaceOverlay.id,
+      activeSlotId: slotId,
+      activeBoneId: "head",
+      focusMode: "head",
+    });
+    setActiveFaceCanvasOverlay(activeFaceOverlay.id);
+    setEditorSelection({
+      kind: "face-overlay",
+      entityId: activeEntity.id,
+      overlayId: activeFaceOverlay.id,
+      featureKey,
+      slotId,
+    });
+    setSelectedSlot(slotId);
+    setEntityFaceOverlayTransform(activeEntity.id, activeFaceOverlay.id, patch);
+  }, [activeEntity, activeFaceOverlay, setActiveFaceCanvasOverlay, setEditorSelection, setEntityFaceAuthoringState, setEntityFaceOverlayTransform, setSelectedSlot]);
+
+  const openFaceOverlayEditor = useCallback((overlayId?: string | null, tool: "select" | "pencil" | "closed-pencil" | "fill" | "eraser" | null = null, focusMode: "document" | "head" = "document") => {
+      if (!activeEntity) return;
+    const overlay = (overlayId
+      ? faceOverlays.find(candidate => candidate.id === overlayId)
+      : activeFaceOverlay) ?? null;
+    if (!overlay) return;
+    const featureKey = overlay.featureTag ?? "generic";
+    const slotId = featureKey === "generic" ? null : FACE_FEATURE_SLOT[featureKey];
+      setEntityFaceAuthoringState(activeEntity.id, {
+        activeFeatureKey: featureKey,
+        overlayFilter: featureKey,
+        selectedOverlayId: overlay.id,
+        activeBoneId: "head",
+        activeSlotId: slotId,
+        drawMode: tool,
+        focusMode,
+      });
+      setActiveFaceCanvasOverlay(overlay.id);
+      setActiveFaceCanvasTool(tool);
+      setActiveFaceCanvasFocusMode(focusMode);
+    setSelectedSlot(slotId);
+    setEditorSelection({
+      kind: "face-overlay",
+      entityId: activeEntity.id,
+      overlayId: overlay.id,
+      featureKey,
+      slotId,
+    });
+    const doc = createDocumentFromFaceOverlay(activeEntity.id, overlay);
+    upsertSpriteEditorDocument(doc);
+    setActiveSpriteDocument(doc.id);
+    setActiveAuthoringMode("sprite-editor");
+    setAnimBottomTab("authoring");
+    setCanvasMode("select");
+  }, [activeEntity, activeFaceOverlay, faceOverlays, setActiveAuthoringMode, setActiveFaceCanvasFocusMode, setActiveFaceCanvasOverlay, setActiveFaceCanvasTool, setActiveSpriteDocument, setAnimBottomTab, setCanvasMode, setEditorSelection, setEntityFaceAuthoringState, setSelectedSlot, upsertSpriteEditorDocument]);
+
+  const createFaceOverlayDraftFromCanvas = useCallback((tool: "select" | "pencil" | "closed-pencil" | "fill" | "eraser" | null = "pencil", focusMode: "document" | "head" = "head") => {
+      if (!activeEntity || !activeFaceFeature) return;
+    const doc = createDocumentFromFaceOverlay(activeEntity.id);
+    const overlayId = doc.target.overlayId ?? `face_overlay_${doc.id}`;
+    const slotId = FACE_FEATURE_SLOT[activeFaceFeature];
+      setEntityFaceAuthoringState(activeEntity.id, {
+        activeFeatureKey: activeFaceFeature,
+        overlayFilter: activeFaceFeature,
+        selectedOverlayId: overlayId,
+        activeBoneId: "head",
+        activeSlotId: slotId,
+        drawMode: tool,
+        focusMode,
+      });
+      setActiveFaceCanvasOverlay(overlayId);
+      setActiveFaceCanvasTool(tool);
+      setActiveFaceCanvasFocusMode(focusMode);
+    setSelectedSlot(slotId);
+    setEditorSelection({
+      kind: "face-overlay",
+      entityId: activeEntity.id,
+      overlayId,
+      featureKey: activeFaceFeature,
+      slotId,
+    });
+    upsertSpriteEditorDocument({
+      ...doc,
+      authoringHint: {
+        ...doc.authoringHint,
+        faceFeatureKey: activeFaceFeature,
+        faceOverlayRole: activeFaceFeature === "hair" || activeFaceFeature === "beard"
+          ? "base"
+          : activeFaceFeature === "brows" || activeFaceFeature === "mouth"
+            ? "line"
+            : "detail",
+        symmetryMode: activeFaceFeature === "eyes" || activeFaceFeature === "brows" ? "mirror_x" : "none",
+        paintToolPreset: "vector_brush",
+      },
+    });
+    setActiveSpriteDocument(doc.id);
+    setActiveAuthoringMode("sprite-editor");
+    setAnimBottomTab("authoring");
+    setCanvasMode("select");
+  }, [activeEntity, activeFaceFeature, setActiveAuthoringMode, setActiveFaceCanvasFocusMode, setActiveFaceCanvasOverlay, setActiveFaceCanvasTool, setActiveSpriteDocument, setAnimBottomTab, setCanvasMode, setEditorSelection, setEntityFaceAuthoringState, setSelectedSlot, upsertSpriteEditorDocument]);
+
+  useEffect(() => {
+    if (!activeEntity || !template) return;
+    const selection = editor.selection;
+
+    const bodyPatch: Partial<{ focusRegion: BodyMorphRegionId; activeBoneId: string | null; activeSlotId: string | null }> = {};
+    const facePatch: Partial<{
+      activeFeatureKey: FaceFeatureKey | "generic" | null;
+      overlayFilter: FaceFeatureKey | "generic" | "all";
+      selectedOverlayId: string | null;
+      activeBoneId: string | null;
+      activeSlotId: string | null;
+      workflowMode: "feature" | "overlay";
+      focusMode: "document" | "head";
+    }> = {};
+
+    if (selection.kind === "bone" && selection.entityId === activeEntity.id) {
+      bodyPatch.focusRegion = getBodyRegionFromBoneId(selection.boneId);
+      bodyPatch.activeBoneId = selection.boneId;
+      bodyPatch.activeSlotId = null;
+      if (selection.boneId === "head") {
+        facePatch.activeBoneId = "head";
+        facePatch.focusMode = "head";
+        facePatch.workflowMode = "feature";
+      }
+    }
+
+    if (selection.kind === "entity-visual" && selection.entityId === activeEntity.id) {
+      const selectedVisual = (activeEntity.visuals ?? []).find(visual => visual.id === selection.visualId);
+      if (selectedVisual) {
+        bodyPatch.focusRegion = getBodyRegionFromBoneId(selectedVisual.boneId);
+        bodyPatch.activeBoneId = selectedVisual.boneId;
+        bodyPatch.activeSlotId = null;
+        if (selectedVisual.boneId === "head") {
+          facePatch.activeBoneId = "head";
+          facePatch.focusMode = "head";
+          facePatch.workflowMode = "feature";
+        }
+      }
+    }
+
+    const selectedSlotId = (
+      selection.kind === "item-part"
+      || selection.kind === "equipped-item"
+      || selection.kind === "template-slot"
+      || selection.kind === "face-overlay"
+    )
+      ? selection.slotId
+      : null;
+    const selectedSlotDef = selectedSlotId
+      ? template.slots.find(slot => slot.id === selectedSlotId)
+      : null;
+    if (selectedSlotDef) {
+      bodyPatch.focusRegion = getBodyRegionFromBoneId(selectedSlotDef.boneId);
+      bodyPatch.activeBoneId = selectedSlotDef.boneId;
+      bodyPatch.activeSlotId = selectedSlotDef.id;
+      const featureFromSlot = getFaceFeatureFromSlotId(selectedSlotDef.id);
+      if (featureFromSlot) {
+        facePatch.activeFeatureKey = featureFromSlot;
+        facePatch.overlayFilter = featureFromSlot;
+        facePatch.activeSlotId = selectedSlotDef.id;
+        facePatch.activeBoneId = "head";
+        facePatch.workflowMode = "feature";
+      }
+    }
+
+    if (selection.kind === "face-overlay" && selection.entityId === activeEntity.id) {
+      facePatch.activeFeatureKey = selection.featureKey;
+      facePatch.overlayFilter = selection.featureKey;
+      facePatch.selectedOverlayId = selection.overlayId;
+      facePatch.activeSlotId = selection.slotId;
+      facePatch.activeBoneId = "head";
+      facePatch.focusMode = "head";
+      facePatch.workflowMode = "overlay";
+      bodyPatch.focusRegion = "head";
+      bodyPatch.activeBoneId = "head";
+      bodyPatch.activeSlotId = selection.slotId;
+    }
+
+    if (
+      bodyPatch.focusRegion !== undefined &&
+      (
+        bodyPatch.focusRegion !== bodyAuthoring.focusRegion
+        || (bodyPatch.activeBoneId ?? null) !== (bodyAuthoring.activeBoneId ?? null)
+        || (bodyPatch.activeSlotId ?? null) !== (bodyAuthoring.activeSlotId ?? null)
+      )
+    ) {
+      setEntityBodyAuthoringState(activeEntity.id, {
+        focusRegion: bodyPatch.focusRegion,
+        activeBoneId: bodyPatch.activeBoneId ?? null,
+        activeSlotId: bodyPatch.activeSlotId ?? null,
+      });
+    }
+
+    const shouldUpdateFace = Object.entries(facePatch).some(([key, value]) => {
+      const currentValue = (faceAuthoring as unknown as Record<string, unknown>)[key];
+      return (currentValue ?? null) !== (value ?? null);
+    });
+    if (shouldUpdateFace) {
+      setEntityFaceAuthoringState(activeEntity.id, facePatch);
+    }
+  }, [
+    activeEntity,
+    bodyAuthoring.activeBoneId,
+    bodyAuthoring.focusRegion,
+    editor.selection,
+    faceAuthoring,
+    setEntityBodyAuthoringState,
+    setEntityFaceAuthoringState,
+    template,
+  ]);
+
   // Ref to latest reconcile fn for ResizeObserver
   const rerenderRef = useRef<(() => void) | null>(null);
 
@@ -241,7 +651,7 @@ export function CanvasPanel() {
         liveEntity,
         effectiveItems,
       );
-      const skeleton = evaluateSkeleton(liveTemplate.bones, pose);
+      const skeleton = evaluateSkeleton(liveTemplate.bones, pose, liveEntity.bodyMorphs);
       const scene    = evaluateScene(liveEntity, liveTemplate, skeleton, effectiveItems, store.project.itemFitProfiles);
 
       const itemsArr = effectiveItems;
@@ -303,7 +713,7 @@ export function CanvasPanel() {
         ent,
         effectiveItems,
       );
-      const skeleton = evaluateSkeleton(tmpl.bones, pose);
+      const skeleton = evaluateSkeleton(tmpl.bones, pose, ent.bodyMorphs);
       const scene    = evaluateScene(ent, tmpl, skeleton, effectiveItems, store.project.itemFitProfiles);
       engineRef.current.updateSceneTransforms(scene);
     });
@@ -368,11 +778,105 @@ export function CanvasPanel() {
     }
     const store    = useStore.getState();
     const effectiveItems = refreshCanonicalBuiltInTypedItems(store.project.items);
-    const skeleton = evaluateSkeleton(template.bones, new Map());
+    const skeleton = evaluateSkeleton(template.bones, new Map(), activeEntity.bodyMorphs);
     const scene    = evaluateScene(activeEntity, template, skeleton, effectiveItems, store.project.itemFitProfiles);
     const cam      = engineRef.current.fitScene(scene, template);
     applyViewport(cam);
   }, [activeEntity, template, applyViewport]);
+
+  const focusAuthoringView = useCallback(() => {
+    if (!engineRef.current || !activeEntity || !template || !containerRef.current) return;
+
+    const store = useStore.getState();
+    const effectiveItems = refreshCanonicalBuiltInTypedItems(store.project.items);
+    const pose = buildMultiClipPose(
+      store.project.animationClips,
+      store.animPlayback.activeClipId,
+      store.animPlayback.upperClipId,
+      store.animPlayback.lowerClipId,
+      store.animPlayback.upperBlendWeight,
+      store.animPlayback.timeMs,
+      activeEntity,
+      effectiveItems,
+    );
+    const skeleton = evaluateSkeleton(template.bones, pose, activeEntity.bodyMorphs);
+    const scene = evaluateScene(activeEntity, template, skeleton, effectiveItems, store.project.itemFitProfiles);
+    const viewportW = containerRef.current.clientWidth || 600;
+    const viewportH = containerRef.current.clientHeight || 500;
+
+    let focusVisuals = scene.visuals;
+    let padding = 0.12;
+
+    if (activeAuthoringMode === "body-morph") {
+      if (bodyAuthoring.viewportMode === "focus_region") {
+        const regionalVisuals = scene.visuals.filter(visual => visualMatchesBodyRegion(visual, bodyAuthoring.focusRegion));
+        if (regionalVisuals.length > 0) {
+          focusVisuals = regionalVisuals;
+          padding = bodyAuthoring.focusRegion === "global" ? 0.12 : 0.2;
+        }
+      }
+    } else if (activeAuthoringMode === "face-editor" && faceAuthoring.focusMode === "head") {
+      padding = 0.22;
+      if (faceAuthoring.workflowMode === "overlay" && faceAuthoring.selectedOverlayId) {
+        const overlayVisuals = scene.visuals.filter(visual => visual.entityVisualId === faceAuthoring.selectedOverlayId);
+        if (overlayVisuals.length > 0) {
+          focusVisuals = overlayVisuals;
+          padding = 0.32;
+        }
+      } else {
+        const featureVisualIds = new Set<string>();
+        if (activeFaceFeature) {
+          featureVisualIds.add(`face__${activeFaceFeature}`);
+          for (const overlay of faceOverlays) {
+            if ((overlay.featureTag ?? "generic") === activeFaceFeature) {
+              featureVisualIds.add(overlay.id);
+            }
+          }
+        }
+        const faceVisuals = scene.visuals.filter(visual => {
+          if (featureVisualIds.size > 0) {
+            return featureVisualIds.has(visual.entityVisualId ?? "");
+          }
+          return visual.boneId === "head" || visual.boneId === "neck";
+        });
+        if (faceVisuals.length > 0) {
+          focusVisuals = faceVisuals;
+          padding = 0.26;
+        }
+      }
+    }
+
+    const bounds = computeSceneBounds(focusVisuals, template.previewWidth, template.previewHeight);
+    const cam = fitSceneToViewport(bounds, viewportW, viewportH, padding);
+    applyViewport(cam);
+  }, [
+    activeAuthoringMode,
+    activeEntity,
+    activeFaceFeature,
+    applyViewport,
+    bodyAuthoring.focusRegion,
+    bodyAuthoring.viewportMode,
+    faceAuthoring.focusMode,
+    faceAuthoring.selectedOverlayId,
+    faceAuthoring.workflowMode,
+    faceOverlays,
+    template,
+  ]);
+
+  useEffect(() => {
+    if (!activeAuthoringMode) return;
+    if (activeAuthoringMode === "face-editor" && faceAuthoring.focusMode !== "head") return;
+    focusAuthoringView();
+  }, [
+    activeAuthoringMode,
+    bodyAuthoring.focusRegion,
+    bodyAuthoring.viewportMode,
+    faceAuthoring.focusMode,
+    faceAuthoring.selectedOverlayId,
+    faceAuthoring.workflowMode,
+    activeFaceFeature,
+    focusAuthoringView,
+  ]);
 
   // ── Wheel zoom towards cursor ─────────────────────────────────────────────
   const onWheel = useCallback((e: React.WheelEvent) => {
@@ -396,6 +900,22 @@ export function CanvasPanel() {
   }, [applyViewport]);
 
   const cursor = isPanning.current ? "grabbing" : altHeld ? "grab" : "default";
+
+  const nudgeActiveFaceFeature = useCallback((
+    patch: Partial<{ x: number; y: number; rotation: number; scaleX: number; scaleY: number }>,
+  ) => {
+    if (!activeEntity || !activeFaceFeature) return;
+    const slotId = FACE_FEATURE_SLOT[activeFaceFeature];
+    setEntityFaceAuthoringState(activeEntity.id, {
+      activeFeatureKey: activeFaceFeature,
+      overlayFilter: activeFaceFeature,
+      selectedOverlayId: faceAuthoring.selectedOverlayId ?? null,
+      activeSlotId: slotId,
+      activeBoneId: "head",
+      focusMode: "head",
+    });
+    setEntityFaceFeatureTransform(activeEntity.id, activeFaceFeature, patch);
+  }, [activeEntity, activeFaceFeature, faceAuthoring.selectedOverlayId, setEntityFaceAuthoringState, setEntityFaceFeatureTransform]);
 
   return (
     <div
@@ -501,6 +1021,265 @@ export function CanvasPanel() {
           <div className="bg-primary/90 text-primary-foreground text-xs rounded-full px-3 py-1 shadow-lg animate-bounce">
             Slot selected — pick an item from the library
           </div>
+        </div>
+      )}
+
+      {activeEntity && activeAuthoringMode && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-10">
+          <div className="rounded-lg border border-border bg-card/85 px-3 py-2 text-[11px] text-muted-foreground backdrop-blur">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-foreground">
+                {activeAuthoringMode === "body-morph" ? "Body Workflow" : activeAuthoringMode === "face-editor" ? "Face Workflow" : "Authoring"}
+              </span>
+              {activeAuthoringMode === "body-morph" && (
+                <span>
+                  focus: {BODY_REGION_LABELS[bodyAuthoring.focusRegion]}
+                  {bodyAuthoring.activeBoneId ? ` · bone ${bodyAuthoring.activeBoneId}` : ""}
+                  {bodyAuthoring.intent ? ` · ${bodyAuthoring.intent}` : ""}
+                  {bodyAuthoring.viewportMode ? ` · ${bodyAuthoring.viewportMode}` : ""}
+                </span>
+              )}
+              {activeAuthoringMode === "face-editor" && (
+                <span>
+                  feature: {activeFaceFeature ? FACE_FEATURE_LABELS[activeFaceFeature] : "Generic"}
+                  {faceAuthoring.activeSlotId ? ` · slot ${faceAuthoring.activeSlotId}` : ""}
+                  {faceAuthoring.workflowMode ? ` · ${faceAuthoring.workflowMode}` : ""}
+                </span>
+              )}
+              {faceAuthoring.overlayFilter !== "all" && activeAuthoringMode === "face-editor" && (
+                <span>overlay filter: {faceAuthoring.overlayFilter}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeEntity && (
+        <div className="absolute top-14 left-3 z-10 flex flex-col gap-2">
+          <div className="rounded-lg border border-border bg-card/85 p-2 backdrop-blur">
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Body Focus</div>
+            <div className="grid grid-cols-3 gap-1">
+              {(Object.keys(BODY_REGION_LABELS) as BodyMorphRegionId[]).map(region => (
+                <Button
+                  key={region}
+                  type="button"
+                  size="sm"
+                  variant={bodyAuthoring.focusRegion === region ? "default" : "secondary"}
+                  className="h-7 px-2 text-[10px]"
+                  onClick={() => {
+                    setEntityBodyAuthoringState(activeEntity.id, {
+                      focusRegion: region,
+                      activeBoneId: BODY_REGION_BONE[region],
+                    });
+                    setActiveAuthoringMode("body-morph");
+                    setEditorSelection({
+                      kind: "bone",
+                      entityId: activeEntity.id,
+                      boneId: BODY_REGION_BONE[region],
+                    });
+                    setSelectedSlot(null);
+                    setCanvasMode("select");
+                    fitView();
+                  }}
+                >
+                  {BODY_REGION_LABELS[region]}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-card/85 p-2 backdrop-blur">
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Face Focus</div>
+            <div className="grid grid-cols-3 gap-1">
+              {(Object.keys(FACE_FEATURE_LABELS) as FaceFeatureKey[]).map(featureKey => (
+                <Button
+                  key={featureKey}
+                  type="button"
+                  size="sm"
+                  variant={activeFaceFeature === featureKey ? "default" : "secondary"}
+                  className="h-7 px-2 text-[10px]"
+                  onClick={() => {
+                    const slotId = FACE_FEATURE_SLOT[featureKey];
+                    setEntityFaceAuthoringState(activeEntity.id, {
+                      activeFeatureKey: featureKey,
+                      overlayFilter: featureKey,
+                      selectedOverlayId: null,
+                      activeBoneId: "head",
+                      activeSlotId: slotId,
+                      focusMode: "head",
+                    });
+                    setActiveAuthoringMode("face-editor");
+                    setSelectedSlot(slotId);
+                    setEditorSelection({
+                      kind: "bone",
+                      entityId: activeEntity.id,
+                      boneId: "head",
+                    });
+                    setCanvasMode("select");
+                    fitView();
+                  }}
+                >
+                  {FACE_FEATURE_LABELS[featureKey]}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {activeFaceFeature && (
+            <div className="rounded-lg border border-border bg-card/85 p-2 backdrop-blur">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Face Local
+                </div>
+                <div className="text-[10px] text-foreground">
+                  {FACE_FEATURE_LABELS[activeFaceFeature]}
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ x: -1 })}>Left</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ y: -1 })}>Up</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ x: 1 })}>Right</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ rotation: -5 })}>Rot -</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ y: 1 })}>Down</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ rotation: 5 })}>Rot +</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ scaleX: 0.95, scaleY: 0.95 })}>Scale -</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 })}>Reset</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ scaleX: 1.05, scaleY: 1.05 })}>Scale +</Button>
+              </div>
+              <div className="mt-2 space-y-1">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Overlay Focus</div>
+                {visibleFaceOverlays.length === 0 ? (
+                  <div className="text-[10px] text-muted-foreground">No overlays for this feature.</div>
+                ) : (
+                  <div className="space-y-1">
+                    {visibleFaceOverlays.map(overlay => (
+                      <Button
+                        key={overlay.id}
+                        type="button"
+                        size="sm"
+                        variant={faceAuthoring.selectedOverlayId === overlay.id ? "default" : "secondary"}
+                        className="h-7 w-full justify-start px-2 text-[10px]"
+                        onClick={() => {
+                          const featureKey = overlay.featureTag ?? "generic";
+                          const slotId = featureKey === "generic" ? null : FACE_FEATURE_SLOT[featureKey];
+                          setEntityFaceAuthoringState(activeEntity.id, {
+                            activeFeatureKey: featureKey,
+                            overlayFilter: featureKey,
+                            selectedOverlayId: overlay.id,
+                            activeBoneId: "head",
+                            activeSlotId: slotId,
+                            focusMode: "head",
+                          });
+                          setSelectedSlot(slotId);
+                          setEditorSelection({
+                            kind: "face-overlay",
+                            entityId: activeEntity.id,
+                            overlayId: overlay.id,
+                            featureKey,
+                            slotId,
+                          });
+                          setActiveAuthoringMode("face-editor");
+                          setCanvasMode("select");
+                        }}
+                      >
+                        {overlay.name}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+                {activeFaceOverlay && (
+                  <div className="rounded border border-border bg-background/60 px-2 py-1 text-[10px] text-muted-foreground">
+                    selected overlay: <span className="text-foreground">{activeFaceOverlay.name}</span>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="h-7 px-2 text-[10px]"
+                    onClick={() => openFaceOverlayEditor(undefined, "select", "document")}
+                    disabled={!activeFaceOverlay}
+                  >
+                    Open Overlay Editor
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="h-7 px-2 text-[10px]"
+                    onClick={() => createFaceOverlayDraftFromCanvas("pencil", "head")}
+                    disabled={!activeFaceFeature}
+                  >
+                    New Overlay Draft
+                  </Button>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 w-full px-2 text-[10px]"
+                  onClick={() => activeFaceOverlay ? openFaceOverlayEditor(activeFaceOverlay.id, "pencil", "head") : createFaceOverlayDraftFromCanvas("pencil", "head")}
+                >
+                  Draw On Head
+                </Button>
+                <div className="grid grid-cols-4 gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={activeFaceCanvasTool === "pencil" ? "default" : "secondary"}
+                    className="h-7 px-2 text-[10px]"
+                      onClick={() => activeFaceOverlay ? openFaceOverlayEditor(activeFaceOverlay.id, "pencil", "head") : createFaceOverlayDraftFromCanvas("pencil", "head")}
+                  >
+                    Draw
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={activeFaceCanvasTool === "closed-pencil" ? "default" : "secondary"}
+                    className="h-7 px-2 text-[10px]"
+                      onClick={() => activeFaceOverlay ? openFaceOverlayEditor(activeFaceOverlay.id, "closed-pencil", "head") : createFaceOverlayDraftFromCanvas("closed-pencil", "head")}
+                  >
+                    Shape
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={activeFaceCanvasTool === "fill" ? "default" : "secondary"}
+                    className="h-7 px-2 text-[10px]"
+                      onClick={() => activeFaceOverlay ? openFaceOverlayEditor(activeFaceOverlay.id, "fill", "head") : createFaceOverlayDraftFromCanvas("fill", "head")}
+                  >
+                    Fill
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={activeFaceCanvasTool === "eraser" ? "default" : "secondary"}
+                    className="h-7 px-2 text-[10px]"
+                      onClick={() => activeFaceOverlay ? openFaceOverlayEditor(activeFaceOverlay.id, "eraser", "head") : createFaceOverlayDraftFromCanvas("eraser", "head")}
+                  >
+                    Erase
+                  </Button>
+                </div>
+                {activeFaceOverlay && (
+                  <div className="mt-2 space-y-1">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Overlay Local</div>
+                    <div className="grid grid-cols-3 gap-1">
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ x: -1 })}>Left</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ y: -1 })}>Up</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ x: 1 })}>Right</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ rotation: -5 })}>Rot -</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ y: 1 })}>Down</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ rotation: 5 })}>Rot +</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ scaleX: activeFaceOverlay.localTransform.scaleX * 0.95, scaleY: activeFaceOverlay.localTransform.scaleY * 0.95 })}>Scale -</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 })}>Reset</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ scaleX: activeFaceOverlay.localTransform.scaleX * 1.05, scaleY: activeFaceOverlay.localTransform.scaleY * 1.05 })}>Scale +</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

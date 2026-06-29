@@ -4,6 +4,8 @@ import { resolveTemplate } from "@/data/templates";
 import { sanitizeSvg } from "@/lib/sanitize";
 import { SKIN_PRESETS, getPresetsByStyleSet } from "@/data/skinPresets";
 import { getVisibleTemplateSlots } from "@/lib/slotVisibility";
+import { getTemplatePresentationSummary } from "@/lib/templatePresentation";
+import { itemSupportsTemplate } from "@/lib/templateCompatibility";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -135,8 +137,6 @@ export function LibraryPanel() {
   const lockedSlotIds = new Set(slotEditorState.lockedSlotIds);
   const selectedSlot = slots.find(s => s.id === editor.selectedSlotId);
   const selectedSlotAssignment = activeEntity?.slots.find(s => s.slotId === editor.selectedSlotId);
-
-  // Determine entity skeleton family
   const entityFamily = template?.skeletonFamily ?? null;
 
   // All items filtered by search + category group
@@ -166,16 +166,14 @@ export function LibraryPanel() {
               : selectedSlot.allowedCategories.some(c => item.category === c))
           : item.allowedSlots.includes(selectedSlot.id);
       const familyMatch =
-        !entityFamily ||
-        item.compatibility.skeletonFamilies.length === 0 ||
-        item.compatibility.skeletonFamilies.includes(entityFamily);
+        !template || itemSupportsTemplate(item, template);
       const speciesMatch =
         !entitySpecies ||
         item.compatibility.species.length === 0 ||
         item.compatibility.species.includes(entitySpecies);
       return slotMatch && familyMatch && speciesMatch;
     });
-  }, [selectedSlot, displayedItems, entityFamily, activeEntity?.species]);
+  }, [selectedSlot, displayedItems, template, activeEntity?.species]);
 
   // Slot grouped by category
   const slotsByCategory = slots.reduce((acc, slot) => {
@@ -252,7 +250,9 @@ export function LibraryPanel() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate text-foreground text-xs">{entity.name}</p>
-                      <p className="text-muted-foreground text-[10px] truncate">{tmpl?.name ?? entity.entityType}</p>
+                      <p className="text-muted-foreground text-[10px] truncate">
+                        {tmpl ? getTemplatePresentationSummary(tmpl) : entity.entityType}
+                      </p>
                     </div>
                     {isActive && <ChevronRight className="w-3 h-3 text-primary flex-shrink-0" />}
                     <button
@@ -303,9 +303,7 @@ export function LibraryPanel() {
                       const isHidden = hiddenSlotIds.has(slot.id);
                       const isLocked = lockedSlotIds.has(slot.id);
                       // Warn if item incompatible with entity family
-                      const hasIncompat = item && entityFamily &&
-                        item.compatibility.skeletonFamilies.length > 0 &&
-                        !item.compatibility.skeletonFamilies.includes(entityFamily);
+                      const hasIncompat = item && template && !itemSupportsTemplate(item, template);
                       return (
                         <div
                           key={slot.id}

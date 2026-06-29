@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useStore } from "@/store";
 import { resolveTemplate } from "@/data/templates";
+import { getStateMachineForTemplate } from "@/lib/animationCompatibility";
 import type { Transition } from "@/domain/types";
 
 // Layout constants
@@ -65,7 +66,7 @@ export function StateMachinePanel() {
 
   const sm = useMemo(() => {
     if (template) {
-      const byFamily = stateMachines.find(m => m.skeletonFamily === template.skeletonFamily);
+      const byFamily = getStateMachineForTemplate(template, stateMachines);
       if (byFamily) return byFamily;
     }
     return stateMachines.find(m => m.id === activeSmId) ?? stateMachines[0] ?? null;

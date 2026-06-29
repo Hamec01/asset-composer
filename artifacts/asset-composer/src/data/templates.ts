@@ -25,22 +25,22 @@ const defaultPalette: PaletteTokens = {
 const humanoidTopdownBones: Bone[] = [
   { id: "root", name: "Root", parentId: null, restPose: { tx: 0, ty: 0, rotation: 0, scaleX: 1, scaleY: 1 }, length: 10 },
   { id: "pelvis", name: "Pelvis", parentId: "root", restPose: { tx: 0, ty: -5, rotation: 0, scaleX: 1, scaleY: 1 }, length: 12 },
-  { id: "spine", name: "Spine", parentId: "pelvis", restPose: { tx: 0, ty: -18, rotation: 0, scaleX: 1, scaleY: 1 }, length: 20 },
-  { id: "chest", name: "Chest", parentId: "spine", restPose: { tx: 0, ty: -16, rotation: 0, scaleX: 1, scaleY: 1 }, length: 14 },
-  { id: "neck", name: "Neck", parentId: "chest", restPose: { tx: 0, ty: -10, rotation: 0, scaleX: 1, scaleY: 1 }, length: 6 },
-  { id: "head", name: "Head", parentId: "neck", restPose: { tx: 0, ty: -6, rotation: 0, scaleX: 1, scaleY: 1 }, length: 18 },
-  { id: "shoulder_l", name: "Shoulder L", parentId: "chest", restPose: { tx: -16, ty: -6, rotation: 0, scaleX: 1, scaleY: 1 }, length: 12 },
-  { id: "elbow_l", name: "Elbow L", parentId: "shoulder_l", restPose: { tx: -14, ty: 4, rotation: 0, scaleX: 1, scaleY: 1 }, length: 10 },
-  { id: "hand_l", name: "Hand L", parentId: "elbow_l", restPose: { tx: -10, ty: 2, rotation: 0, scaleX: 1, scaleY: 1 }, length: 6 },
-  { id: "shoulder_r", name: "Shoulder R", parentId: "chest", restPose: { tx: 16, ty: -6, rotation: 0, scaleX: 1, scaleY: 1 }, length: 12 },
-  { id: "elbow_r", name: "Elbow R", parentId: "shoulder_r", restPose: { tx: 14, ty: 4, rotation: 0, scaleX: 1, scaleY: 1 }, length: 10 },
-  { id: "hand_r", name: "Hand R", parentId: "elbow_r", restPose: { tx: 10, ty: 2, rotation: 0, scaleX: 1, scaleY: 1 }, length: 6 },
-  { id: "hip_l", name: "Hip L", parentId: "pelvis", restPose: { tx: -8, ty: 0, rotation: 0, scaleX: 1, scaleY: 1 }, length: 10 },
-  { id: "knee_l", name: "Knee L", parentId: "hip_l", restPose: { tx: -2, ty: 16, rotation: 0, scaleX: 1, scaleY: 1 }, length: 10 },
-  { id: "foot_l", name: "Foot L", parentId: "knee_l", restPose: { tx: -1, ty: 14, rotation: 0, scaleX: 1, scaleY: 1 }, length: 6 },
-  { id: "hip_r", name: "Hip R", parentId: "pelvis", restPose: { tx: 8, ty: 0, rotation: 0, scaleX: 1, scaleY: 1 }, length: 10 },
-  { id: "knee_r", name: "Knee R", parentId: "hip_r", restPose: { tx: 2, ty: 16, rotation: 0, scaleX: 1, scaleY: 1 }, length: 10 },
-  { id: "foot_r", name: "Foot R", parentId: "knee_r", restPose: { tx: 1, ty: 14, rotation: 0, scaleX: 1, scaleY: 1 }, length: 6 },
+  { id: "spine", name: "Spine", parentId: "pelvis", restPose: { tx: 0, ty: -15, rotation: 0, scaleX: 1, scaleY: 1 }, length: 18 },
+  { id: "chest", name: "Chest", parentId: "spine", restPose: { tx: 0, ty: -13, rotation: 0, scaleX: 1, scaleY: 1 }, length: 13 },
+  { id: "neck", name: "Neck", parentId: "chest", restPose: { tx: 0, ty: -8, rotation: 0, scaleX: 1, scaleY: 1 }, length: 5 },
+  { id: "head", name: "Head", parentId: "neck", restPose: { tx: 0, ty: -5, rotation: 0, scaleX: 1, scaleY: 1 }, length: 17 },
+  { id: "shoulder_l", name: "Shoulder L", parentId: "chest", restPose: { tx: -12, ty: -3, rotation: 0, scaleX: 1, scaleY: 1 }, length: 11 },
+  { id: "elbow_l", name: "Elbow L", parentId: "shoulder_l", restPose: { tx: 0, ty: 13, rotation: 8, scaleX: 1, scaleY: 1 }, length: 9 },
+  { id: "hand_l", name: "Hand L", parentId: "elbow_l", restPose: { tx: 0, ty: 10, rotation: 6, scaleX: 1, scaleY: 1 }, length: 6 },
+  { id: "shoulder_r", name: "Shoulder R", parentId: "chest", restPose: { tx: 12, ty: -3, rotation: 0, scaleX: 1, scaleY: 1 }, length: 11 },
+  { id: "elbow_r", name: "Elbow R", parentId: "shoulder_r", restPose: { tx: 0, ty: 13, rotation: -8, scaleX: 1, scaleY: 1 }, length: 9 },
+  { id: "hand_r", name: "Hand R", parentId: "elbow_r", restPose: { tx: 0, ty: 10, rotation: -6, scaleX: 1, scaleY: 1 }, length: 6 },
+  { id: "hip_l", name: "Hip L", parentId: "pelvis", restPose: { tx: -6, ty: 2, rotation: 0, scaleX: 1, scaleY: 1 }, length: 10 },
+  { id: "knee_l", name: "Knee L", parentId: "hip_l", restPose: { tx: 0, ty: 14, rotation: 3, scaleX: 1, scaleY: 1 }, length: 10 },
+  { id: "foot_l", name: "Foot L", parentId: "knee_l", restPose: { tx: 0, ty: 12, rotation: 6, scaleX: 1, scaleY: 1 }, length: 6 },
+  { id: "hip_r", name: "Hip R", parentId: "pelvis", restPose: { tx: 6, ty: 2, rotation: 0, scaleX: 1, scaleY: 1 }, length: 10 },
+  { id: "knee_r", name: "Knee R", parentId: "hip_r", restPose: { tx: 0, ty: 14, rotation: -3, scaleX: 1, scaleY: 1 }, length: 10 },
+  { id: "foot_r", name: "Foot R", parentId: "knee_r", restPose: { tx: 0, ty: 12, rotation: -6, scaleX: 1, scaleY: 1 }, length: 6 },
 ];
 
 const humanoidTopdownSlots: SlotDef[] = [
@@ -104,6 +104,31 @@ function humanoidTopdownBaseSvg(palette: PaletteTokens): string {
   <ellipse cx="64" cy="30" rx="2" ry="1.5" fill="${palette.shadow}"/>
   <!-- Mouth -->
   <path d="M60 35 Q64 38 68 35" stroke="${palette.outline}" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg>`;
+}
+
+function humanoidTopdownCleanBodyBaseSvg(palette: PaletteTokens): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Feet -->
+  <ellipse cx="56" cy="110" rx="5" ry="6" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="1.5"/>
+  <ellipse cx="72" cy="110" rx="5" ry="6" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="1.5"/>
+  <!-- Legs -->
+  <rect x="52" y="80" width="10" height="28" rx="4" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="1.5"/>
+  <rect x="66" y="80" width="10" height="28" rx="4" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="1.5"/>
+  <!-- Pelvis -->
+  <ellipse cx="64" cy="78" rx="16" ry="10" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="1.5"/>
+  <!-- Torso/Body -->
+  <rect x="48" y="52" width="32" height="28" rx="6" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="1.5"/>
+  <ellipse cx="64" cy="54" rx="15" ry="8" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="1.5"/>
+  <!-- Arms -->
+  <rect x="30" y="54" width="18" height="10" rx="4" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="1.5"/>
+  <ellipse cx="30" cy="59" rx="6" ry="5" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="1.5"/>
+  <rect x="80" y="54" width="18" height="10" rx="4" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="1.5"/>
+  <ellipse cx="98" cy="59" rx="6" ry="5" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="1.5"/>
+  <!-- Neck -->
+  <rect x="59" y="42" width="10" height="12" rx="4" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="1.5"/>
+  <!-- Clean head without facial features -->
+  <ellipse cx="64" cy="28" rx="18" ry="20" fill="${palette.skin}" stroke="${palette.outline}" stroke-width="2"/>
 </svg>`;
 }
 
@@ -296,6 +321,7 @@ function siegeStaticBaseSvg(palette: PaletteTokens): string {
 // ─── Thumbnail SVGs (simplified) ─────────────────────────────────────────────
 const thumbnails = {
   humanoid_topdown_v1: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><ellipse cx="24" cy="16" rx="10" ry="11" fill="#C89A7B"/><rect x="16" y="24" width="16" height="16" rx="4" fill="#C89A7B"/></svg>`,
+  humanoid_topdown_clean_body_v1: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><ellipse cx="24" cy="16" rx="10" ry="11" fill="#C89A7B"/><rect x="16" y="24" width="16" height="16" rx="4" fill="#C89A7B"/></svg>`,
   humanoid_side_v1: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 64"><ellipse cx="16" cy="10" rx="10" ry="11" fill="#C89A7B"/><rect x="10" y="20" width="12" height="32" rx="4" fill="#C89A7B"/></svg>`,
   quadruped_side_v1: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48"><ellipse cx="32" cy="28" rx="24" ry="14" fill="#A0896A"/><ellipse cx="14" cy="18" rx="12" ry="9" fill="#A0896A"/></svg>`,
   bird_side_v1: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48"><ellipse cx="32" cy="28" rx="20" ry="14" fill="#7A9E7E"/><ellipse cx="16" cy="16" rx="10" ry="9" fill="#C89A7B"/></svg>`,
@@ -327,103 +353,239 @@ const siegePalette: PaletteTokens = { ...defaultPalette, skin: "#8E8A80", primar
 //   shoulder_l(-16,-45)  elbow_l(-30,-41)  hand_l(-40,-39)
 //   hip_l(-8,-5)  knee_l(-10,11)  foot_l(-11,25)  (right side mirrored)
 function humanoidTopdownBoneParts(palette: PaletteTokens): BonePart[] {
-  const { skin, outline } = palette;
+  const { skin, outline, shadow } = palette;
   return [
     // ── Feet ──────────────────────────────────────────────────────────────
     {
       id: "foot_l", boneId: "foot_l", naturalWidth: 16, naturalHeight: 10,
       localX: 0, localY: 0, zOffset: -900,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -5 16 10"><ellipse cx="0" cy="0" rx="7" ry="4" fill="${skin}" stroke="${outline}" stroke-width="0.5"/><ellipse cx="0" cy="0" rx="5" ry="2.5" fill="${skin}" stroke="${outline}" stroke-width="0.3" opacity="0.5"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -5 16 10"><path d="M-5.8 -1.8 C-4.7 -3.9 -0.8 -4.8 3.5 -4.1 C6 -3.6 7.2 -2 7.1 0.1 C7 2.7 4.7 4.2 0.4 4.2 C-4.1 4.2 -6.9 2.4 -7 -0.1 C-7.1 -0.8 -6.7 -1.3 -5.8 -1.8 Z" fill="${skin}" stroke="${outline}" stroke-width="0.55"/><path d="M-3.9 1 C-1.6 1.7 1.1 1.8 3.7 1.1" stroke="${shadow}" stroke-width="0.8" opacity="0.45" fill="none"/></svg>`,
     },
     {
       id: "foot_r", boneId: "foot_r", naturalWidth: 16, naturalHeight: 10,
       localX: 0, localY: 0, zOffset: -899,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -5 16 10"><ellipse cx="0" cy="0" rx="7" ry="4" fill="${skin}" stroke="${outline}" stroke-width="0.5"/><ellipse cx="0" cy="0" rx="5" ry="2.5" fill="${skin}" stroke="${outline}" stroke-width="0.3" opacity="0.5"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -5 16 10"><path d="M-7 -0.2 C-7 -2.6 -4.6 -4.1 -0.5 -4.2 C3.9 -4.3 6.4 -2.9 7 -0.4 C7.5 2 5.3 4 1.1 4.3 C-3.6 4.7 -6.9 2.9 -7 0.4 Z" fill="${skin}" stroke="${outline}" stroke-width="0.55"/><path d="M-3.6 1.1 C-1 1.7 1.8 1.6 4.1 0.8" stroke="${shadow}" stroke-width="0.8" opacity="0.45" fill="none"/></svg>`,
     },
     // ── Knees / lower legs ────────────────────────────────────────────────
     {
       id: "knee_l", boneId: "knee_l", naturalWidth: 12, naturalHeight: 16,
       localX: 0, localY: 0, zOffset: -880,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -8 12 16"><rect x="-5" y="-7" width="10" height="14" rx="4" fill="${skin}" stroke="${outline}" stroke-width="0.6"/><ellipse cx="0" cy="-3" rx="3" ry="2" fill="${skin}" stroke="${outline}" stroke-width="0.4" opacity="0.5"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -8 12 16"><path d="M-3.8 -7 C-1.2 -7.7 1.7 -7.4 3.6 -6.1 C4.5 -5.3 4.7 -4.1 4.4 3.8 C4.1 5.9 2.7 7.2 0.4 7.6 C-1.9 8 -3.8 7.3 -4.5 5.3 C-5.2 3.1 -5.1 -5.5 -3.8 -7 Z" fill="${skin}" stroke="${outline}" stroke-width="0.6"/><ellipse cx="0" cy="0.2" rx="2.5" ry="1.5" fill="${shadow}" opacity="0.12"/></svg>`,
     },
     {
       id: "knee_r", boneId: "knee_r", naturalWidth: 12, naturalHeight: 16,
       localX: 0, localY: 0, zOffset: -879,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -8 12 16"><rect x="-5" y="-7" width="10" height="14" rx="4" fill="${skin}" stroke="${outline}" stroke-width="0.6"/><ellipse cx="0" cy="-3" rx="3" ry="2" fill="${skin}" stroke="${outline}" stroke-width="0.4" opacity="0.5"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -8 12 16"><path d="M-3.5 -7 C-0.9 -7.8 2.1 -7.3 4 -6 C4.8 -5.2 4.9 -3.9 4.5 4 C4.1 6.1 2.5 7.4 0.1 7.6 C-2.1 7.9 -3.9 7.1 -4.6 5.2 C-5.1 3.7 -4.8 -5.6 -3.5 -7 Z" fill="${skin}" stroke="${outline}" stroke-width="0.6"/><ellipse cx="0.1" cy="0.2" rx="2.5" ry="1.5" fill="${shadow}" opacity="0.12"/></svg>`,
     },
     // ── Hips / thighs ─────────────────────────────────────────────────────
     {
       id: "hip_l", boneId: "hip_l", naturalWidth: 14, naturalHeight: 18,
       localX: 0, localY: 0, zOffset: -860,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -9 14 18"><rect x="-6" y="-8" width="12" height="16" rx="5" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -9 14 18"><path d="M-4.8 -8.1 C-2.7 -9 1.3 -8.8 3.7 -7.3 C4.8 -6.3 5 -4.9 4.9 2.2 C4.7 5.8 3.1 8.1 0.7 8.8 C-2.1 9.5 -4.2 8.5 -5 5.8 C-5.5 4.3 -5.6 -6.5 -4.8 -8.1 Z" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
     },
     {
       id: "hip_r", boneId: "hip_r", naturalWidth: 14, naturalHeight: 18,
       localX: 0, localY: 0, zOffset: -859,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -9 14 18"><rect x="-6" y="-8" width="12" height="16" rx="5" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -9 14 18"><path d="M-4.4 -8.1 C-2.3 -9 1.7 -8.7 4 -7.2 C5.1 -6.1 5.2 -4.7 5 2.2 C4.8 5.9 3.3 8.2 0.8 8.8 C-1.8 9.5 -4.1 8.5 -5 5.8 C-5.5 4 -5.4 -6.4 -4.4 -8.1 Z" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
     },
     // ── Pelvis ────────────────────────────────────────────────────────────
     {
       id: "pelvis", boneId: "pelvis", naturalWidth: 24, naturalHeight: 14,
       localX: 0, localY: 0, zOffset: -840,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -7 24 14"><ellipse cx="0" cy="0" rx="11" ry="6" fill="${skin}" stroke="${outline}" stroke-width="0.7"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -7 24 14"><path d="M-8.7 -1.3 C-7.8 -4.9 -4.5 -6.6 0 -6.5 C4.7 -6.4 7.8 -4.8 8.7 -1.4 C9.6 2.2 6.6 5.1 0.2 5.6 C-6.1 6 -9.7 2.8 -8.7 -1.3 Z" fill="${skin}" stroke="${outline}" stroke-width="0.7"/><path d="M-5.8 0.1 C-2.4 1.2 2.2 1.2 5.6 0.1" stroke="${shadow}" stroke-width="0.8" opacity="0.22" fill="none"/></svg>`,
     },
     // ── Spine ─────────────────────────────────────────────────────────────
     {
       id: "spine", boneId: "spine", naturalWidth: 12, naturalHeight: 20,
       localX: 0, localY: 0, zOffset: -820,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -10 12 20"><rect x="-5" y="-9" width="10" height="18" rx="3" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -10 12 20"><path d="M-2.8 -9.1 C-1.3 -9.8 1.1 -9.7 2.7 -9 C3.7 -8.1 4 -6.7 4 6.8 C3.6 8.7 2.4 9.9 0.4 10 C-1.4 10.1 -2.8 9.2 -3.6 7.6 C-4.1 6.2 -4 -7.1 -3.4 -8.4 C-3.3 -8.7 -3 -8.9 -2.8 -9.1 Z" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
     },
     // ── Chest ─────────────────────────────────────────────────────────────
     {
-      id: "chest", boneId: "chest", naturalWidth: 28, naturalHeight: 18,
+      id: "chest", boneId: "chest", naturalWidth: 28, naturalHeight: 24,
       localX: 0, localY: 0, zOffset: -800,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -9 28 18"><rect x="-13" y="-8" width="26" height="16" rx="4" fill="${skin}" stroke="${outline}" stroke-width="0.8"/><ellipse cx="-5" cy="-2" rx="5" ry="4" fill="${skin}" stroke="${outline}" stroke-width="0.4" opacity="0.55"/><ellipse cx="5" cy="-2" rx="5" ry="4" fill="${skin}" stroke="${outline}" stroke-width="0.4" opacity="0.55"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -12 28 24"><path d="M-8.8 -10 C-4.9 -12.2 5.2 -12.1 9 -9.8 C11.4 -8.1 12.3 -5.2 11.9 3.8 C11.2 8.1 8.1 10.9 0 11.3 C-8.2 10.8 -11.1 7.8 -11.8 3.4 C-12.1 -5.1 -11.3 -8.2 -8.8 -10 Z" fill="${skin}" stroke="${outline}" stroke-width="0.8"/><path d="M0 -9 V9.5" stroke="${shadow}" stroke-width="0.75" opacity="0.16"/><path d="M-6.2 -1.2 C-2.2 0 2 0 6.1 -1.1" stroke="${shadow}" stroke-width="0.75" opacity="0.12" fill="none"/></svg>`,
     },
     // ── Shoulders / upper arms ────────────────────────────────────────────
     {
-      id: "shoulder_l", boneId: "shoulder_l", naturalWidth: 18, naturalHeight: 14,
+      id: "shoulder_l", boneId: "shoulder_l", naturalWidth: 12, naturalHeight: 20,
       localX: 0, localY: 0, zOffset: -780,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-9 -7 18 14"><rect x="-8" y="-6" width="16" height="12" rx="5" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -10 12 20"><path d="M-4.9 -7.6 C-3.4 -9.8 2 -10 4.4 -8.1 C5.5 -6.9 5.8 -5.1 5.6 2.8 C5.1 6.8 3.1 9 0 9.4 C-3 9.7 -5 7.8 -5.6 4 C-5.9 2.1 -5.8 -6.3 -4.9 -7.6 Z" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
     },
     {
-      id: "shoulder_r", boneId: "shoulder_r", naturalWidth: 18, naturalHeight: 14,
+      id: "shoulder_r", boneId: "shoulder_r", naturalWidth: 12, naturalHeight: 20,
       localX: 0, localY: 0, zOffset: -779,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-9 -7 18 14"><rect x="-8" y="-6" width="16" height="12" rx="5" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -10 12 20"><path d="M-4.4 -8.1 C-2 -10 3.5 -9.8 4.9 -7.6 C5.8 -6.3 5.9 2.1 5.6 4 C5 7.8 3 9.7 0 9.4 C-3.1 9 -5.1 6.8 -5.6 2.8 C-5.8 -5.1 -5.5 -6.9 -4.4 -8.1 Z" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
     },
     // ── Elbows / forearms ─────────────────────────────────────────────────
     {
-      id: "elbow_l", boneId: "elbow_l", naturalWidth: 16, naturalHeight: 12,
+      id: "elbow_l", boneId: "elbow_l", naturalWidth: 11, naturalHeight: 18,
       localX: 0, localY: 0, zOffset: -760,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -6 16 12"><rect x="-7" y="-5" width="14" height="10" rx="4" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-5.5 -9 11 18"><path d="M-4.2 -7.2 C-2.8 -8.8 1.6 -8.9 3.4 -7.4 C4.3 -6.4 4.6 -4.9 4.4 2.8 C4 6 2.7 8.1 0.5 8.6 C-1.9 9.1 -3.8 7.7 -4.5 4.8 C-4.9 3.1 -4.9 -5.9 -4.2 -7.2 Z" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
     },
     {
-      id: "elbow_r", boneId: "elbow_r", naturalWidth: 16, naturalHeight: 12,
+      id: "elbow_r", boneId: "elbow_r", naturalWidth: 11, naturalHeight: 18,
       localX: 0, localY: 0, zOffset: -759,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -6 16 12"><rect x="-7" y="-5" width="14" height="10" rx="4" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-5.5 -9 11 18"><path d="M-3.4 -7.4 C-1.6 -8.9 2.8 -8.8 4.2 -7.2 C4.9 -5.9 4.9 3.1 4.5 4.8 C3.8 7.7 1.9 9.1 -0.5 8.6 C-2.7 8.1 -4 6 -4.4 2.8 C-4.6 -4.9 -4.3 -6.4 -3.4 -7.4 Z" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
     },
     // ── Hands ─────────────────────────────────────────────────────────────
     {
       id: "hand_l", boneId: "hand_l", naturalWidth: 14, naturalHeight: 10,
       localX: 0, localY: 0, zOffset: -740,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -5 14 10"><ellipse cx="0" cy="0" rx="6" ry="4" fill="${skin}" stroke="${outline}" stroke-width="0.5"/><circle cx="-4" cy="-3" r="1.5" fill="${skin}" stroke="${outline}" stroke-width="0.4"/><circle cx="-1" cy="-4" r="1.5" fill="${skin}" stroke="${outline}" stroke-width="0.4"/><circle cx="2" cy="-4" r="1.5" fill="${skin}" stroke="${outline}" stroke-width="0.4"/><circle cx="5" cy="-3" r="1.5" fill="${skin}" stroke="${outline}" stroke-width="0.4"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -5 14 10"><ellipse cx="0" cy="0.8" rx="4.6" ry="3.6" fill="${skin}" stroke="${outline}" stroke-width="0.5"/><circle cx="-3.2" cy="-2.2" r="0.9" fill="${skin}" stroke="${outline}" stroke-width="0.28"/><circle cx="-1" cy="-3" r="0.9" fill="${skin}" stroke="${outline}" stroke-width="0.28"/><circle cx="1.2" cy="-3" r="0.9" fill="${skin}" stroke="${outline}" stroke-width="0.28"/><circle cx="3.4" cy="-2.2" r="0.85" fill="${skin}" stroke="${outline}" stroke-width="0.28"/></svg>`,
     },
     {
       id: "hand_r", boneId: "hand_r", naturalWidth: 14, naturalHeight: 10,
       localX: 0, localY: 0, zOffset: -739,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -5 14 10"><ellipse cx="0" cy="0" rx="6" ry="4" fill="${skin}" stroke="${outline}" stroke-width="0.5"/><circle cx="-4" cy="-3" r="1.5" fill="${skin}" stroke="${outline}" stroke-width="0.4"/><circle cx="-1" cy="-4" r="1.5" fill="${skin}" stroke="${outline}" stroke-width="0.4"/><circle cx="2" cy="-4" r="1.5" fill="${skin}" stroke="${outline}" stroke-width="0.4"/><circle cx="5" cy="-3" r="1.5" fill="${skin}" stroke="${outline}" stroke-width="0.4"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -5 14 10"><ellipse cx="0" cy="0.8" rx="4.6" ry="3.6" fill="${skin}" stroke="${outline}" stroke-width="0.5"/><circle cx="-3.4" cy="-2.2" r="0.85" fill="${skin}" stroke="${outline}" stroke-width="0.28"/><circle cx="-1.2" cy="-3" r="0.9" fill="${skin}" stroke="${outline}" stroke-width="0.28"/><circle cx="1" cy="-3" r="0.9" fill="${skin}" stroke="${outline}" stroke-width="0.28"/><circle cx="3.2" cy="-2.2" r="0.9" fill="${skin}" stroke="${outline}" stroke-width="0.28"/></svg>`,
     },
     // ── Neck ──────────────────────────────────────────────────────────────
     {
       id: "neck", boneId: "neck", naturalWidth: 10, naturalHeight: 10,
       localX: 0, localY: 0, zOffset: -720,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-5 -5 10 10"><ellipse cx="0" cy="0" rx="4" ry="5" fill="${skin}" stroke="${outline}" stroke-width="0.6"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-5 -5 10 10"><rect x="-2.4" y="-4.2" width="4.8" height="8.4" rx="2" fill="${skin}" stroke="${outline}" stroke-width="0.55"/></svg>`,
     },
     // ── Head ──────────────────────────────────────────────────────────────
     {
       id: "head", boneId: "head", naturalWidth: 28, naturalHeight: 28,
       localX: 0, localY: 0, zOffset: -700,
-      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 28 28"><ellipse cx="0" cy="0" rx="12" ry="13" fill="${skin}" stroke="${outline}" stroke-width="0.8"/><ellipse cx="-4" cy="-3" rx="2.5" ry="3" fill="#2B1D18"/><ellipse cx="4" cy="-3" rx="2.5" ry="3" fill="#2B1D18"/><circle cx="-3.2" cy="-3.8" r="0.8" fill="white"/><circle cx="4.8" cy="-3.8" r="0.8" fill="white"/><ellipse cx="0" cy="3" rx="1.5" ry="1" fill="#00000033"/><path d="M-3 7 Q0 9 3 7" stroke="${outline}" stroke-width="0.7" fill="none" stroke-linecap="round"/></svg>`,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -14 28 28"><path d="M-9.8 -9.1 C-6.9 -12.5 6.9 -12.5 9.8 -9.1 C12.7 -6 12.6 6.3 9.4 9.8 C6.4 12.8 -6.1 12.9 -9.2 9.8 C-12.5 6.4 -12.6 -5.8 -9.8 -9.1 Z" fill="${skin}" stroke="${outline}" stroke-width="0.8"/><path d="M-7.2 -8.4 C-3.8 -10.8 4.4 -10.8 8 -8.4" stroke="${shadow}" stroke-width="0.85" opacity="0.12" fill="none"/></svg>`,
+    },
+  ];
+}
+
+function humanoidSideBoneParts(palette: PaletteTokens): BonePart[] {
+  const { skin, outline, primaryCloth, secondaryCloth, accent, shadow } = palette;
+  return [
+    {
+      id: "foot_l_side", boneId: "foot_l", naturalWidth: 24, naturalHeight: 12,
+      localX: 6, localY: 1, zOffset: -900,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -6 24 12">
+        <path d="M-9 -2 Q-4 -5 2 -4 Q8 -3 10 1 Q8 4 0 4 Q-8 4 -10 1 Z" fill="${secondaryCloth}" stroke="${outline}" stroke-width="0.8"/>
+        <path d="M-8 1 Q-4 3 0 3" stroke="${accent}" stroke-width="0.8" fill="none" opacity="0.8"/>
+      </svg>`,
+    },
+    {
+      id: "foot_r_side", boneId: "foot_r", naturalWidth: 26, naturalHeight: 13,
+      localX: 8, localY: 1, zOffset: -890,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-13 -6.5 26 13">
+        <path d="M-10 -2 Q-4 -5 4 -4 Q10 -3 12 2 Q9 5 1 5 Q-8 5 -11 2 Z" fill="${secondaryCloth}" stroke="${outline}" stroke-width="0.9"/>
+        <path d="M-8 2 Q-1 4 5 3" stroke="${accent}" stroke-width="0.9" fill="none" opacity="0.85"/>
+      </svg>`,
+    },
+    {
+      id: "shin_l_side", boneId: "knee_l", naturalWidth: 14, naturalHeight: 24,
+      localX: -1, localY: 10, zOffset: -880,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -12 14 24">
+        <rect x="-5" y="-10" width="10" height="20" rx="4" fill="${skin}" stroke="${outline}" stroke-width="0.7"/>
+        <path d="M-4 8 H4" stroke="${shadow}" stroke-width="2" opacity="0.75"/>
+      </svg>`,
+    },
+    {
+      id: "shin_r_side", boneId: "knee_r", naturalWidth: 15, naturalHeight: 25,
+      localX: 1, localY: 10, zOffset: -870,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7.5 -12.5 15 25">
+        <rect x="-5.5" y="-10.5" width="11" height="21" rx="4.5" fill="${skin}" stroke="${outline}" stroke-width="0.75"/>
+        <path d="M-4 8.5 H4" stroke="${shadow}" stroke-width="2" opacity="0.75"/>
+      </svg>`,
+    },
+    {
+      id: "thigh_l_side", boneId: "hip_l", naturalWidth: 16, naturalHeight: 28,
+      localX: -1, localY: 12, zOffset: -860,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -14 16 28">
+        <path d="M-6 -11 H4 Q7 -6 6 2 L4 11 Q-1 14 -5 10 L-6 -10 Z" fill="${skin}" stroke="${outline}" stroke-width="0.7"/>
+      </svg>`,
+    },
+    {
+      id: "thigh_r_side", boneId: "hip_r", naturalWidth: 18, naturalHeight: 30,
+      localX: 2, localY: 12, zOffset: -850,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-9 -15 18 30">
+        <path d="M-6 -12 H5 Q8 -9 8 -2 L7 11 Q3 15 -4 12 L-6 -11 Z" fill="${skin}" stroke="${outline}" stroke-width="0.8"/>
+      </svg>`,
+    },
+    {
+      id: "pelvis_side", boneId: "pelvis", naturalWidth: 24, naturalHeight: 18,
+      localX: 4, localY: 8, zOffset: -840,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -9 24 18">
+        <ellipse cx="0" cy="0" rx="10" ry="7" fill="${secondaryCloth}" stroke="${outline}" stroke-width="0.9"/>
+        <path d="M-6 -5 H6" stroke="${accent}" stroke-width="1" opacity="0.8"/>
+      </svg>`,
+    },
+    {
+      id: "spine_side", boneId: "spine", naturalWidth: 18, naturalHeight: 22,
+      localX: 3, localY: -3, zOffset: -830,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-9 -11 18 22">
+        <rect x="-6" y="-10" width="12" height="20" rx="4" fill="${primaryCloth}" stroke="${outline}" stroke-width="0.8"/>
+      </svg>`,
+    },
+    {
+      id: "chest_side", boneId: "chest", naturalWidth: 30, naturalHeight: 34,
+      localX: 5, localY: 3, zOffset: -820,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -17 30 34">
+        <path d="M-10 -13 H8 Q12 -11 12 -6 V11 Q11 15 6 16 H-6 Q-12 15 -12 10 V-8 Q-11 -12 -10 -13 Z" fill="${primaryCloth}" stroke="${outline}" stroke-width="0.9"/>
+        <path d="M-8 -9 Q0 -6 9 -9" stroke="${secondaryCloth}" stroke-width="1.2" fill="none" opacity="0.9"/>
+        <circle cx="2" cy="-4" r="2.4" fill="${accent}" stroke="${outline}" stroke-width="0.5"/>
+      </svg>`,
+    },
+    {
+      id: "upper_arm_l_side", boneId: "shoulder_l", naturalWidth: 18, naturalHeight: 11,
+      localX: -8, localY: 2, zOffset: -810,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-9 -5.5 18 11">
+        <rect x="-8" y="-4" width="15" height="8" rx="4" fill="${skin}" stroke="${outline}" stroke-width="0.7"/>
+      </svg>`,
+    },
+    {
+      id: "forearm_l_side", boneId: "elbow_l", naturalWidth: 16, naturalHeight: 10,
+      localX: -6, localY: 1, zOffset: -800,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -5 16 10">
+        <rect x="-7" y="-3.5" width="14" height="7" rx="3.5" fill="${skin}" stroke="${outline}" stroke-width="0.7"/>
+      </svg>`,
+    },
+    {
+      id: "hand_l_side", boneId: "hand_l", naturalWidth: 11, naturalHeight: 10,
+      localX: -2, localY: 0, zOffset: -790,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-5.5 -5 11 10">
+        <path d="M-3 -3 Q1 -5 3 -2 Q5 1 2 4 Q-2 5 -4 2 Q-5 -1 -3 -3 Z" fill="${skin}" stroke="${outline}" stroke-width="0.7"/>
+      </svg>`,
+    },
+    {
+      id: "upper_arm_r_side", boneId: "shoulder_r", naturalWidth: 22, naturalHeight: 13,
+      localX: 9, localY: 2, zOffset: -780,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-11 -6.5 22 13">
+        <rect x="-10" y="-5" width="20" height="10" rx="5" fill="${skin}" stroke="${outline}" stroke-width="0.8"/>
+      </svg>`,
+    },
+    {
+      id: "forearm_r_side", boneId: "elbow_r", naturalWidth: 18, naturalHeight: 11,
+      localX: 7, localY: 1, zOffset: -770,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-9 -5.5 18 11">
+        <rect x="-8" y="-4" width="16" height="8" rx="4" fill="${skin}" stroke="${outline}" stroke-width="0.8"/>
+      </svg>`,
+    },
+    {
+      id: "hand_r_side", boneId: "hand_r", naturalWidth: 12, naturalHeight: 11,
+      localX: 3, localY: 0, zOffset: -760,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -5.5 12 11">
+        <path d="M-3 -3 Q1 -5 4 -2 Q6 1 3 4 Q-1 5 -4 2 Q-6 -1 -3 -3 Z" fill="${skin}" stroke="${outline}" stroke-width="0.8"/>
+      </svg>`,
+    },
+    {
+      id: "neck_side", boneId: "neck", naturalWidth: 12, naturalHeight: 12,
+      localX: 2, localY: 0, zOffset: -720,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -6 12 12">
+        <rect x="-3.5" y="-5" width="7" height="10" rx="3" fill="${skin}" stroke="${outline}" stroke-width="0.7"/>
+      </svg>`,
+    },
+    {
+      id: "head_side", boneId: "head", naturalWidth: 34, naturalHeight: 36,
+      localX: 5, localY: 0, zOffset: -700,
+      svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-17 -18 34 36">
+        <path d="M-10 -12 Q-3 -16 7 -14 Q13 -12 15 -7 Q16 1 14 8 Q11 15 2 16 Q-7 16 -11 10 Q-14 5 -14 -2 Q-14 -9 -10 -12 Z" fill="${skin}" stroke="${outline}" stroke-width="1"/>
+        <path d="M-10 -10 Q-4 -16 8 -13 Q13 -11 14 -8 Q8 -7 4 -6 Q-2 -6 -10 -10 Z" fill="${secondaryCloth}" opacity="0.75"/>
+        <ellipse cx="4" cy="-3" rx="2.1" ry="2.7" fill="#2B1D18"/>
+        <circle cx="4.8" cy="-4" r="0.7" fill="#FFFFFF"/>
+        <path d="M7 2 Q10 1 8 5" stroke="${outline}" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+      </svg>`,
     },
   ];
 }
@@ -435,6 +597,11 @@ export const TEMPLATES: Template[] = [
     description: "Isometric/top-down humanoid character. Ideal for RPGs, dungeon crawlers, and strategy games.",
     skeletonFamily: "humanoid_topdown_v1",
     viewProfile: "topdown_45",
+    rigFamilyId: "biped_directional_v1",
+    defaultFacing: "south_east",
+    views: {
+      south_east: { key: "south_east", viewProfile: "topdown_45", thumbnailSvg: thumbnails.humanoid_topdown_v1 },
+    },
     entityTypes: ["character", "monster"],
     bones: humanoidTopdownBones,
     slots: humanoidTopdownSlots,
@@ -466,11 +633,57 @@ export const TEMPLATES: Template[] = [
     thumbnailSvg: thumbnails.humanoid_topdown_v1,
   },
   {
+    id: "humanoid_topdown_clean_body_v1",
+    name: "Humanoid — Top-Down Clean Body",
+    description: "Top-down humanoid mannequin on the same skeleton contract as humanoid_topdown_v1, with a clean body presentation for authoring armor, hair, and face parts.",
+    skeletonFamily: "humanoid_topdown_v1",
+    viewProfile: "topdown_45",
+    rigFamilyId: "biped_directional_v1",
+    defaultFacing: "south_east",
+    views: {
+      south_east: { key: "south_east", viewProfile: "topdown_45", thumbnailSvg: thumbnails.humanoid_topdown_clean_body_v1 },
+    },
+    entityTypes: ["character", "monster"],
+    bones: humanoidTopdownBones,
+    slots: humanoidTopdownSlots,
+    anchors: {
+      hand_r_weapon: { id: "hand_r_weapon", boneId: "hand_r", offsetX: 4, offsetY: 0, rotation: 0 },
+      hand_l_weapon: { id: "hand_l_weapon", boneId: "hand_l", offsetX: -4, offsetY: 0, rotation: 0 },
+      back_cloak:    { id: "back_cloak",    boneId: "spine",  offsetX: 0, offsetY: 0, rotation: 0 },
+      head_crown:    { id: "head_crown",    boneId: "head",   offsetX: 0, offsetY: -14, rotation: 0 },
+      head_center:   { id: "head_center",   boneId: "head",   offsetX: 0, offsetY: 0,   rotation: 0 },
+      hair_top:      { id: "hair_top",      boneId: "head",   offsetX: 0, offsetY: -11, rotation: 0 },
+      forehead:      { id: "forehead",      boneId: "head",   offsetX: 0, offsetY: -7,  rotation: 0 },
+      face_center:   { id: "face_center",   boneId: "head",   offsetX: 0, offsetY: -2,  rotation: 0 },
+      ear_l:         { id: "ear_l",         boneId: "head",   offsetX: -11, offsetY: -4, rotation: 0 },
+      ear_r:         { id: "ear_r",         boneId: "head",   offsetX:  11, offsetY: -4, rotation: 0 },
+      beard:         { id: "beard",         boneId: "head",   offsetX: 0, offsetY: 7,   rotation: 0 },
+      neck_top:      { id: "neck_top",      boneId: "head",   offsetX: 0, offsetY: 12,  rotation: 0 },
+    },
+    paletteTokens: defaultPalette,
+    baseBodyLayers: [{
+      id: "base_clean_body",
+      styleSetId: null,
+      svgData: humanoidTopdownCleanBodyBaseSvg(defaultPalette),
+      paletteChannels: ["skin", "outline", "shadow"],
+      zOffset: 0,
+    }],
+    boneParts: humanoidTopdownBoneParts(defaultPalette),
+    previewWidth: 128,
+    previewHeight: 128,
+    thumbnailSvg: thumbnails.humanoid_topdown_clean_body_v1,
+  },
+  {
     id: "humanoid_side_v1",
     name: "Humanoid — Side View",
     description: "Side-scrolling humanoid. Perfect for platformers, farm games, and action RPGs.",
     skeletonFamily: "humanoid_side_v1",
     viewProfile: "side_view",
+    rigFamilyId: "biped_profile_v1",
+    defaultFacing: "east",
+    views: {
+      east: { key: "east", viewProfile: "side_view", thumbnailSvg: thumbnails.humanoid_side_v1 },
+    },
     entityTypes: ["character", "monster"],
     bones: humanoidTopdownBones,
     slots: humanoidTopdownSlots.map(s => ({ ...s, id: s.id.replace("slot_", "side_slot_") })),
@@ -500,11 +713,56 @@ export const TEMPLATES: Template[] = [
     thumbnailSvg: thumbnails.humanoid_side_v1,
   },
   {
+    id: "biped_profile_base_v1",
+    name: "Biped Profile вЂ” Base",
+    description: "Production-safe profile humanoid family entrypoint. Uses the proven side-view runtime while we grow the next-generation RPG pipeline.",
+    skeletonFamily: "humanoid_side_v1",
+    viewProfile: "side_view",
+    rigFamilyId: "biped_profile_v1",
+    defaultFacing: "east",
+    views: {
+      east: { key: "east", viewProfile: "side_view", thumbnailSvg: thumbnails.humanoid_side_v1 },
+    },
+    entityTypes: ["character"],
+    bones: humanoidTopdownBones,
+    slots: humanoidTopdownSlots.map(s => ({ ...s, id: s.id.replace("slot_", "side_slot_") })),
+    anchors: {
+      hand_r_weapon: { id: "hand_r_weapon", boneId: "hand_r", offsetX: 6, offsetY: 0, rotation: -20 },
+      hand_l_weapon: { id: "hand_l_weapon", boneId: "hand_l", offsetX: 6, offsetY: 0, rotation: 20 },
+      back_cloak:    { id: "back_cloak",    boneId: "spine",  offsetX: -6, offsetY: 0, rotation: 0 },
+      head_center:   { id: "head_center",   boneId: "head",   offsetX: 0, offsetY: 0,   rotation: 0 },
+      hair_top:      { id: "hair_top",      boneId: "head",   offsetX: 0, offsetY: -11, rotation: 0 },
+      forehead:      { id: "forehead",      boneId: "head",   offsetX: 0, offsetY: -7,  rotation: 0 },
+      face_center:   { id: "face_center",   boneId: "head",   offsetX: 0, offsetY: -2,  rotation: 0 },
+      ear_l:         { id: "ear_l",         boneId: "head",   offsetX: -11, offsetY: -4, rotation: 0 },
+      ear_r:         { id: "ear_r",         boneId: "head",   offsetX:  11, offsetY: -4, rotation: 0 },
+      beard:         { id: "beard",         boneId: "head",   offsetX: 0, offsetY: 7,   rotation: 0 },
+      neck_top:      { id: "neck_top",      boneId: "head",   offsetX: 0, offsetY: 12,  rotation: 0 },
+    },
+    paletteTokens: defaultPalette,
+    baseBodyLayers: [{
+      id: "base_biped_profile_base",
+      styleSetId: null,
+      svgData: humanoidSideBaseSvg(defaultPalette),
+      paletteChannels: ["skin", "outline", "shadow"],
+      zOffset: 0,
+    }],
+    boneParts: humanoidSideBoneParts(defaultPalette),
+    previewWidth: 128,
+    previewHeight: 192,
+    thumbnailSvg: thumbnails.humanoid_side_v1,
+  },
+  {
     id: "quadruped_side_v1",
     name: "Quadruped — Side View",
     description: "Four-legged animals: horses, wolves, cows, boars, dogs. Supports mounts, mobs, and farm animals.",
     skeletonFamily: "quadruped_side_v1",
     viewProfile: "side_view",
+    rigFamilyId: "quadruped_profile_v1",
+    defaultFacing: "east",
+    views: {
+      east: { key: "east", viewProfile: "side_view", thumbnailSvg: thumbnails.quadruped_side_v1 },
+    },
     entityTypes: ["animal"],
     bones: [
       { id: "root", name: "Root", parentId: null, restPose: { tx: 0, ty: 0, rotation: 0, scaleX: 1, scaleY: 1 }, length: 10 },
@@ -552,6 +810,10 @@ export const TEMPLATES: Template[] = [
     description: "Winged creatures: ravens, eagles, parrots, fantasy birds. Supports mounted and wild variants.",
     skeletonFamily: "bird_side_v1",
     viewProfile: "side_view",
+    defaultFacing: "east",
+    views: {
+      east: { key: "east", viewProfile: "side_view", thumbnailSvg: thumbnails.bird_side_v1 },
+    },
     entityTypes: ["animal"],
     bones: [
       { id: "root", name: "Root", parentId: null, restPose: { tx: 0, ty: 0, rotation: 0, scaleX: 1, scaleY: 1 }, length: 8 },
@@ -596,6 +858,11 @@ export const TEMPLATES: Template[] = [
     description: "Large bipedal monsters: orcs, trolls, demons, undead knights. Heavier proportions, claws, fangs.",
     skeletonFamily: "humanoid_monster_v1",
     viewProfile: "topdown_45",
+    rigFamilyId: "biped_directional_v1",
+    defaultFacing: "south_east",
+    views: {
+      south_east: { key: "south_east", viewProfile: "topdown_45", thumbnailSvg: thumbnails.humanoid_monster_v1 },
+    },
     entityTypes: ["monster"],
     bones: humanoidTopdownBones.map(b => ({
       ...b,
@@ -631,6 +898,10 @@ export const TEMPLATES: Template[] = [
     description: "Catapults, chests, barrels, trees, buildings. Non-animated or simple idle animations.",
     skeletonFamily: "siege_static_v1",
     viewProfile: "isometric_34",
+    defaultFacing: "south_east",
+    views: {
+      south_east: { key: "south_east", viewProfile: "isometric_34", thumbnailSvg: thumbnails.siege_static_v1 },
+    },
     entityTypes: ["static_object"],
     bones: [
       { id: "root", name: "Root", parentId: null, restPose: { tx: 0, ty: 0, rotation: 0, scaleX: 1, scaleY: 1 }, length: 10 },
@@ -669,7 +940,15 @@ export function cloneTemplates(): Template[] {
 
 const REFRESHED_BUILTIN_TEMPLATE_IDS = new Set([
   "humanoid_topdown_v1",
+  "humanoid_topdown_clean_body_v1",
+  "biped_profile_base_v1",
 ]);
+
+const TEMPLATE_PRIORITY_IDS = [
+  "biped_profile_base_v1",
+  "humanoid_topdown_clean_body_v1",
+  "humanoid_topdown_v1",
+];
 
 function cloneTemplate(template: Template): Template {
   if (typeof globalThis.structuredClone === "function") {
@@ -712,7 +991,18 @@ export function getTemplateById(id: string): Template | undefined {
 }
 
 export function getTemplatesForEntityType(type: string): Template[] {
-  return TEMPLATES.filter(t => t.entityTypes.includes(type as any));
+  const priority = new Map(TEMPLATE_PRIORITY_IDS.map((id, index) => [id, index]));
+  return TEMPLATES
+    .filter(t => t.entityTypes.includes(type as any))
+    .slice()
+    .sort((a, b) => {
+      const aPriority = priority.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+      const bPriority = priority.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+      return a.name.localeCompare(b.name);
+    });
 }
 
 /**
