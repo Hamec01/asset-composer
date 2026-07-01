@@ -78,7 +78,7 @@ async function prerasterizeAll(
   for (const entity of entities) {
     const template = findTemplate(entity.templateId);
     if (!template) continue;
-    const scene = evaluateScene(entity, template, evaluateRestSkeleton(template.bones, entity.bodyMorphs), items, useStore.getState().project.itemFitProfiles);
+    const scene = evaluateScene(entity, template, evaluateRestSkeleton(template.bones, entity.bodyMorphs, entity.poseOverrides), items, useStore.getState().project.itemFitProfiles);
     for (const visual of scene.visuals) {
       const key = `visual:${entity.id}:${visual.id}`;
       if (cache[key]) continue;

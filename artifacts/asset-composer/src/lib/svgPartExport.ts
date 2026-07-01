@@ -63,7 +63,7 @@ export async function buildSvgPartExportFiles(
     const scene = evaluateScene(
       entity,
       template,
-      evaluateRestSkeleton(template.bones, entity.bodyMorphs),
+      evaluateRestSkeleton(template.bones, entity.bodyMorphs, entity.poseOverrides),
       items,
       itemFitProfiles,
     );

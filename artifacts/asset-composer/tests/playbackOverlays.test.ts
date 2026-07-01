@@ -44,4 +44,25 @@ describe("playback overlay selection", () => {
     expect(nextState.animPlayback.playing).toBe(true);
     expect(nextState.animPlayback.timeMs).toBe(0);
   });
+
+  it("resets volatile authoring ui state when loading a saved project", () => {
+    const store = useStore.getState();
+    store.createEntity("character", "humanoid_topdown_v1", "Author Hero");
+
+    const savedProject = structuredClone(useStore.getState().project) as Project;
+    savedProject.editorMeta.activeAuthoringMode = "sprite-editor";
+    savedProject.editorMeta.activeFaceCanvasOverlayId = "overlay-1";
+    savedProject.editorMeta.activeFaceCanvasTool = "pencil";
+    savedProject.editorMeta.activeFaceCanvasFocusMode = "head";
+    savedProject.editorMeta.activeSpriteDocumentId = "doc-1";
+
+    useStore.getState().loadProject(savedProject);
+
+    const nextProject = useStore.getState().project;
+    expect(nextProject.editorMeta.activeAuthoringMode).toBeNull();
+    expect(nextProject.editorMeta.activeFaceCanvasOverlayId).toBeNull();
+    expect(nextProject.editorMeta.activeFaceCanvasTool).toBeNull();
+    expect(nextProject.editorMeta.activeFaceCanvasFocusMode).toBeNull();
+    expect(nextProject.editorMeta.activeSpriteDocumentId).toBeNull();
+  });
 });

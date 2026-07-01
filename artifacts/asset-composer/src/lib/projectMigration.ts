@@ -29,6 +29,7 @@ const DEFAULT_BODY_AUTHORING = {
   activeSlotId: null,
   intent: "morph",
   viewportMode: "focus_region",
+  activePoseBoneId: null,
   regionPresetIds: {},
 };
 
@@ -235,6 +236,21 @@ function normalizeV2Project(raw: unknown): unknown {
           },
         },
         bodyMorphs: { ...DEFAULT_BODY_MORPHS, ...(e.bodyMorphs as Record<string, unknown> ?? {}) },
+        poseOverrides: Object.fromEntries(
+          Object.entries((e.poseOverrides as Record<string, unknown> | undefined) ?? {})
+            .map(([boneId, value]) => {
+              const transform = value && typeof value === "object" && !Array.isArray(value)
+                ? value as Record<string, unknown>
+                : {};
+              return [boneId, {
+                tx: Number(transform.tx ?? 0),
+                ty: Number(transform.ty ?? 0),
+                rotation: Number(transform.rotation ?? 0),
+                scaleX: Number(transform.scaleX ?? 1),
+                scaleY: Number(transform.scaleY ?? 1),
+              }];
+            }),
+        ),
         faceCustomization: {
           ...DEFAULT_FACE_CUSTOMIZATION,
           ...(e.faceCustomization as Record<string, unknown> ?? {}),

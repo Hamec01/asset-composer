@@ -7,12 +7,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { resolveTemplate } from "@/data/templates";
 import { renderFrameToCanvas } from "@/lib/frameRenderer";
 import { sanitizeSvg } from "@/lib/sanitize";
@@ -38,6 +36,7 @@ import type {
   BodyAuthoringViewportMode,
   BodyMorphRegionId,
   BodyMorphValues,
+  BoneTransform,
   FaceCanvasFocusMode,
   FaceCustomization,
   FaceFeatureKey,
@@ -190,6 +189,44 @@ const BODY_QUICK_ACTIONS: Record<BodyMorphRegionId, Array<{ id: string; label: s
     { id: "global_tall", label: "Tall", values: { overallHeightScale: 1.1, legLength: 1.08, torsoHeight: 1.04 } },
   ],
 };
+
+const BODY_POSE_PRESETS: Array<{
+  id: string;
+  label: string;
+  pose: Partial<Record<string, Partial<BoneTransform>>>;
+}> = [
+  {
+    id: "neutral_reset",
+    label: "Neutral",
+    pose: {},
+  },
+  {
+    id: "quarter_turn",
+    label: "3/4 Turn",
+    pose: {
+      root: { rotation: -10 },
+      chest: { rotation: -8 },
+      head: { rotation: 10 },
+      shoulder_l: { rotation: -18, tx: -3 },
+      shoulder_r: { rotation: -6, tx: 2 },
+      hip_l: { rotation: 8, tx: -2 },
+      hip_r: { rotation: -10, tx: 2 },
+    },
+  },
+  {
+    id: "combat_ready",
+    label: "Combat",
+    pose: {
+      chest: { rotation: -6, ty: -1 },
+      shoulder_l: { rotation: -26, ty: -1 },
+      shoulder_r: { rotation: 26, ty: -1 },
+      elbow_l: { rotation: 24 },
+      elbow_r: { rotation: -24 },
+      hip_l: { rotation: 8 },
+      hip_r: { rotation: -8 },
+    },
+  },
+];
 
 const FACE_WORKSPACE_LABELS: Record<keyof Omit<FaceCustomization, "overlays">, string> = {
   eyes: "Eyes",
@@ -442,6 +479,32 @@ function NumericInput({
   );
 }
 
+function NativeSelect({
+  value,
+  onValueChange,
+  options,
+  className = "",
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  className?: string;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={event => onValueChange(event.target.value)}
+      className={`flex w-full rounded-md border border-border bg-background px-3 py-2 text-[11px] text-foreground outline-none focus:ring-1 focus:ring-ring ${className}`.trim()}
+    >
+      {options.map(option => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function cloneSpriteEditorDocument(document: SpriteEditorDocument): SpriteEditorDocument {
   return structuredClone(document);
 }
@@ -644,6 +707,8 @@ export function AuthoringPanel() {
   const setEntityBodyMorphPreset = useStore(s => s.setEntityBodyMorphPreset);
   const setEntityBodyAuthoringState = useStore(s => s.setEntityBodyAuthoringState);
   const setEntityBodyAuthoringRegionPreset = useStore(s => s.setEntityBodyAuthoringRegionPreset);
+  const setEntityPoseOverride = useStore(s => s.setEntityPoseOverride);
+  const resetEntityPoseOverride = useStore(s => s.resetEntityPoseOverride);
   const setEntityFaceFeature = useStore(s => s.setEntityFaceFeature);
   const setEntityFaceFeatureTransform = useStore(s => s.setEntityFaceFeatureTransform);
   const updateProjectItemPart = useStore(s => s.updateProjectItemPart);
@@ -654,8 +719,10 @@ export function AuthoringPanel() {
   const getActiveEntity = useStore(s => s.getActiveEntity);
 
   const activeEntity = getActiveEntity();
+  const activeTemplate = activeEntity ? resolveTemplate(project, activeEntity.templateId) : undefined;
   const faceOverlays = activeEntity?.faceCustomization?.overlays ?? [];
   const bodyMorphs = activeEntity?.bodyMorphs ?? DEFAULT_BODY_MORPHS;
+  const poseOverrides = activeEntity?.poseOverrides ?? {};
   const faceCustomization = activeEntity?.faceCustomization ?? null;
   const bodyAuthoring = activeEntity?.bodyAuthoring ?? {
     focusRegion: "global" as BodyMorphRegionId,
@@ -663,6 +730,7 @@ export function AuthoringPanel() {
     activeSlotId: null as string | null,
     intent: "morph" as BodyAuthoringIntent,
     viewportMode: "focus_region" as BodyAuthoringViewportMode,
+    activePoseBoneId: null as string | null,
     regionPresetIds: {},
   };
   const faceAuthoring = activeEntity?.faceAuthoring ?? {
@@ -702,16 +770,34 @@ export function AuthoringPanel() {
   const [toolStrokeWidth, setToolStrokeWidth] = useState(1.5);
 
   const itemPartSelection = editor.selection.kind === "item-part" ? editor.selection : null;
+  const equippedItemSelection = editor.selection.kind === "equipped-item" ? editor.selection : null;
   const entityVisualSelection = editor.selection.kind === "entity-visual" ? editor.selection : null;
   const selectedAssignment = activeEntity?.slots.find(slot =>
-    itemPartSelection ? slot.slotId === itemPartSelection.slotId : false,
+    itemPartSelection
+      ? slot.slotId === itemPartSelection.slotId
+      : equippedItemSelection
+        ? slot.slotId === equippedItemSelection.slotId
+        : editor.selectedSlotId
+          ? slot.slotId === editor.selectedSlotId
+          : false,
   );
-  const selectedItem = itemPartSelection && selectedAssignment?.itemId
-    ? project.items.find(item => item.id === selectedAssignment.itemId)
+  const selectedItemId = itemPartSelection?.itemId ?? equippedItemSelection?.itemId ?? selectedAssignment?.itemId ?? null;
+  const selectedItem = selectedItemId
+    ? project.items.find(item => item.id === selectedItemId)
     : undefined;
   const selectedPart = itemPartSelection && selectedItem?.parts
     ? selectedItem.parts.find(part => part.id === itemPartSelection.partId)
     : undefined;
+  const activePoseBoneId = bodyAuthoring.activePoseBoneId ?? bodyAuthoring.activeBoneId ?? activeTemplate?.bones[0]?.id ?? null;
+  const activePoseOverride: BoneTransform = activePoseBoneId
+    ? {
+        tx: poseOverrides[activePoseBoneId]?.tx ?? 0,
+        ty: poseOverrides[activePoseBoneId]?.ty ?? 0,
+        rotation: poseOverrides[activePoseBoneId]?.rotation ?? 0,
+        scaleX: poseOverrides[activePoseBoneId]?.scaleX ?? 1,
+        scaleY: poseOverrides[activePoseBoneId]?.scaleY ?? 1,
+      }
+    : { tx: 0, ty: 0, rotation: 0, scaleX: 1, scaleY: 1 };
   const selectedVisual = entityVisualSelection && activeEntity?.visuals
     ? activeEntity.visuals.find(visual => visual.id === entityVisualSelection.visualId)
     : undefined;
@@ -1333,10 +1419,29 @@ export function AuthoringPanel() {
       activeSlotId: string | null;
       intent: BodyAuthoringIntent;
       viewportMode: BodyAuthoringViewportMode;
+      activePoseBoneId: string | null;
     }>,
   ) {
     if (!activeEntity) return;
     setEntityBodyAuthoringState(activeEntity.id, patch);
+  }
+
+  function patchPoseOverride(boneId: string, patch: Partial<BoneTransform>) {
+    if (!activeEntity) return;
+    patchBodyWorkflow({
+      activePoseBoneId: boneId,
+      activeBoneId: boneId,
+      intent: "inspect",
+    });
+    setEntityPoseOverride(activeEntity.id, boneId, patch);
+  }
+
+  function applyPosePreset(preset: Partial<Record<string, Partial<BoneTransform>>>) {
+    if (!activeEntity) return;
+    for (const [boneId, patch] of Object.entries(preset)) {
+      if (!patch) continue;
+      setEntityPoseOverride(activeEntity.id, boneId, patch);
+    }
   }
 
   function patchFaceWorkflow(
@@ -1467,13 +1572,15 @@ export function AuthoringPanel() {
   function handleOpenSelection() {
     if (!activeEntity) return;
     switchMode("sprite-editor");
-    if (selectedPart && selectedItem) {
+    if (selectedItem) {
       const itemParts = selectedItem.parts ?? [];
+      if (itemParts.length === 0) return;
       const docs = itemParts.map(part => createDocumentFromItemPart(activeEntity.id, selectedItem, part));
       for (const doc of docs) {
         upsertSpriteEditorDocument(doc);
       }
-      const activeSelectionDoc = docs.find(doc => doc.target.partId === selectedPart.id) ?? docs[0];
+      const preferredPartId = selectedPart?.id ?? itemParts[0]?.id ?? null;
+      const activeSelectionDoc = docs.find(doc => doc.target.partId === preferredPartId) ?? docs[0];
       if (activeSelectionDoc) {
         setActiveSpriteDocument(activeSelectionDoc.id);
         setSelectedLayerId(activeSelectionDoc.layers[0]?.id ?? null);
@@ -2364,7 +2471,7 @@ export function AuthoringPanel() {
     <>
     <div className="flex h-full bg-background">
       <div className="w-64 border-r border-border bg-sidebar/40">
-        <ScrollArea className="h-full">
+        <div className="h-full overflow-auto">
           <div className="p-3 space-y-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Authoring</p>
@@ -2407,7 +2514,7 @@ export function AuthoringPanel() {
                 size="sm"
                 className="w-full h-8 text-xs"
                 onClick={handleOpenSelection}
-                disabled={!selectedPart && !selectedVisual}
+                disabled={!selectedItem && !selectedVisual}
               >
                 Open Current Selection
               </Button>
@@ -2438,28 +2545,25 @@ export function AuthoringPanel() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Face Overlays</p>
-                    <Select
-                      value={faceAuthoring.overlayGrouping}
+                    <NativeSelect
+                      value={faceAuthoring.overlayGrouping ?? "feature"}
                       onValueChange={value => {
                         if (!activeEntity) return;
                         setEntityFaceAuthoringState(activeEntity.id, {
                           overlayGrouping: value as "feature" | "feature_role" | "feature_role_paint",
                         });
                       }}
-                    >
-                      <SelectTrigger className="h-7 w-[128px] text-[11px] bg-background border-border">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border text-foreground text-xs">
-                        <SelectItem value="feature" className="text-xs">By Feature</SelectItem>
-                        <SelectItem value="feature_role" className="text-xs">Feature + Role</SelectItem>
-                        <SelectItem value="feature_role_paint" className="text-xs">Feature + Role + Paint</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      className="h-7 w-[128px]"
+                      options={[
+                        { value: "feature", label: "By Feature" },
+                        { value: "feature_role", label: "Feature + Role" },
+                        { value: "feature_role_paint", label: "Feature + Role + Paint" },
+                      ]}
+                    />
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <Select
-                      value={faceAuthoring.overlayFilter}
+                    <NativeSelect
+                      value={faceAuthoring.overlayFilter ?? "all"}
                       onValueChange={value => {
                         if (!activeEntity) return;
                         const nextValue = value as FaceFeatureKey | "generic" | "all";
@@ -2475,60 +2579,51 @@ export function AuthoringPanel() {
                           selectedOverlayId: nextSelectedOverlay?.id ?? null,
                         });
                       }}
-                    >
-                      <SelectTrigger className="h-7 text-[11px] bg-background border-border">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border text-foreground text-xs">
-                        <SelectItem value="all" className="text-xs">All features</SelectItem>
-                        <SelectItem value="generic" className="text-xs">Generic</SelectItem>
-                        <SelectItem value="eyes" className="text-xs">Eyes</SelectItem>
-                        <SelectItem value="mouth" className="text-xs">Mouth</SelectItem>
-                        <SelectItem value="brows" className="text-xs">Brows</SelectItem>
-                        <SelectItem value="beard" className="text-xs">Beard</SelectItem>
-                        <SelectItem value="hair" className="text-xs">Hair</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={faceAuthoring.overlayRoleFilter}
+                      className="h-7"
+                      options={[
+                        { value: "all", label: "All features" },
+                        { value: "generic", label: "Generic" },
+                        { value: "eyes", label: "Eyes" },
+                        { value: "mouth", label: "Mouth" },
+                        { value: "brows", label: "Brows" },
+                        { value: "beard", label: "Beard" },
+                        { value: "hair", label: "Hair" },
+                      ]}
+                    />
+                    <NativeSelect
+                      value={faceAuthoring.overlayRoleFilter ?? "all"}
                       onValueChange={value => {
                         if (!activeEntity) return;
                         setEntityFaceAuthoringState(activeEntity.id, {
                           overlayRoleFilter: value as "all" | "base" | "line" | "detail" | "shadow" | "highlight",
                         });
                       }}
-                    >
-                      <SelectTrigger className="h-7 text-[11px] bg-background border-border">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border text-foreground text-xs">
-                        <SelectItem value="all" className="text-xs">All roles</SelectItem>
-                        <SelectItem value="base" className="text-xs">Base</SelectItem>
-                        <SelectItem value="line" className="text-xs">Line</SelectItem>
-                        <SelectItem value="detail" className="text-xs">Detail</SelectItem>
-                        <SelectItem value="shadow" className="text-xs">Shadow</SelectItem>
-                        <SelectItem value="highlight" className="text-xs">Highlight</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={faceAuthoring.paintTargetFilter}
+                      className="h-7"
+                      options={[
+                        { value: "all", label: "All roles" },
+                        { value: "base", label: "Base" },
+                        { value: "line", label: "Line" },
+                        { value: "detail", label: "Detail" },
+                        { value: "shadow", label: "Shadow" },
+                        { value: "highlight", label: "Highlight" },
+                      ]}
+                    />
+                    <NativeSelect
+                      value={faceAuthoring.paintTargetFilter ?? "all"}
                       onValueChange={value => {
                         if (!activeEntity) return;
                         setEntityFaceAuthoringState(activeEntity.id, {
                           paintTargetFilter: value as "all" | "fill" | "stroke" | "both",
                         });
                       }}
-                    >
-                      <SelectTrigger className="h-7 text-[11px] bg-background border-border">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border text-foreground text-xs">
-                        <SelectItem value="all" className="text-xs">All paint</SelectItem>
-                        <SelectItem value="fill" className="text-xs">Fill</SelectItem>
-                        <SelectItem value="stroke" className="text-xs">Line</SelectItem>
-                        <SelectItem value="both" className="text-xs">Both</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      className="h-7"
+                      options={[
+                        { value: "all", label: "All paint" },
+                        { value: "fill", label: "Fill" },
+                        { value: "stroke", label: "Line" },
+                        { value: "both", label: "Both" },
+                      ]}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -2613,7 +2708,7 @@ export function AuthoringPanel() {
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {activeMode === "body-morph" ? (
@@ -2679,35 +2774,27 @@ export function AuthoringPanel() {
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Body Intent</Label>
-                  <Select
+                  <NativeSelect
                     value={bodyAuthoring.intent ?? "morph"}
                     onValueChange={value => patchBodyWorkflow({ intent: value as BodyAuthoringIntent })}
-                  >
-                    <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border text-foreground text-xs">
-                      {(Object.keys(BODY_AUTHORING_INTENT_LABELS) as BodyAuthoringIntent[]).map(intent => (
-                        <SelectItem key={intent} value={intent} className="text-xs">{BODY_AUTHORING_INTENT_LABELS[intent]}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    className="h-8"
+                    options={(Object.keys(BODY_AUTHORING_INTENT_LABELS) as BodyAuthoringIntent[]).map(intent => ({
+                      value: intent,
+                      label: BODY_AUTHORING_INTENT_LABELS[intent],
+                    }))}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Viewport</Label>
-                  <Select
+                  <NativeSelect
                     value={bodyAuthoring.viewportMode ?? "focus_region"}
                     onValueChange={value => patchBodyWorkflow({ viewportMode: value as BodyAuthoringViewportMode })}
-                  >
-                    <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border text-foreground text-xs">
-                      {(Object.keys(BODY_VIEWPORT_MODE_LABELS) as BodyAuthoringViewportMode[]).map(mode => (
-                        <SelectItem key={mode} value={mode} className="text-xs">{BODY_VIEWPORT_MODE_LABELS[mode]}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    className="h-8"
+                    options={(Object.keys(BODY_VIEWPORT_MODE_LABELS) as BodyAuthoringViewportMode[]).map(mode => ({
+                      value: mode,
+                      label: BODY_VIEWPORT_MODE_LABELS[mode],
+                    }))}
+                  />
                 </div>
               </div>
 
@@ -2748,6 +2835,79 @@ export function AuthoringPanel() {
                 </div>
               )}
 
+              {activeEntity && activeTemplate && (
+                <div className="space-y-3 rounded border border-border bg-background/50 p-3">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Skeleton Pose</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Fine-tune the rig by nudging individual bones. These offsets are saved with the character.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <NativeSelect
+                      value={activePoseBoneId ?? activeTemplate.bones[0]?.id ?? ""}
+                      onValueChange={value => patchBodyWorkflow({ activePoseBoneId: value, activeBoneId: value, intent: "inspect" })}
+                      className="h-8"
+                      options={activeTemplate.bones.map(bone => ({
+                        value: bone.id,
+                        label: bone.name,
+                      }))}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-[11px]"
+                      onClick={() => resetEntityPoseOverride(activeEntity.id, activePoseBoneId)}
+                      disabled={!activePoseBoneId}
+                    >
+                      Reset Bone
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {BODY_POSE_PRESETS.map(preset => (
+                      <Button
+                        key={preset.id}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-[11px]"
+                        onClick={() => {
+                          if (preset.id === "neutral_reset") {
+                            resetEntityPoseOverride(activeEntity.id);
+                            return;
+                          }
+                          applyPosePreset(preset.pose);
+                        }}
+                      >
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {activePoseBoneId && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[10px]">Offset X</Label>
+                        <NumericInput value={activePoseOverride.tx} onChange={value => patchPoseOverride(activePoseBoneId, { tx: value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px]">Offset Y</Label>
+                        <NumericInput value={activePoseOverride.ty} onChange={value => patchPoseOverride(activePoseBoneId, { ty: value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px]">Rotation</Label>
+                        <NumericInput value={activePoseOverride.rotation} onChange={value => patchPoseOverride(activePoseBoneId, { rotation: value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px]">Uniform Scale</Label>
+                        <NumericInput value={activePoseOverride.scaleX} onChange={value => patchPoseOverride(activePoseBoneId, { scaleX: value, scaleY: value })} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <Separator className="bg-border" />
 
               <div className="space-y-2 text-[11px] text-muted-foreground">
@@ -2766,7 +2926,7 @@ export function AuthoringPanel() {
             </div>
           </div>
 
-          <ScrollArea className="h-full">
+          <div className="h-full overflow-auto">
             <div className="p-3 space-y-3">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -2799,7 +2959,7 @@ export function AuthoringPanel() {
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         </div>
       ) : activeMode === "face-editor" ? (
         <div className="flex-1 grid grid-cols-[0.9fr,1.1fr]">
@@ -2846,71 +3006,55 @@ export function AuthoringPanel() {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
                         <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Workflow</Label>
-                        <Select
+                        <NativeSelect
                           value={faceAuthoring.workflowMode ?? "feature"}
                           onValueChange={value => patchFaceWorkflow({ workflowMode: value as FaceAuthoringWorkflowMode })}
-                        >
-                          <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground text-xs">
-                            {(Object.keys(FACE_WORKFLOW_MODE_LABELS) as FaceAuthoringWorkflowMode[]).map(mode => (
-                              <SelectItem key={mode} value={mode} className="text-xs">{FACE_WORKFLOW_MODE_LABELS[mode]}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          className="h-8"
+                          options={(Object.keys(FACE_WORKFLOW_MODE_LABELS) as FaceAuthoringWorkflowMode[]).map(mode => ({
+                            value: mode,
+                            label: FACE_WORKFLOW_MODE_LABELS[mode],
+                          }))}
+                        />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Draft Role</Label>
-                        <Select
+                        <NativeSelect
                           value={faceAuthoring.draftOverlayRole ?? "detail"}
                           onValueChange={value => patchFaceWorkflow({ draftOverlayRole: value as FaceOverlayRole })}
-                        >
-                          <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground text-xs">
-                            {(Object.keys(FACE_OVERLAY_ROLE_LABELS) as FaceOverlayRole[]).map(role => (
-                              <SelectItem key={role} value={role} className="text-xs">{FACE_OVERLAY_ROLE_LABELS[role]}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          className="h-8"
+                          options={(Object.keys(FACE_OVERLAY_ROLE_LABELS) as FaceOverlayRole[]).map(role => ({
+                            value: role,
+                            label: FACE_OVERLAY_ROLE_LABELS[role],
+                          }))}
+                        />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Draft Paint</Label>
-                        <Select
+                        <NativeSelect
                           value={faceAuthoring.draftPaintTarget ?? "both"}
                           onValueChange={value => {
                             const paintTarget = value as SpriteEditorPaintTarget;
                             patchFaceWorkflow({ draftPaintTarget: paintTarget });
                             applyDraftPaintBehavior(paintTarget);
                           }}
-                        >
-                          <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground text-xs">
-                            {(Object.keys(FACE_PAINT_TARGET_LABELS) as SpriteEditorPaintTarget[]).map(target => (
-                              <SelectItem key={target} value={target} className="text-xs">{FACE_PAINT_TARGET_LABELS[target]}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          className="h-8"
+                          options={(Object.keys(FACE_PAINT_TARGET_LABELS) as SpriteEditorPaintTarget[]).map(target => ({
+                            value: target,
+                            label: FACE_PAINT_TARGET_LABELS[target],
+                          }))}
+                        />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Draft Symmetry</Label>
-                        <Select
+                        <NativeSelect
                           value={faceAuthoring.draftSymmetryMode ?? "none"}
                           onValueChange={value => patchFaceWorkflow({ draftSymmetryMode: value as SpriteEditorSymmetryMode })}
-                        >
-                          <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground text-xs">
-                            {(Object.keys(FACE_SYMMETRY_LABELS) as SpriteEditorSymmetryMode[]).map(mode => (
-                              <SelectItem key={mode} value={mode} className="text-xs">{FACE_SYMMETRY_LABELS[mode]}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          className="h-8"
+                          options={(Object.keys(FACE_SYMMETRY_LABELS) as SpriteEditorSymmetryMode[]).map(mode => ({
+                            value: mode,
+                            label: FACE_SYMMETRY_LABELS[mode],
+                          }))}
+                        />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
@@ -2939,25 +3083,19 @@ export function AuthoringPanel() {
                           </label>
                         </div>
 
-                        <Select
+                        <NativeSelect
                           value={feature.presetId}
                           onValueChange={value => {
                             if (!activeEntity) return;
                             setEntityFaceAuthoringState(activeEntity.id, { activeFeatureKey: key });
                             setEntityFaceFeature(activeEntity.id, key, { presetId: value, visible: value !== "none" });
                           }}
-                        >
-                          <SelectTrigger className="h-7 text-[11px] bg-background border-border">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground text-xs">
-                            {FACE_PRESETS[key].map(preset => (
-                              <SelectItem key={preset.id} value={preset.id} className="text-xs">
-                                {preset.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          className="h-7"
+                          options={FACE_PRESETS[key].map(preset => ({
+                            value: preset.id,
+                            label: preset.label,
+                          }))}
+                        />
 
                         <div className="flex items-center gap-2">
                           <input
@@ -3133,7 +3271,7 @@ export function AuthoringPanel() {
             </div>
           </div>
 
-          <ScrollArea className="h-full">
+          <div className="h-full overflow-auto">
             <div className="p-3 space-y-3">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -3201,22 +3339,19 @@ export function AuthoringPanel() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[10px] text-muted-foreground">Feature Tag</Label>
-                        <Select
+                        <NativeSelect
                           value={overlay.featureTag ?? "generic"}
                           onValueChange={value => handleOverlayFeatureTagChange(overlay, value as "eyes" | "mouth" | "brows" | "beard" | "hair" | "generic")}
-                        >
-                          <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground text-xs">
-                            <SelectItem value="generic" className="text-xs">Generic</SelectItem>
-                            <SelectItem value="eyes" className="text-xs">Eyes</SelectItem>
-                            <SelectItem value="mouth" className="text-xs">Mouth</SelectItem>
-                            <SelectItem value="brows" className="text-xs">Brows</SelectItem>
-                            <SelectItem value="beard" className="text-xs">Beard</SelectItem>
-                            <SelectItem value="hair" className="text-xs">Hair</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          className="h-8"
+                          options={[
+                            { value: "generic", label: "Generic" },
+                            { value: "eyes", label: "Eyes" },
+                            { value: "mouth", label: "Mouth" },
+                            { value: "brows", label: "Brows" },
+                            { value: "beard", label: "Beard" },
+                            { value: "hair", label: "Hair" },
+                          ]}
+                        />
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -3261,7 +3396,7 @@ export function AuthoringPanel() {
                 ))
               )}
             </div>
-          </ScrollArea>
+          </div>
         </div>
       ) : (
       <div className="flex-1 grid grid-cols-[1.1fr,0.9fr]">
@@ -3442,7 +3577,7 @@ export function AuthoringPanel() {
           </div>
         </div>
 
-        <ScrollArea className="h-full">
+        <div className="h-full overflow-auto">
           <div className="p-3 space-y-3">
             {activeDoc && (
               <>
@@ -3618,7 +3753,7 @@ export function AuthoringPanel() {
                   </div>
                   <p className="text-[10px] text-muted-foreground">{getFaceDrawingPreset(activeDocFaceFeature).description}</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <Select
+                    <NativeSelect
                       value={activeDocFaceOverlayRole}
                       onValueChange={value => patchDocument(doc => ({
                         ...doc,
@@ -3628,19 +3763,16 @@ export function AuthoringPanel() {
                           paintTarget: doc.authoringHint?.paintTarget ?? getDefaultFacePaintTarget(value as "base" | "line" | "detail" | "shadow" | "highlight"),
                         },
                       }))}
-                    >
-                      <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                        <SelectValue placeholder="Overlay role" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border text-foreground text-xs">
-                        <SelectItem value="base" className="text-xs">Base</SelectItem>
-                        <SelectItem value="line" className="text-xs">Line</SelectItem>
-                        <SelectItem value="detail" className="text-xs">Detail</SelectItem>
-                        <SelectItem value="shadow" className="text-xs">Shadow</SelectItem>
-                        <SelectItem value="highlight" className="text-xs">Highlight</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select
+                      className="h-8"
+                      options={[
+                        { value: "base", label: "Base" },
+                        { value: "line", label: "Line" },
+                        { value: "detail", label: "Detail" },
+                        { value: "shadow", label: "Shadow" },
+                        { value: "highlight", label: "Highlight" },
+                      ]}
+                    />
+                    <NativeSelect
                       value={activeDocPaintTarget}
                       onValueChange={value => patchDocument(doc => ({
                         ...doc,
@@ -3649,17 +3781,14 @@ export function AuthoringPanel() {
                           paintTarget: value as SpriteEditorPaintTarget,
                         },
                       }))}
-                    >
-                      <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                        <SelectValue placeholder="Paint pass" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border text-foreground text-xs">
-                        <SelectItem value="fill" className="text-xs">Fill Pass</SelectItem>
-                        <SelectItem value="stroke" className="text-xs">Line Pass</SelectItem>
-                        <SelectItem value="both" className="text-xs">Both</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select
+                      className="h-8"
+                      options={[
+                        { value: "fill", label: "Fill Pass" },
+                        { value: "stroke", label: "Line Pass" },
+                        { value: "both", label: "Both" },
+                      ]}
+                    />
+                    <NativeSelect
                       value={activeDocSymmetryMode}
                       onValueChange={value => patchDocument(doc => ({
                         ...doc,
@@ -3668,15 +3797,12 @@ export function AuthoringPanel() {
                           symmetryMode: value as "none" | "mirror_x",
                         },
                       }))}
-                    >
-                      <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                        <SelectValue placeholder="Symmetry" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border text-foreground text-xs">
-                        <SelectItem value="none" className="text-xs">No Symmetry</SelectItem>
-                        <SelectItem value="mirror_x" className="text-xs">Mirror X</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      className="h-8"
+                      options={[
+                        { value: "none", label: "No Symmetry" },
+                        { value: "mirror_x", label: "Mirror X" },
+                      ]}
+                    />
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {FACE_PAINT_SWATCHES.map(color => (
@@ -3924,7 +4050,7 @@ export function AuthoringPanel() {
               </>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </div>
       )}
     </div>
@@ -4134,7 +4260,7 @@ export function AuthoringPanel() {
               </div>
             </div>
 
-            <ScrollArea className="h-full">
+            <div className="h-full overflow-auto">
               <div className="p-4 space-y-3">
                 {relatedDocuments.length > 1 && (
                   <div className="space-y-2">
@@ -4266,7 +4392,7 @@ export function AuthoringPanel() {
                       </div>
                       <p className="text-[10px] text-muted-foreground">{getFaceDrawingPreset(activeDocFaceFeature).description}</p>
                       <div className="grid grid-cols-3 gap-2">
-                        <Select
+                        <NativeSelect
                           value={activeDocFaceOverlayRole}
                           onValueChange={value => patchDocument(doc => ({
                             ...doc,
@@ -4276,19 +4402,16 @@ export function AuthoringPanel() {
                               paintTarget: doc.authoringHint?.paintTarget ?? getDefaultFacePaintTarget(value as "base" | "line" | "detail" | "shadow" | "highlight"),
                             },
                           }))}
-                        >
-                          <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                            <SelectValue placeholder="Overlay role" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground text-xs">
-                            <SelectItem value="base" className="text-xs">Base</SelectItem>
-                            <SelectItem value="line" className="text-xs">Line</SelectItem>
-                            <SelectItem value="detail" className="text-xs">Detail</SelectItem>
-                            <SelectItem value="shadow" className="text-xs">Shadow</SelectItem>
-                            <SelectItem value="highlight" className="text-xs">Highlight</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select
+                          className="h-8"
+                          options={[
+                            { value: "base", label: "Base" },
+                            { value: "line", label: "Line" },
+                            { value: "detail", label: "Detail" },
+                            { value: "shadow", label: "Shadow" },
+                            { value: "highlight", label: "Highlight" },
+                          ]}
+                        />
+                        <NativeSelect
                           value={activeDocPaintTarget}
                           onValueChange={value => patchDocument(doc => ({
                             ...doc,
@@ -4297,17 +4420,14 @@ export function AuthoringPanel() {
                               paintTarget: value as SpriteEditorPaintTarget,
                             },
                           }))}
-                        >
-                          <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                            <SelectValue placeholder="Paint pass" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground text-xs">
-                            <SelectItem value="fill" className="text-xs">Fill Pass</SelectItem>
-                            <SelectItem value="stroke" className="text-xs">Line Pass</SelectItem>
-                            <SelectItem value="both" className="text-xs">Both</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select
+                          className="h-8"
+                          options={[
+                            { value: "fill", label: "Fill Pass" },
+                            { value: "stroke", label: "Line Pass" },
+                            { value: "both", label: "Both" },
+                          ]}
+                        />
+                        <NativeSelect
                           value={activeDocSymmetryMode}
                           onValueChange={value => patchDocument(doc => ({
                             ...doc,
@@ -4316,15 +4436,12 @@ export function AuthoringPanel() {
                               symmetryMode: value as "none" | "mirror_x",
                             },
                           }))}
-                        >
-                          <SelectTrigger className="h-8 text-[11px] bg-background border-border">
-                            <SelectValue placeholder="Symmetry" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground text-xs">
-                            <SelectItem value="none" className="text-xs">No Symmetry</SelectItem>
-                            <SelectItem value="mirror_x" className="text-xs">Mirror X</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          className="h-8"
+                          options={[
+                            { value: "none", label: "No Symmetry" },
+                            { value: "mirror_x", label: "Mirror X" },
+                          ]}
+                        />
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {FACE_PAINT_SWATCHES.map(color => (
@@ -4625,7 +4742,7 @@ export function AuthoringPanel() {
                   </>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         )}
       </DialogContent>

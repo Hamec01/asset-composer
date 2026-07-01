@@ -240,6 +240,7 @@ export interface BodyAuthoringState {
   intent?: BodyAuthoringIntent;
   viewportMode?: BodyAuthoringViewportMode;
   regionPresetIds?: Partial<Record<BodyMorphRegionId, string | null>>;
+  activePoseBoneId?: string | null;
 }
 
 export interface FaceFeatureTransform {
@@ -712,6 +713,7 @@ export interface Entity {
   bodyMorphs?: BodyMorphValues;
   bodyMorphPresetId?: string | null;
   bodyAuthoring?: BodyAuthoringState;
+  poseOverrides?: Record<string, BoneTransform>;
   faceCustomization?: FaceCustomization;
   faceAuthoring?: FaceAuthoringState;
   /** Entity-level root transform for moving/scaling the whole entity (v2.0+). */

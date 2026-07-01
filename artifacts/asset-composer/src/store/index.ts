@@ -5,6 +5,7 @@ import type {
   AnimationClip, EntityVisual, AttachmentOverride,
   CanvasMode, EditorSelection, LocalTransform, Template, SlotEditorState, Item, ItemFitProfile,
   BodyMorphValues, BodyMorphRegionId, FaceCustomization, FaceFeatureConfig, FaceOverlay, SpriteEditorDocument, ItemPart, FaceFeatureKey,
+  BoneTransform,
   FaceAuthoringState, FaceAuthoringTool, FaceCanvasFocusMode,
 } from "@/domain/types";
 import type { Command } from "./commands";
@@ -93,6 +94,8 @@ interface AppStore {
   setEntityBodyAuthoringFocus: (entityId: string, region: BodyMorphRegionId) => void;
   setEntityBodyAuthoringState: (entityId: string, patch: Partial<NonNullable<Entity["bodyAuthoring"]>>) => void;
   setEntityBodyAuthoringRegionPreset: (entityId: string, region: BodyMorphRegionId, presetId: string | null) => void;
+  setEntityPoseOverride: (entityId: string, boneId: string, patch: Partial<BoneTransform>) => void;
+  resetEntityPoseOverride: (entityId: string, boneId?: string | null) => void;
   setEntityFaceFeature: (entityId: string, feature: keyof Omit<FaceCustomization, "overlays">, patch: Partial<FaceFeatureConfig>) => void;
   setEntityFaceFeatureTransform: (
     entityId: string,
@@ -352,6 +355,7 @@ function makeDefaultBodyAuthoringState() {
     activeSlotId: null as string | null,
     intent: "morph" as const,
     viewportMode: "focus_region" as const,
+    activePoseBoneId: null as string | null,
     regionPresetIds: {},
   };
 }
@@ -480,6 +484,7 @@ function sameBodyAuthoringState(
   current: NonNullable<Entity["bodyAuthoring"]> | undefined,
   patch: Partial<NonNullable<Entity["bodyAuthoring"]>>,
 ) {
+  type RegionPresetMap = Partial<Record<BodyMorphRegionId, string | null | undefined>>;
   const prev = {
     ...makeDefaultBodyAuthoringState(),
     ...(current ?? {}),
@@ -498,9 +503,12 @@ function sameBodyAuthoringState(
       ...(((patch.regionPresetIds as Record<string, string | null | undefined> | undefined) ?? {})),
     },
   };
-  const prevPresetIds = prev.regionPresetIds ?? {};
-  const nextPresetIds = next.regionPresetIds ?? {};
-  const presetKeys = new Set([...Object.keys(prevPresetIds), ...Object.keys(nextPresetIds)]);
+  const prevPresetIds = (prev.regionPresetIds ?? {}) as RegionPresetMap;
+  const nextPresetIds = (next.regionPresetIds ?? {}) as RegionPresetMap;
+  const presetKeys = new Set<BodyMorphRegionId>([
+    ...Object.keys(prevPresetIds),
+    ...Object.keys(nextPresetIds),
+  ] as BodyMorphRegionId[]);
   for (const key of presetKeys) {
     if ((prevPresetIds[key] ?? null) !== (nextPresetIds[key] ?? null)) {
       return false;
@@ -510,6 +518,7 @@ function sameBodyAuthoringState(
     prev.focusRegion === next.focusRegion &&
     (prev.activeBoneId ?? null) === (next.activeBoneId ?? null) &&
     (prev.activeSlotId ?? null) === (next.activeSlotId ?? null) &&
+    (prev.activePoseBoneId ?? null) === (next.activePoseBoneId ?? null) &&
     prev.intent === next.intent &&
     prev.viewportMode === next.viewportMode
   );
@@ -705,6 +714,52 @@ function debugLogProjectState(project: Project) {
   console.info("[asset-composer][restore-debug]", JSON.stringify(payload));
 }
 
+function resetTransientProjectUiState(project: Project): Project {
+  const nextEditorMeta = {
+    ...project.editorMeta,
+    activeAuthoringMode: null,
+    activeFaceCanvasOverlayId: null,
+    activeFaceCanvasTool: null,
+    activeFaceCanvasFocusMode: null,
+    activeSpriteDocumentId: null,
+  };
+
+  if (
+    project.editorMeta.activeAuthoringMode === nextEditorMeta.activeAuthoringMode &&
+    project.editorMeta.activeFaceCanvasOverlayId === nextEditorMeta.activeFaceCanvasOverlayId &&
+    project.editorMeta.activeFaceCanvasTool === nextEditorMeta.activeFaceCanvasTool &&
+    project.editorMeta.activeFaceCanvasFocusMode === nextEditorMeta.activeFaceCanvasFocusMode &&
+    project.editorMeta.activeSpriteDocumentId === nextEditorMeta.activeSpriteDocumentId
+  ) {
+    return project;
+  }
+
+  return {
+    ...project,
+    editorMeta: nextEditorMeta,
+  };
+}
+
+function normalizeBoneTransform(transform: Partial<BoneTransform> | BoneTransform | undefined): BoneTransform {
+  return {
+    tx: transform?.tx ?? 0,
+    ty: transform?.ty ?? 0,
+    rotation: transform?.rotation ?? 0,
+    scaleX: transform?.scaleX ?? 1,
+    scaleY: transform?.scaleY ?? 1,
+  };
+}
+
+function isIdentityBoneTransform(transform: BoneTransform) {
+  return (
+    transform.tx === 0 &&
+    transform.ty === 0 &&
+    transform.rotation === 0 &&
+    transform.scaleX === 1 &&
+    transform.scaleY === 1
+  );
+}
+
 const DEFAULT_ANIM_PLAYBACK: AnimPlayback = {
   activeClipId:         null,
   upperClipId:          null,
@@ -756,6 +811,7 @@ export const useStore = create<AppStore>()(
         bodyMorphs:           makeDefaultBodyMorphs(),
         bodyMorphPresetId:    null,
         bodyAuthoring:        makeDefaultBodyAuthoringState(),
+        poseOverrides:        {},
         faceCustomization:    makeDefaultFaceCustomization(),
         faceAuthoring:        makeDefaultFaceAuthoringState(),
         activeAnimationClipId: null,
@@ -974,14 +1030,57 @@ export const useStore = create<AppStore>()(
         const e = state.project.entities.find(entity => entity.id === entityId);
         if (!e) return;
         const current = e.bodyAuthoring ?? makeDefaultBodyAuthoringState();
-        if ((current.regionPresetIds?.[region] ?? null) === presetId) return;
+        const currentRegionPresetIds = (current.regionPresetIds ?? {}) as Partial<Record<BodyMorphRegionId, string | null>>;
+        if ((currentRegionPresetIds[region] ?? null) === presetId) return;
         e.bodyAuthoring = {
           ...current,
           regionPresetIds: {
-            ...(current.regionPresetIds ?? {}),
+            ...currentRegionPresetIds,
             [region]: presetId,
           },
         };
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    setEntityPoseOverride: (entityId, boneId, patch) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        const current = normalizeBoneTransform(e.poseOverrides?.[boneId]);
+        const next = normalizeBoneTransform({ ...current, ...patch });
+        if (
+          current.tx === next.tx &&
+          current.ty === next.ty &&
+          current.rotation === next.rotation &&
+          current.scaleX === next.scaleX &&
+          current.scaleY === next.scaleY
+        ) {
+          return;
+        }
+        e.poseOverrides = {
+          ...(e.poseOverrides ?? {}),
+          [boneId]: next,
+        };
+        e.updatedAt = Date.now();
+        state.project.updatedAt = Date.now();
+      });
+    },
+    resetEntityPoseOverride: (entityId, boneId = null) => {
+      set(state => {
+        const e = state.project.entities.find(entity => entity.id === entityId);
+        if (!e) return;
+        const currentOverrides = { ...(e.poseOverrides ?? {}) };
+        if (boneId) {
+          if (!(boneId in currentOverrides)) return;
+          delete currentOverrides[boneId];
+        } else {
+          if (Object.keys(currentOverrides).length === 0) return;
+          for (const key of Object.keys(currentOverrides)) {
+            delete currentOverrides[key];
+          }
+        }
+        e.poseOverrides = currentOverrides;
         e.updatedAt = Date.now();
         state.project.updatedAt = Date.now();
       });
@@ -1229,7 +1328,7 @@ export const useStore = create<AppStore>()(
 
     loadProject: (raw: unknown) => {
       animController.pause();
-      const migrated = parseProjectSnapshot(raw);
+      const migrated = resetTransientProjectUiState(parseProjectSnapshot(raw) as Project);
       debugLogProjectState(migrated as Project);
       set(state => {
         state.project = migrated as Project;
@@ -1768,6 +1867,12 @@ if (typeof window !== "undefined") {
 
   animController.addSyncListener((timeMs) => {
     useStore.setState(state => {
+      if (
+        state.animPlayback.timeMs === timeMs &&
+        state.animPlayback.playing === animController.isPlaying
+      ) {
+        return;
+      }
       state.animPlayback.timeMs  = timeMs;
       state.animPlayback.playing = animController.isPlaying;
     });

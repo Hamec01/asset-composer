@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useStore } from "@/store";
 import { CanvasEngine } from "@/engine/canvasEngine";
 import { resolveTemplate } from "@/data/templates";
@@ -10,12 +10,6 @@ import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
 import { computeSceneBounds, fitSceneToViewport } from "@/lib/sceneUtils";
 import { animController } from "@/core-v2/AnimationController";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { ZoomIn, ZoomOut, Maximize2, MousePointer2, Move, LayoutGrid } from "lucide-react";
 import type { BodyMorphRegionId, CanvasMode, FaceAuthoringTool, FaceFeatureKey } from "@/domain/types";
 
@@ -163,15 +157,30 @@ export function CanvasPanel() {
 
   const applyViewport = useCallback((next: Viewport | ((prev: Viewport) => Viewport)) => {
     const resolved = typeof next === "function" ? next(vpRef.current) : next;
+    const current = vpRef.current;
+    if (
+      current.zoom === resolved.zoom &&
+      current.panX === resolved.panX &&
+      current.panY === resolved.panY
+    ) {
+      return;
+    }
     vpRef.current = resolved;
     _setVp(resolved);
     engineRef.current?.setViewport(resolved.zoom, resolved.panX, resolved.panY);
   }, []);
 
   const activeEntity = project.entities.find(e => e.id === project.activeEntityId);
-  const template     = activeEntity
-    ? resolveTemplate(project, activeEntity.templateId)
-    : undefined;
+  const activeTemplateId = activeEntity?.templateId ?? null;
+  const projectTemplate = useMemo(
+    () => (activeTemplateId ? project.templates.find(candidate => candidate.id === activeTemplateId) : undefined),
+    [activeTemplateId, project.templates],
+  );
+  const template = useMemo(() => {
+    if (!activeTemplateId) return undefined;
+    if (!projectTemplate) return resolveTemplate({ templates: [] }, activeTemplateId);
+    return resolveTemplate({ templates: [projectTemplate] }, activeTemplateId);
+  }, [activeTemplateId, projectTemplate]);
   const activeAuthoringMode = project.editorMeta.activeAuthoringMode ?? null;
   const activeFaceCanvasTool = project.editorMeta.activeFaceCanvasTool ?? null;
   const bodyAuthoring = activeEntity?.bodyAuthoring ?? { focusRegion: "global" as BodyMorphRegionId, activeBoneId: null, activeSlotId: null, intent: "morph" as const, viewportMode: "focus_region" as const, regionPresetIds: {} };
@@ -637,12 +646,14 @@ export function CanvasPanel() {
   // ── Heavy effect: entity / palette / slots / visuals / selectedSlot change ─
   useEffect(() => {
     if (!initialized || !engineRef.current) return;
+    let cancelled = false;
 
     const doReconcile = async () => {
-      if (!engineRef.current) return;
+      const engine = engineRef.current;
+      if (!engine || cancelled) return;
 
-      if (!engineRef.current.isTransforming) {
-        engineRef.current.commitPendingEdits();
+      if (!engine.isTransforming) {
+        engine.commitPendingEdits();
       }
       const store = useStore.getState();
       const liveEntity = store.project.entities.find(e => e.id === store.project.activeEntityId);
@@ -651,7 +662,7 @@ export function CanvasPanel() {
         : undefined;
 
       if (!liveEntity || !liveTemplate) {
-        engineRef.current.renderEmpty("Select an entity to view it here");
+        engine.renderEmpty("Select an entity to view it here");
         cameraDirtyRef.current = false;
         return;
       }
@@ -671,7 +682,7 @@ export function CanvasPanel() {
       const scene    = evaluateScene(liveEntity, liveTemplate, skeleton, effectiveItems, store.project.itemFitProfiles);
 
       const itemsArr = effectiveItems;
-      await engineRef.current.reconcileSceneStructure(
+      await engine.reconcileSceneStructure(
         scene,
         liveTemplate,
         editor.selectedSlotId,
@@ -680,20 +691,24 @@ export function CanvasPanel() {
         liveEntity,
         store.project.editorMeta.slotEditorByTemplateId[liveTemplate.id] ?? { hiddenSlotIds: [], lockedSlotIds: [] },
       );
+      if (cancelled || engineRef.current !== engine) return;
 
       // Re-apply viewport after reconcile (new visuals reset internal state)
-      engineRef.current.setViewport(vpRef.current.zoom, vpRef.current.panX, vpRef.current.panY);
+      engine.setViewport(vpRef.current.zoom, vpRef.current.panX, vpRef.current.panY);
 
       // Auto-fit on first render for this entity
       if (cameraDirtyRef.current) {
         cameraDirtyRef.current = false;
-        const cam = engineRef.current.fitScene(scene, liveTemplate);
+        const cam = engine.fitScene(scene, liveTemplate);
         applyViewport(cam);
       }
     };
 
     rerenderRef.current = () => { doReconcile(); };
     doReconcile();
+    return () => {
+      cancelled = true;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     initialized,
@@ -895,24 +910,29 @@ export function CanvasPanel() {
   ]);
 
   // ── Wheel zoom towards cursor ─────────────────────────────────────────────
-  const onWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    // pivotX/Y relative to viewport centre (matches new setViewport formula)
-    const pivotX = e.clientX - rect.left  - rect.width  / 2;
-    const pivotY = e.clientY - rect.top   - rect.height / 2;
-    const delta  = e.ctrlKey ? e.deltaY * 0.005 : e.deltaY * 0.001;
-    const factor = Math.exp(-delta);
-    applyViewport(prev => {
-      const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev.zoom * factor));
-      // Keep template point under cursor fixed: newPanX = pivotX - (pivotX - panX)*next/prev
-      return {
-        zoom: next,
-        panX: pivotX - (pivotX - prev.panX) * (next / prev.zoom),
-        panY: pivotY - (pivotY - prev.panY) * (next / prev.zoom),
-      };
-    });
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = container.getBoundingClientRect();
+      const pivotX = e.clientX - rect.left - rect.width / 2;
+      const pivotY = e.clientY - rect.top - rect.height / 2;
+      const delta = e.ctrlKey ? e.deltaY * 0.005 : e.deltaY * 0.001;
+      const factor = Math.exp(-delta);
+      applyViewport(prev => {
+        const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev.zoom * factor));
+        return {
+          zoom: next,
+          panX: pivotX - (pivotX - prev.panX) * (next / prev.zoom),
+          panY: pivotY - (pivotY - prev.panY) * (next / prev.zoom),
+        };
+      });
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
   }, [applyViewport]);
 
   const cursor = isPanning.current ? "grabbing" : altHeld ? "grab" : "default";
@@ -944,42 +964,34 @@ export function CanvasPanel() {
       onMouseUp={stopPan}
       onMouseLeave={stopPan}
       onAuxClick={onAuxClick}
-      onWheel={onWheel}
     >
       {/* Canvas — no CSS transform; Fabric viewport handles zoom/pan */}
       <canvas ref={canvasRef} className="absolute inset-0" />
 
-      <TooltipProvider delayDuration={150}>
-        <div className="absolute top-3 left-3 z-10 flex items-center gap-1 rounded-lg border border-border bg-card/85 p-1 backdrop-blur">
-          {MODE_BUTTONS.map(({ mode, label, title, icon: Icon }) => {
-            const active = editor.canvasMode === mode;
-            return (
-              <Tooltip key={mode}>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={active ? "default" : "secondary"}
-                    className={[
-                      "h-8 gap-1.5 px-2.5 text-xs",
-                      active ? "shadow-sm" : "bg-card/70",
-                    ].join(" ")}
-                    onClick={() => setCanvasMode(mode)}
-                    aria-pressed={active}
-                    data-testid={`canvas-mode-${mode}`}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span>{label}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  {title}
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </div>
-      </TooltipProvider>
+      <div className="absolute top-3 left-3 z-10 flex items-center gap-1 rounded-lg border border-border bg-card/85 p-1 backdrop-blur">
+        {MODE_BUTTONS.map(({ mode, label, title, icon: Icon }) => {
+          const active = editor.canvasMode === mode;
+          return (
+            <Button
+              key={mode}
+              type="button"
+              size="sm"
+              variant={active ? "default" : "secondary"}
+              className={[
+                "h-8 gap-1.5 px-2.5 text-xs",
+                active ? "shadow-sm" : "bg-card/70",
+              ].join(" ")}
+              onClick={() => setCanvasMode(mode)}
+              aria-pressed={active}
+              data-testid={`canvas-mode-${mode}`}
+              title={title}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span>{label}</span>
+            </Button>
+          );
+        })}
+      </div>
 
       {/* Zoom controls */}
       <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10">

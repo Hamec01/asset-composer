@@ -127,6 +127,17 @@ export function buildMultiClipPose(
     }
   }
 
+  for (const [boneId, override] of Object.entries(entity.poseOverrides ?? {})) {
+    const base = pose.get(boneId);
+    pose.set(boneId, {
+      tx: (base?.tx ?? 0) + (override.tx ?? 0),
+      ty: (base?.ty ?? 0) + (override.ty ?? 0),
+      rotation: (base?.rotation ?? 0) + (override.rotation ?? 0),
+      scaleX: (base?.scaleX ?? 1) * (override.scaleX ?? 1),
+      scaleY: (base?.scaleY ?? 1) * (override.scaleY ?? 1),
+    });
+  }
+
   return pose;
 }
 
@@ -170,8 +181,22 @@ export function evaluateSkeleton(
   return { bones: world };
 }
 
-export function evaluateRestSkeleton(bones: Bone[], bodyMorphs?: BodyMorphValues): EvaluatedSkeleton {
-  return evaluateSkeleton(bones, new Map(), bodyMorphs);
+export function evaluateRestSkeleton(
+  bones: Bone[],
+  bodyMorphs?: BodyMorphValues,
+  poseOverrides?: Record<string, Bone["restPose"]>,
+): EvaluatedSkeleton {
+  const restPose = new Map<string, Bone["restPose"]>();
+  for (const [boneId, override] of Object.entries(poseOverrides ?? {})) {
+    restPose.set(boneId, {
+      tx: override.tx ?? 0,
+      ty: override.ty ?? 0,
+      rotation: override.rotation ?? 0,
+      scaleX: override.scaleX ?? 1,
+      scaleY: override.scaleY ?? 1,
+    });
+  }
+  return evaluateSkeleton(bones, restPose, bodyMorphs);
 }
 
 function applyBodyMorphToRestPose(bone: Bone, bodyMorphs?: BodyMorphValues): Bone["restPose"] {

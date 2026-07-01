@@ -1,8 +1,6 @@
 import { useStore } from "@/store";
 import { ProjectSchema } from "@/domain/schema";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { STYLE_SETS } from "@/data/styleSets";
 import { migrateProject } from "@/lib/projectMigration";
 import { triggerDownload } from "@/lib/download";
@@ -127,6 +125,11 @@ export function Toolbar() {
     setAppState("dashboard");
   }
 
+  const styleOptions = STYLE_SETS.map(styleSet => ({
+    value: styleSet.id,
+    label: styleSet.label,
+  }));
+
   return (
     <>
       <header
@@ -151,118 +154,89 @@ export function Toolbar() {
 
         <div className="w-px h-5 bg-border mx-1" />
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              data-testid="toolbar-back-dashboard"
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7"
-              onClick={handleBackToDashboard}
-            ><Home className="w-3.5 h-3.5" /></Button>
-          </TooltipTrigger>
-          <TooltipContent>Back to Main Menu</TooltipContent>
-        </Tooltip>
+        <Button
+          data-testid="toolbar-back-dashboard"
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          onClick={handleBackToDashboard}
+          title="Back to Main Menu"
+        ><Home className="w-3.5 h-3.5" /></Button>
 
         {/* New Entity */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              data-testid="toolbar-new-entity"
-              size="icon" variant="ghost"
-              className="h-7 w-7 text-primary hover:bg-primary/10"
-              onClick={openWizard}
-            ><Plus className="w-4 h-4" /></Button>
-          </TooltipTrigger>
-          <TooltipContent>New Entity (Ctrl+N)</TooltipContent>
-        </Tooltip>
+        <Button
+          data-testid="toolbar-new-entity"
+          size="icon" variant="ghost"
+          className="h-7 w-7 text-primary hover:bg-primary/10"
+          onClick={openWizard}
+          title="New Entity (Ctrl+N)"
+        ><Plus className="w-4 h-4" /></Button>
 
         {/* Import SVG */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              data-testid="toolbar-import-svg"
-              size="icon" variant="ghost"
-              className="h-7 w-7 text-emerald-400 hover:bg-emerald-400/10"
-              onClick={openImportWizard}
-              disabled={!activeEntity}
-            ><Upload className="w-3.5 h-3.5" /></Button>
-          </TooltipTrigger>
-          <TooltipContent>Import SVG Asset</TooltipContent>
-        </Tooltip>
+        <Button
+          data-testid="toolbar-import-svg"
+          size="icon" variant="ghost"
+          className="h-7 w-7 text-emerald-400 hover:bg-emerald-400/10"
+          onClick={openImportWizard}
+          disabled={!activeEntity}
+          title="Import SVG Asset"
+        ><Upload className="w-3.5 h-3.5" /></Button>
 
         <div className="w-px h-5 bg-border mx-0.5" />
 
         {/* Undo / Redo */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              data-testid="toolbar-undo"
-              size="icon" variant="ghost"
-              className="h-7 w-7 disabled:opacity-30"
-              onClick={undo} disabled={!canUndo}
-            ><Undo2 className="w-3.5 h-3.5" /></Button>
-          </TooltipTrigger>
-          <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
-        </Tooltip>
+        <Button
+          data-testid="toolbar-undo"
+          size="icon" variant="ghost"
+          className="h-7 w-7 disabled:opacity-30"
+          onClick={undo} disabled={!canUndo}
+          title="Undo (Ctrl+Z)"
+        ><Undo2 className="w-3.5 h-3.5" /></Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              data-testid="toolbar-redo"
-              size="icon" variant="ghost"
-              className="h-7 w-7 disabled:opacity-30"
-              onClick={redo} disabled={!canRedo}
-            ><Redo2 className="w-3.5 h-3.5" /></Button>
-          </TooltipTrigger>
-          <TooltipContent>Redo (Ctrl+X / Ctrl+Shift+Z / Ctrl+Y)</TooltipContent>
-        </Tooltip>
+        <Button
+          data-testid="toolbar-redo"
+          size="icon" variant="ghost"
+          className="h-7 w-7 disabled:opacity-30"
+          onClick={redo} disabled={!canRedo}
+          title="Redo (Ctrl+X / Ctrl+Shift+Z / Ctrl+Y)"
+        ><Redo2 className="w-3.5 h-3.5" /></Button>
 
         <div className="w-px h-5 bg-border mx-0.5" />
 
         {/* Save / Load */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              data-testid="toolbar-save"
-              size="icon" variant="ghost"
-              className="h-7 w-7"
-              onClick={handleSaveProject}
-            ><Save className="w-3.5 h-3.5" /></Button>
-          </TooltipTrigger>
-          <TooltipContent>Save Project</TooltipContent>
-        </Tooltip>
+        <Button
+          data-testid="toolbar-save"
+          size="icon" variant="ghost"
+          className="h-7 w-7"
+          onClick={handleSaveProject}
+          title="Save Project"
+        ><Save className="w-3.5 h-3.5" /></Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              data-testid="toolbar-load"
-              size="icon" variant="ghost"
-              className="h-7 w-7"
-              onClick={handleLoad}
-            ><FolderOpen className="w-3.5 h-3.5" /></Button>
-          </TooltipTrigger>
-          <TooltipContent>Load Project</TooltipContent>
-        </Tooltip>
+        <Button
+          data-testid="toolbar-load"
+          size="icon" variant="ghost"
+          className="h-7 w-7"
+          onClick={handleLoad}
+          title="Load Project"
+        ><FolderOpen className="w-3.5 h-3.5" /></Button>
 
         <div className="flex-1" />
 
         {/* Style set switcher */}
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-muted-foreground hidden md:block">Style</span>
-          <Select value={currentStyleSetId} onValueChange={handleStyleSetChange}>
-            <SelectTrigger
-              data-testid="toolbar-styleset"
-              className="h-7 text-xs bg-background border-border w-36"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border text-foreground text-xs">
-              {STYLE_SETS.map(s => (
-                <SelectItem key={s.id} value={s.id} className="text-xs">{s.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <select
+            data-testid="toolbar-styleset"
+            value={currentStyleSetId}
+            onChange={event => handleStyleSetChange(event.target.value)}
+            className="h-7 w-36 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring"
+          >
+            {styleOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="w-px h-5 bg-border mx-1" />

@@ -34,7 +34,7 @@ export class RuntimeErrorBoundary extends React.Component<
       ).__assetComposerLastRuntimeError = {
         message: error.message,
         stack: error.stack,
-        componentStack: errorInfo.componentStack,
+        componentStack: errorInfo.componentStack ?? "",
       };
     }
   }

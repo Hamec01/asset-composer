@@ -155,6 +155,7 @@ const BodyAuthoringStateSchema = z.object({
   activeSlotId: z.string().nullable().optional(),
   intent: BodyAuthoringIntentSchema.optional().default("morph"),
   viewportMode: BodyAuthoringViewportModeSchema.optional().default("focus_region"),
+  activePoseBoneId: z.string().nullable().optional(),
   regionPresetIds: z.object({
     head: z.string().nullable().optional(),
     torso: z.string().nullable().optional(),
@@ -319,8 +320,10 @@ export const EntitySchema = z.object({
   bodyMorphPresetId: z.string().nullable().optional(),
   bodyAuthoring: BodyAuthoringStateSchema.optional().default({
     focusRegion: "global",
+    activePoseBoneId: null,
     regionPresetIds: {},
   }),
+  poseOverrides: z.record(BoneTransformSchema).optional().default({}),
   faceCustomization: FaceCustomizationSchema.optional().default({
     eyes: { presetId: "round_kawaii", color: "#2B1D18", visible: true, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } },
     mouth: { presetId: "soft_smile", color: "#1A1A1A", visible: true, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } },

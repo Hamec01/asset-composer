@@ -100,7 +100,7 @@ export async function renderFrameToCanvas(opts: {
     ctx.fillRect(0, 0, frameSz, frameSz);
   }
 
-  const skeleton = evaluateRestSkeleton(template.bones, entity.bodyMorphs);
+  const skeleton = evaluateRestSkeleton(template.bones, entity.bodyMorphs, entity.poseOverrides);
   const scene    = evaluateScene(entity, template, skeleton, items, itemFitProfiles);
 
   for (const visual of scene.visuals) {
