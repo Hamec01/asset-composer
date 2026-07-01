@@ -403,6 +403,118 @@ function sameEntityVisualTransform(a?: LocalTransform, b?: LocalTransform) {
   return sameLocalTransform(a, b);
 }
 
+function sameFaceAuthoringState(
+  current: FaceAuthoringState | undefined,
+  patch: Partial<FaceAuthoringState>,
+) {
+  const next = {
+    ...makeDefaultFaceAuthoringState(),
+    ...(current ?? {}),
+    ...patch,
+  };
+  const prev = {
+    ...makeDefaultFaceAuthoringState(),
+    ...(current ?? {}),
+  };
+  return (
+    prev.activeFeatureKey === next.activeFeatureKey &&
+    prev.overlayFilter === next.overlayFilter &&
+    (prev.selectedOverlayId ?? null) === (next.selectedOverlayId ?? null) &&
+    (prev.activeBoneId ?? null) === (next.activeBoneId ?? null) &&
+    (prev.activeSlotId ?? null) === (next.activeSlotId ?? null) &&
+    prev.workflowMode === next.workflowMode &&
+    prev.draftOverlayRole === next.draftOverlayRole &&
+    prev.draftPaintTarget === next.draftPaintTarget &&
+    prev.draftSymmetryMode === next.draftSymmetryMode &&
+    prev.overlayRoleFilter === next.overlayRoleFilter &&
+    prev.paintTargetFilter === next.paintTargetFilter &&
+    prev.overlayGrouping === next.overlayGrouping &&
+    (prev.drawMode ?? null) === (next.drawMode ?? null) &&
+    (prev.focusMode ?? null) === (next.focusMode ?? null)
+  );
+}
+
+function sameEditorSelection(a: EditorSelection, b: EditorSelection) {
+  if (a.kind !== b.kind) return false;
+  switch (a.kind) {
+    case "none":
+      return true;
+    case "template-slot":
+      return a.templateId === (b as typeof a).templateId && a.slotId === (b as typeof a).slotId;
+    case "anchor":
+      return (
+        a.templateId === (b as typeof a).templateId &&
+        a.boneId === (b as typeof a).boneId &&
+        a.anchorId === (b as typeof a).anchorId
+      );
+    case "equipped-item":
+      return (
+        a.entityId === (b as typeof a).entityId &&
+        a.slotId === (b as typeof a).slotId &&
+        a.itemId === (b as typeof a).itemId
+      );
+    case "item-part":
+      return (
+        a.entityId === (b as typeof a).entityId &&
+        a.slotId === (b as typeof a).slotId &&
+        a.itemId === (b as typeof a).itemId &&
+        a.partId === (b as typeof a).partId
+      );
+    case "face-overlay":
+      return (
+        a.entityId === (b as typeof a).entityId &&
+        a.overlayId === (b as typeof a).overlayId &&
+        a.featureKey === (b as typeof a).featureKey &&
+        a.slotId === (b as typeof a).slotId
+      );
+    case "bone":
+      return a.entityId === (b as typeof a).entityId && a.boneId === (b as typeof a).boneId;
+    case "entity-visual":
+      return a.entityId === (b as typeof a).entityId && a.visualId === (b as typeof a).visualId;
+    default:
+      return false;
+  }
+}
+
+function sameBodyAuthoringState(
+  current: NonNullable<Entity["bodyAuthoring"]> | undefined,
+  patch: Partial<NonNullable<Entity["bodyAuthoring"]>>,
+) {
+  const prev = {
+    ...makeDefaultBodyAuthoringState(),
+    ...(current ?? {}),
+    regionPresetIds: {
+      ...(makeDefaultBodyAuthoringState().regionPresetIds ?? {}),
+      ...((current?.regionPresetIds ?? {})),
+    },
+  };
+  const next = {
+    ...makeDefaultBodyAuthoringState(),
+    ...(current ?? {}),
+    ...patch,
+    regionPresetIds: {
+      ...(makeDefaultBodyAuthoringState().regionPresetIds ?? {}),
+      ...((current?.regionPresetIds ?? {})),
+      ...(((patch.regionPresetIds as Record<string, string | null | undefined> | undefined) ?? {})),
+    },
+  };
+  const prevPresetIds = prev.regionPresetIds ?? {};
+  const nextPresetIds = next.regionPresetIds ?? {};
+  const presetKeys = new Set([...Object.keys(prevPresetIds), ...Object.keys(nextPresetIds)]);
+  for (const key of presetKeys) {
+    if ((prevPresetIds[key] ?? null) !== (nextPresetIds[key] ?? null)) {
+      return false;
+    }
+  }
+  return (
+    prev.focusRegion === next.focusRegion &&
+    (prev.activeBoneId ?? null) === (next.activeBoneId ?? null) &&
+    (prev.activeSlotId ?? null) === (next.activeSlotId ?? null) &&
+    prev.intent === next.intent &&
+    prev.viewportMode === next.viewportMode
+  );
+}
+
 function makeDefaultProject(): Project {
   return {
     id:              createId(),
@@ -806,6 +918,8 @@ export const useStore = create<AppStore>()(
       set(state => {
         const e = state.project.entities.find(entity => entity.id === entityId);
         if (!e) return;
+        const currentMorphs = { ...makeDefaultBodyMorphs(), ...(e.bodyMorphs ?? {}) };
+        if (currentMorphs[key] === value && e.bodyMorphPresetId === null) return;
         e.bodyMorphs = { ...makeDefaultBodyMorphs(), ...(e.bodyMorphs ?? {}), [key]: value };
         e.bodyMorphPresetId = null;
         e.updatedAt = Date.now();
@@ -816,6 +930,7 @@ export const useStore = create<AppStore>()(
       set(state => {
         const e = state.project.entities.find(entity => entity.id === entityId);
         if (!e) return;
+        if ((e.bodyMorphPresetId ?? null) === presetId) return;
         e.bodyMorphPresetId = presetId;
         e.updatedAt = Date.now();
         state.project.updatedAt = Date.now();
@@ -825,6 +940,7 @@ export const useStore = create<AppStore>()(
       set(state => {
         const e = state.project.entities.find(entity => entity.id === entityId);
         if (!e) return;
+        if (sameBodyAuthoringState(e.bodyAuthoring, { focusRegion: region })) return;
         e.bodyAuthoring = {
           ...makeDefaultBodyAuthoringState(),
           ...(e.bodyAuthoring ?? {}),
@@ -839,6 +955,7 @@ export const useStore = create<AppStore>()(
         const e = state.project.entities.find(entity => entity.id === entityId);
         if (!e) return;
         const current = e.bodyAuthoring ?? makeDefaultBodyAuthoringState();
+        if (sameBodyAuthoringState(current, patch)) return;
         e.bodyAuthoring = {
           ...makeDefaultBodyAuthoringState(),
           ...current,
@@ -857,6 +974,7 @@ export const useStore = create<AppStore>()(
         const e = state.project.entities.find(entity => entity.id === entityId);
         if (!e) return;
         const current = e.bodyAuthoring ?? makeDefaultBodyAuthoringState();
+        if ((current.regionPresetIds?.[region] ?? null) === presetId) return;
         e.bodyAuthoring = {
           ...current,
           regionPresetIds: {
@@ -982,6 +1100,7 @@ export const useStore = create<AppStore>()(
       set(state => {
         const e = state.project.entities.find(entity => entity.id === entityId);
         if (!e) return;
+        if (sameFaceAuthoringState(e.faceAuthoring, patch)) return;
         e.faceAuthoring = {
           ...makeDefaultFaceAuthoringState(),
           ...(e.faceAuthoring ?? {}),
@@ -1039,30 +1158,35 @@ export const useStore = create<AppStore>()(
     },
     setActiveSpriteDocument: (documentId) => {
       set(state => {
+        if (state.project.editorMeta.activeSpriteDocumentId === documentId) return;
         state.project.editorMeta.activeSpriteDocumentId = documentId;
         state.project.updatedAt = Date.now();
       });
     },
     setActiveAuthoringMode: (mode) => {
       set(state => {
+        if (state.project.editorMeta.activeAuthoringMode === mode) return;
         state.project.editorMeta.activeAuthoringMode = mode;
         state.project.updatedAt = Date.now();
       });
     },
     setActiveFaceCanvasOverlay: (overlayId) => {
       set(state => {
+        if (state.project.editorMeta.activeFaceCanvasOverlayId === overlayId) return;
         state.project.editorMeta.activeFaceCanvasOverlayId = overlayId;
         state.project.updatedAt = Date.now();
       });
     },
       setActiveFaceCanvasTool: (tool) => {
         set(state => {
+          if (state.project.editorMeta.activeFaceCanvasTool === tool) return;
           state.project.editorMeta.activeFaceCanvasTool = tool;
           state.project.updatedAt = Date.now();
         });
       },
       setActiveFaceCanvasFocusMode: (mode) => {
         set(state => {
+          if (state.project.editorMeta.activeFaceCanvasFocusMode === mode) return;
           state.project.editorMeta.activeFaceCanvasFocusMode = mode;
           state.project.updatedAt = Date.now();
         });
@@ -1238,8 +1362,23 @@ export const useStore = create<AppStore>()(
     },
 
     // ── Editor Actions ───────────────────────────────────────────────────────
-    setAppState:         (appState)  => set(state => { state.editor.appState = appState; }),
+    setAppState:         (appState)  => set(state => {
+      if (state.editor.appState === appState) return;
+      state.editor.appState = appState;
+    }),
     setSelectedSlot:     (slotId)    => set(state => {
+      if (state.editor.selectedSlotId === slotId) {
+        const selection = state.editor.selection;
+        if (
+          (slotId === null && selection.kind === "none") ||
+          (selection.kind === "item-part" && selection.slotId === slotId) ||
+          (selection.kind === "template-slot" && selection.slotId === slotId) ||
+          (selection.kind === "equipped-item" && selection.slotId === slotId) ||
+          (selection.kind === "face-overlay" && selection.slotId === slotId)
+        ) {
+          return;
+        }
+      }
       state.editor.selectedSlotId = slotId;
       const selection = state.editor.selection;
       if (slotId === null) {
@@ -1296,7 +1435,10 @@ export const useStore = create<AppStore>()(
 
       state.editor.selection = { kind: "none" };
     }),
-    setActivePanel:      (panel)     => set(state => { state.editor.activePanel = panel; }),
+    setActivePanel:      (panel)     => set(state => {
+      if (state.editor.activePanel === panel) return;
+      state.editor.activePanel = panel;
+    }),
     openWizard:          ()          => set(state => { state.editor.isWizardOpen = true; }),
     closeWizard:         ()          => set(state => { state.editor.isWizardOpen = false; }),
     openExport:          ()          => set(state => { state.editor.isExportOpen = true; }),
@@ -1304,12 +1446,16 @@ export const useStore = create<AppStore>()(
     openImportWizard:    ()          => set(state => { state.editor.isImportWizardOpen = true; state.project.editorMeta.activeAuthoringMode = "asset-import"; }),
     closeImportWizard:   ()          => set(state => { state.editor.isImportWizardOpen = false; if (state.project.editorMeta.activeAuthoringMode === "asset-import") state.project.editorMeta.activeAuthoringMode = null; }),
     setCanvasMode:       (mode)      => set(state => {
+      if (state.editor.canvasMode === mode && (mode === "edit-attachment" || state.editor.fitAuthoring == null)) {
+        return;
+      }
       state.editor.canvasMode = mode;
       if (mode !== "edit-attachment") {
         state.editor.fitAuthoring = null;
       }
     }),
     setEditorSelection:  (sel)       => set(state => {
+      if (sameEditorSelection(state.editor.selection, sel)) return;
       state.editor.selection = sel;
       if (!selectionMatchesFitAuthoring(sel, state.editor.fitAuthoring)) {
         state.editor.fitAuthoring = null;

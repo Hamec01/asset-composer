@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import type { Plugin } from "vite";
 
 function resolveRequestedPort() {
   const cliArgs = process.argv;
@@ -26,12 +27,31 @@ const port = resolveRequestedPort();
 
 const basePath = process.env.BASE_PATH ?? "/";
 
+function legacyPwaDevCompat(): Plugin {
+  return {
+    name: "legacy-pwa-dev-compat",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url === "/@vite-plugin-pwa/pwa-entry-point-loaded") {
+          res.statusCode = 204;
+          res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+          res.end("");
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
+
 export default defineConfig({
   base: basePath,
   plugins: [
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    legacyPwaDevCompat(),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [

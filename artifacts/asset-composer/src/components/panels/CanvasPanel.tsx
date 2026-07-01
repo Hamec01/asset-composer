@@ -337,7 +337,11 @@ export function CanvasPanel() {
         entityId: activeEntity.id,
         boneId: bodyAuthoring.activeBoneId,
       });
+    }
+    if (editor.selectedSlotId !== (bodyAuthoring.activeSlotId ?? null)) {
       setSelectedSlot(bodyAuthoring.activeSlotId ?? null);
+    }
+    if (editor.canvasMode !== "select") {
       setCanvasMode("select");
     }
   }, [
@@ -345,6 +349,8 @@ export function CanvasPanel() {
     activeEntity,
     bodyAuthoring.activeBoneId,
     bodyAuthoring.activeSlotId,
+    editor.canvasMode,
+    editor.selectedSlotId,
     editor.selection,
     setCanvasMode,
     setEditorSelection,
@@ -368,8 +374,12 @@ export function CanvasPanel() {
           slotId,
         });
       }
-      setSelectedSlot(slotId);
-      setCanvasMode("select");
+      if (editor.selectedSlotId !== slotId) {
+        setSelectedSlot(slotId);
+      }
+      if (editor.canvasMode !== "select") {
+        setCanvasMode("select");
+      }
       return;
     }
 
@@ -384,12 +394,18 @@ export function CanvasPanel() {
         boneId: "head",
       });
     }
-    setSelectedSlot(slotId);
-    setCanvasMode("select");
+    if (editor.selectedSlotId !== slotId) {
+      setSelectedSlot(slotId);
+    }
+    if (editor.canvasMode !== "select") {
+      setCanvasMode("select");
+    }
   }, [
     activeAuthoringMode,
     activeEntity,
     activeFaceFeature,
+    editor.canvasMode,
+    editor.selectedSlotId,
     editor.selection,
     faceAuthoring.activeSlotId,
     faceAuthoring.selectedOverlayId,

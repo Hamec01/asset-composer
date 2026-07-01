@@ -989,57 +989,119 @@ export function AuthoringPanel() {
   useEffect(() => {
     if (!activeDoc) return;
     if (activeDoc.target.kind === "entity-visual" && activeDoc.target.entityId && activeDoc.target.visualId) {
-      setSelectedSlot(null);
-      setEditorSelection({
+      if (editor.selectedSlotId !== null) {
+        setSelectedSlot(null);
+      }
+      const nextSelection = {
         kind: "entity-visual",
         entityId: activeDoc.target.entityId,
         visualId: activeDoc.target.visualId,
-      });
+      } as const;
+      if (
+        editor.selection.kind !== "entity-visual" ||
+        editor.selection.entityId !== nextSelection.entityId ||
+        editor.selection.visualId !== nextSelection.visualId
+      ) {
+        setEditorSelection(nextSelection);
+      }
       return;
     }
     if (activeDoc.target.kind === "item-part" && activeDoc.target.entityId && activeDoc.target.itemId && activeDoc.target.partId) {
       const entity = project.entities.find(candidate => candidate.id === activeDoc.target.entityId);
       const slotId = entity?.slots.find(slot => slot.itemId === activeDoc.target.itemId)?.slotId ?? null;
       if (!slotId) return;
-      setSelectedSlot(slotId);
-      setEditorSelection({
+      if (editor.selectedSlotId !== slotId) {
+        setSelectedSlot(slotId);
+      }
+      const nextSelection = {
         kind: "item-part",
         entityId: activeDoc.target.entityId,
         slotId,
         itemId: activeDoc.target.itemId,
         partId: activeDoc.target.partId,
-      });
+      } as const;
+      if (
+        editor.selection.kind !== "item-part" ||
+        editor.selection.entityId !== nextSelection.entityId ||
+        editor.selection.slotId !== nextSelection.slotId ||
+        editor.selection.itemId !== nextSelection.itemId ||
+        editor.selection.partId !== nextSelection.partId
+      ) {
+        setEditorSelection(nextSelection);
+      }
       return;
     }
     if (activeDoc.target.kind === "face-overlay") {
-      setSelectedSlot(null);
-      setEditorSelection({ kind: "none" });
+      if (editor.selectedSlotId !== null) {
+        setSelectedSlot(null);
+      }
+      if (editor.selection.kind !== "none") {
+        setEditorSelection({ kind: "none" });
+      }
     }
-  }, [activeDoc, project.entities, setEditorSelection, setSelectedSlot]);
+  }, [activeDoc, editor.selectedSlotId, editor.selection, project.entities, setEditorSelection, setSelectedSlot]);
 
   useEffect(() => {
     if (!activeDoc || activeDoc.target.kind !== "face-overlay" || !activeDoc.target.entityId) return;
     const featureKey = activeDoc.authoringHint?.faceFeatureKey ?? "generic";
     const slotId = featureKey === "generic" ? null : FACE_FEATURE_TO_SLOT[featureKey] ?? null;
-    setEntityFaceAuthoringState(activeDoc.target.entityId, {
-      activeFeatureKey: featureKey,
-      overlayFilter: featureKey,
-      selectedOverlayId: activeDoc.target.overlayId ?? null,
-      drawMode: activeFaceCanvasTool ?? faceAuthoring.drawMode ?? null,
-      focusMode: activeFaceCanvasFocusMode,
-    });
-    setSelectedSlot(slotId);
+    const nextDrawMode = activeFaceCanvasTool ?? faceAuthoring.drawMode ?? null;
+    if (
+      faceAuthoring.activeFeatureKey !== featureKey ||
+      faceAuthoring.overlayFilter !== featureKey ||
+      (faceAuthoring.selectedOverlayId ?? null) !== (activeDoc.target.overlayId ?? null) ||
+      (faceAuthoring.drawMode ?? null) !== nextDrawMode ||
+      faceAuthoring.focusMode !== activeFaceCanvasFocusMode
+    ) {
+      setEntityFaceAuthoringState(activeDoc.target.entityId, {
+        activeFeatureKey: featureKey,
+        overlayFilter: featureKey,
+        selectedOverlayId: activeDoc.target.overlayId ?? null,
+        drawMode: nextDrawMode,
+        focusMode: activeFaceCanvasFocusMode,
+      });
+    }
+    if (editor.selectedSlotId !== slotId) {
+      setSelectedSlot(slotId);
+    }
     if (activeDoc.target.overlayId) {
-      setActiveFaceCanvasOverlay(activeDoc.target.overlayId);
-      setEditorSelection({
+      if (project.editorMeta.activeFaceCanvasOverlayId !== activeDoc.target.overlayId) {
+        setActiveFaceCanvasOverlay(activeDoc.target.overlayId);
+      }
+      const nextSelection = {
         kind: "face-overlay",
         entityId: activeDoc.target.entityId,
         overlayId: activeDoc.target.overlayId,
         featureKey,
         slotId,
-      });
+      } as const;
+      if (
+        editor.selection.kind !== "face-overlay" ||
+        editor.selection.entityId !== nextSelection.entityId ||
+        editor.selection.overlayId !== nextSelection.overlayId ||
+        editor.selection.featureKey !== nextSelection.featureKey ||
+        editor.selection.slotId !== nextSelection.slotId
+      ) {
+        setEditorSelection(nextSelection);
+      }
     }
-  }, [activeDoc, activeFaceCanvasFocusMode, activeFaceCanvasTool, faceAuthoring.drawMode, setActiveFaceCanvasOverlay, setEditorSelection, setEntityFaceAuthoringState, setSelectedSlot]);
+  }, [
+    activeDoc,
+    activeFaceCanvasFocusMode,
+    activeFaceCanvasTool,
+    editor.selectedSlotId,
+    editor.selection,
+    faceAuthoring.activeFeatureKey,
+    faceAuthoring.drawMode,
+    faceAuthoring.focusMode,
+    faceAuthoring.overlayFilter,
+    faceAuthoring.selectedOverlayId,
+    project.editorMeta.activeFaceCanvasOverlayId,
+    setActiveFaceCanvasOverlay,
+    setEditorSelection,
+    setEntityFaceAuthoringState,
+    setSelectedSlot,
+  ]);
 
   useEffect(() => {
     if (!activeDoc || activeDoc.target.kind !== "face-overlay" || !activeFaceCanvasTool) return;

@@ -1,0 +1,15 @@
+{
+  "name": "Asset Composer IDE",
+  "short_name": "AssetComposer",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#11131d",
+  "theme_color": "#11131d",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
