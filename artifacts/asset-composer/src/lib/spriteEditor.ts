@@ -30,7 +30,7 @@ function parseNumericAttribute(value: string | null | undefined, fallback = 0): 
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function parseStrokeWidth(value: string | null | undefined, fallback = 1.5): number {
+function parseStrokeWidth(value: string | null | undefined, fallback = 1): number {
   if (!value) return fallback;
   const match = value.match(/-?\d*\.?\d+/);
   return match ? parseNumericAttribute(match[0], fallback) : fallback;
@@ -43,8 +43,8 @@ function parseRotation(transform: string | null | undefined): number {
 }
 
 function parseShapeColors(element: Element) {
-  const fill = element.getAttribute("fill") || "#746A5E";
-  const stroke = element.getAttribute("stroke") || "#1A1208";
+  const fill = element.getAttribute("fill") || "#000000";
+  const stroke = element.getAttribute("stroke") || "none";
   const strokeWidth = parseStrokeWidth(element.getAttribute("stroke-width"));
   return { fill, stroke, strokeWidth };
 }
@@ -525,7 +525,11 @@ export function resizeSpriteShape(
   };
 }
 
-export function spriteEditorDocumentToSvg(document: SpriteEditorDocument): string {
+export function spriteEditorDocumentToSvg(document: SpriteEditorDocument, options?: { preview?: boolean }): string {
+  const tracingTransform = document.tracingTransform ?? { x: 0, y: 0, scale: 1 };
+  const tracingMarkup = options?.preview && document.tracingVisible !== false && document.tracingAsset?.dataUri
+    ? `<image href="${document.tracingAsset.dataUri}" x="0" y="0" width="${document.width}" height="${document.height}" preserveAspectRatio="xMidYMid meet" transform="translate(${document.width / 2 + tracingTransform.x} ${document.height / 2 + tracingTransform.y}) scale(${tracingTransform.scale}) translate(${-document.width / 2} ${-document.height / 2})" opacity="${Math.max(0, Math.min(1, document.tracingOpacity ?? 0.35))}" />`
+    : "";
   const referenceMarkup = document.referenceAsset?.dataUri
     ? `<image href="${document.referenceAsset.dataUri}" x="0" y="0" width="${document.width}" height="${document.height}" preserveAspectRatio="none" opacity="0.9" />`
     : "";
@@ -542,6 +546,7 @@ export function spriteEditorDocumentToSvg(document: SpriteEditorDocument): strin
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${document.width} ${document.height}">`,
     referenceMarkup,
+    tracingMarkup,
     layersMarkup,
     `</svg>`,
   ].join("");

@@ -10,6 +10,7 @@ import {
 } from "@/lib/evaluationPipeline";
 import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
 import { animController } from "@/core-v2/AnimationController";
+import { entityVisualRevision } from "@/lib/entityVisualRevision";
 import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { decompose, transformPoint } from "@/lib/matrixUtils";
@@ -97,10 +98,7 @@ export function PixiPreviewPanel() {
     if (!eId) return "";
     const entity = s.project.entities.find(e => e.id === eId);
     if (!entity) return eId;
-    const slotKey = entity.slots
-      .map(sa => `${sa.slotId}:${sa.itemId ?? ""}:${JSON.stringify(sa.paletteOverride)}`)
-      .join("|");
-    return `${eId}|${entity.styleSetId}|${slotKey}|${JSON.stringify(entity.palette)}`;
+    return entityVisualRevision(entity);
   });
 
   const mountRef = useRef<HTMLDivElement>(null);
@@ -233,7 +231,7 @@ export function PixiPreviewPanel() {
             lineGfxRef.current!.clear();
             nodeGfxRef.current!.clear();
             for (const ps of spritePoolRef.current) ps.sprite.visible = false;
-            hudRef.current!.text = "Select an entity to preview";
+            hudRef.current!.text = "Персонаж не выбран";
             return;
           }
 
@@ -251,7 +249,7 @@ export function PixiPreviewPanel() {
           );
 
           // Step 2: canonical evaluated scene
-          const skeleton = evaluateSkeleton(template.bones, localPose, entity.bodyMorphs);
+          const skeleton = evaluateSkeleton(template.bones, localPose, entity.bodyMorphs, entity.appearance);
           const scene = evaluateScene(entity, template, skeleton, items, store.project.itemFitProfiles);
 
           // Step 3: viewport scale from template units to preview pixels
@@ -329,6 +327,7 @@ export function PixiPreviewPanel() {
 
   // ── Rebuild sprite pool on entity visual changes ──────────────────────────
   useEffect(() => {
+    if (status !== "ready") return;
     const spriteLayer = spriteLayerRef.current;
     if (!spriteLayer) return;
 
@@ -346,21 +345,23 @@ export function PixiPreviewPanel() {
     const template = entity ? resolveTemplate(store.project, entity.templateId) : null;
     if (!entity || !template) return;
 
-    const restSkeleton = evaluateSkeleton(template.bones, new Map(), entity.bodyMorphs);
+    const restSkeleton = evaluateSkeleton(template.bones, new Map(), entity.bodyMorphs, entity.appearance);
     const items        = refreshCanonicalBuiltInTypedItems(store.project.items);
     const scene        = evaluateScene(entity, template, restSkeleton, items, store.project.itemFitProfiles);
 
+    let cancelled = false;
+    const newPool: PooledSprite[] = [];
     (async () => {
-      const newPool: PooledSprite[] = [];
 
       for (const visual of scene.visuals) {
-        if (!spriteLayerRef.current) return;
+        if (cancelled || !spriteLayerRef.current) return;
 
         const cacheKey = visual.id;
         let texture = textureCacheRef.current.get(cacheKey);
         if (!texture) {
           try {
             texture = await rasterizeSvg(visual.svgData, 256, visual.svgFitMode ?? "legacy_full_frame");
+            if (cancelled) { texture.destroy(true); return; }
             textureCacheRef.current.set(cacheKey, texture);
           } catch (e) {
             console.warn("[PixiPreviewPanel] rasterize failed:", cacheKey, e);
@@ -386,8 +387,15 @@ export function PixiPreviewPanel() {
 
       spritePoolRef.current = newPool;
     })();
+    return () => {
+      cancelled = true;
+      for (const { sprite } of newPool) {
+        if (!sprite.destroyed) sprite.destroy({ texture: false });
+      }
+      if (spritePoolRef.current === newPool) spritePoolRef.current = [];
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityVisualKey]);
+  }, [entityVisualKey, status]);
 
   // ── Camera helpers ────────────────────────────────────────────────────────
   /** Apply a zoom factor around a screen-space point (px, py). */
@@ -473,12 +481,12 @@ export function PixiPreviewPanel() {
       >
         {status === "init" && (
           <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">
-            Initialising renderer…
+            Загрузка предпросмотра…
           </div>
         )}
         {status === "error" && (
           <div className="absolute inset-0 flex items-center justify-center text-destructive text-sm">
-            WebGL not available
+            Предпросмотр недоступен: нет WebGL
           </div>
         )}
 
@@ -491,7 +499,8 @@ export function PixiPreviewPanel() {
                 variant="secondary"
                 className="h-7 w-7 bg-card/80 backdrop-blur border-border hover:bg-card"
                 onClick={() => applyZoom(1 + ZOOM_STEP)}
-                title="Zoom in"
+                title="Увеличить"
+                aria-label="Увеличить предпросмотр"
               >
                 <ZoomIn className="w-3.5 h-3.5" />
               </Button>
@@ -500,7 +509,8 @@ export function PixiPreviewPanel() {
                 variant="secondary"
                 className="h-7 w-7 bg-card/80 backdrop-blur border-border hover:bg-card"
                 onClick={() => applyZoom(1 / (1 + ZOOM_STEP))}
-                title="Zoom out"
+                title="Уменьшить"
+                aria-label="Уменьшить предпросмотр"
               >
                 <ZoomOut className="w-3.5 h-3.5" />
               </Button>
@@ -509,7 +519,8 @@ export function PixiPreviewPanel() {
                 variant="secondary"
                 className="h-7 w-7 bg-card/80 backdrop-blur border-border hover:bg-card"
                 onClick={fitView}
-                title="Fit to screen (reset camera)"
+                title="Показать целиком"
+                aria-label="Показать предпросмотр целиком"
               >
                 <Maximize className="w-3.5 h-3.5" />
               </Button>
@@ -522,12 +533,6 @@ export function PixiPreviewPanel() {
               </span>
             </div>
 
-            {/* Pan hint */}
-            <div className="absolute top-3 right-3 z-10 pointer-events-none">
-              <span className="text-[10px] text-muted-foreground/40">
-                Scroll to zoom · Alt+drag to pan
-              </span>
-            </div>
           </>
         )}
       </div>

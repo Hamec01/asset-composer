@@ -4,6 +4,7 @@ import { resolveTemplate } from "../src/data/templates";
 import type { AttachmentOverride, Entity, LocalTransform, Template } from "../src/domain/types";
 import { evaluateScene, evaluateSkeleton } from "../src/lib/evaluationPipeline";
 import { useStore } from "../src/store";
+import { ITEMS } from "../src/data/items";
 
 function resetHistory() {
   useStore.setState(state => ({
@@ -30,6 +31,7 @@ function normalizeOverride(override: Partial<AttachmentOverride> | undefined): A
 function setupCharacterWithItem(slotId: string, itemId: string) {
   const store = useStore.getState();
   store.newProject();
+  useStore.setState(state => { state.project.items = structuredClone(ITEMS.filter(item => item.id === itemId)); });
   store.createEntity("character", "humanoid_topdown_v1", "History Test");
   const entityId = useStore.getState().project.activeEntityId!;
   useStore.getState().setEntitySlot(entityId, slotId, itemId);

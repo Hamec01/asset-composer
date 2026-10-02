@@ -1,11 +1,15 @@
 import { create } from "zustand";
+import { HISTORY_LIMIT } from "@/lib/history";
+import { PEASANT_EQUIPMENT } from "@/data/peasantEquipment";
+import { DEFAULT_APPEARANCE } from "@/data/characterAppearance";
+import { createReferenceChibiTemplate, createReferenceChibiDocuments, getAuthoredDocumentMetrics, normalizeReferenceSvg } from "@/lib/referenceChibi";
 import { immer } from "zustand/middleware/immer";
 import type {
   Entity, Project, EntityType, PaletteTokens, SlotAssignment,
   AnimationClip, EntityVisual, AttachmentOverride,
   CanvasMode, EditorSelection, LocalTransform, Template, SlotEditorState, Item, ItemFitProfile,
   BodyMorphValues, BodyMorphRegionId, FaceCustomization, FaceFeatureConfig, FaceOverlay, SpriteEditorDocument, ItemPart, FaceFeatureKey,
-  BoneTransform,
+  BoneTransform, CharacterAppearance, ImportedAssetSource,
   FaceAuthoringState, FaceAuthoringTool, FaceCanvasFocusMode,
 } from "@/domain/types";
 import type { Command } from "./commands";
@@ -17,10 +21,9 @@ import {
 import { cloneTemplates, resolveTemplate } from "@/data/templates";
 import { STYLE_SETS, DEFAULT_STYLE_SET_ID, getStyleSetById } from "@/data/styleSets";
 import { DEFAULT_EXPORT_PROFILES } from "@/data/exportProfiles";
-import { ITEMS } from "@/data/items";
-import { ITEM_FIT_PROFILES } from "@/data/itemFitProfiles";
 import { getPresetById } from "@/data/skinPresets";
 import { PRESET_ANIMATIONS, getClipById } from "@/data/presetAnimations";
+import { CHIBI_ANIMATIONS, upgradeChibiActionClip } from "@/data/chibiAnimations";
 import { PRESET_STATE_MACHINES } from "@/data/presetStateMachines";
 import { animController } from "@/core-v2/AnimationController";
 import { resetItemFitProfilePartToItemDefault, upsertItemFitProfilePartTransform } from "@/lib/itemFitProfileMutations";
@@ -79,6 +82,7 @@ interface AppStore {
   animPlayback: AnimPlayback;
 
   createEntity:           (entityType: EntityType, templateId: string, name: string) => void;
+  createReferenceChibi: (source: ImportedAssetSource) => void;
   deleteEntity:           (entityId: string) => void;
   setActiveEntity:        (entityId: string | null) => void;
   renameEntity:           (entityId: string, name: string) => void;
@@ -90,6 +94,7 @@ interface AppStore {
   applyOutfitPreset:      (entityId: string, presetId: string) => void;
   setEntitySpecies:       (entityId: string, species: string) => void;
   setEntityBodyMorphValue: (entityId: string, key: keyof BodyMorphValues, value: number) => void;
+  setEntityAppearance: (entityId: string, patch: Partial<CharacterAppearance>) => void;
   setEntityBodyMorphPreset: (entityId: string, presetId: string | null) => void;
   setEntityBodyAuthoringFocus: (entityId: string, region: BodyMorphRegionId) => void;
   setEntityBodyAuthoringState: (entityId: string, patch: Partial<NonNullable<Entity["bodyAuthoring"]>>) => void;
@@ -531,11 +536,18 @@ function makeDefaultProject(): Project {
     name:            "New Project",
     description:     "",
     entities:        [],
-    templates:       cloneTemplates(),
-    items:           [...ITEMS],
-    itemFitProfiles: [...ITEM_FIT_PROFILES],
-    animationClips:  PRESET_ANIMATIONS,
-    stateMachines:   PRESET_STATE_MACHINES,
+    templates:       cloneTemplates().filter(template => template.id.startsWith("biped_profile_")),
+    items:           structuredClone(PEASANT_EQUIPMENT),
+    itemFitProfiles: [],
+    animationClips:  PRESET_ANIMATIONS.filter(clip => clip.id !== "humanoid_side_v1__walk" && clip.id !== "humanoid_side_v1__run"),
+    stateMachines:   PRESET_STATE_MACHINES.map(machine => ({
+      ...machine,
+      states: machine.states.map(state => ({
+        ...state,
+        clipId: state.clipId === "humanoid_side_v1__walk" ? "chibi_front__walk"
+          : state.clipId === "humanoid_side_v1__run" ? "chibi_front__run" : state.clipId,
+      })),
+    })),
     styleSets:       STYLE_SETS,
     exportProfiles:  DEFAULT_EXPORT_PROFILES,
       editorMeta:      {
@@ -645,7 +657,7 @@ function hydratePlaybackForEntity(
   }
 
   const activeStateMachineId =
-    entity.activeStateMachineId ??
+    (template.id.startsWith("biped_profile_") ? null : entity.activeStateMachineId) ??
     getStateMachineForTemplate(template, PRESET_STATE_MACHINES)?.id ??
     null;
   const activeStateMachine = activeStateMachineId
@@ -665,7 +677,7 @@ function hydratePlaybackForEntity(
     }
   }
 
-  if (!activeClipId) {
+  if (!activeClipId || (template.id.startsWith("biped_profile_") && !activeClipId.startsWith("chibi_front__"))) {
     const firstLoop = getLoopingClipForTemplate(template, project.animationClips);
     if (firstLoop) {
       activeClipId = firstLoop.id;
@@ -788,14 +800,29 @@ export const useStore = create<AppStore>()(
       selection:          { kind: "none" } as EditorSelection,
       fitAuthoring:       null,
     },
-    history: { past: [], future: [], maxDepth: 100 },
+    history: { past: [], future: [], maxDepth: HISTORY_LIMIT },
     animPlayback: { ...DEFAULT_ANIM_PLAYBACK },
 
     // ── Project Actions ────────────────────────────────────────────────────────
     createEntity: (entityType, templateId, name) => {
       const template = resolveTemplate(get().project, templateId);
       if (!template) return;
-      const styleSet = STYLE_SETS.find(s => s.id === DEFAULT_STYLE_SET_ID);
+      const useTemplatePalette = template.id.startsWith("biped_profile_");
+      const styleSet = useTemplatePalette ? undefined : STYLE_SETS.find(s => s.id === DEFAULT_STYLE_SET_ID);
+      const faceCustomization = makeDefaultFaceCustomization();
+      if (useTemplatePalette) {
+        faceCustomization.eyes.presetId = "none";
+        faceCustomization.eyes.visible = false;
+        faceCustomization.mouth.presetId = "none";
+        faceCustomization.mouth.visible = false;
+        faceCustomization.brows.presetId = "none";
+        faceCustomization.brows.visible = false;
+        faceCustomization.beard.presetId = "none";
+        faceCustomization.beard.visible = false;
+        faceCustomization.hair.presetId = "none";
+        faceCustomization.hair.color = template.paletteTokens.hair;
+        faceCustomization.hair.visible = false;
+      }
       const entity: Entity = {
         id:                   createId(),
         name,
@@ -812,7 +839,8 @@ export const useStore = create<AppStore>()(
         bodyMorphPresetId:    null,
         bodyAuthoring:        makeDefaultBodyAuthoringState(),
         poseOverrides:        {},
-        faceCustomization:    makeDefaultFaceCustomization(),
+        faceCustomization,
+        appearance: useTemplatePalette ? { ...DEFAULT_APPEARANCE } : undefined,
         faceAuthoring:        makeDefaultFaceAuthoringState(),
         activeAnimationClipId: null,
         activeStateMachineId:  null,
@@ -821,6 +849,9 @@ export const useStore = create<AppStore>()(
         updatedAt:            Date.now(),
       };
       set(state => {
+        if (!state.project.templates.some(candidate => candidate.id === template.id)) {
+          state.project.templates.push(template);
+        }
         state.project.entities.push(entity);
         state.project.activeEntityId = entity.id;
         state.project.updatedAt = Date.now();
@@ -835,6 +866,11 @@ export const useStore = create<AppStore>()(
             state.animPlayback.activeClipId = entrySt.clipId;
             state.animPlayback.playing = true;
             state.animPlayback.timeMs = 0;
+            const activeEntity = state.project.entities.find(candidate => candidate.id === entity.id);
+            if (activeEntity) {
+              activeEntity.activeAnimationClipId = entrySt.clipId;
+              activeEntity.activeStateMachineId = sm.id;
+            }
             startClipPlayback(state.project.animationClips as AnimationClip[], entrySt.clipId, state.animPlayback.looping);
           }
         } else {
@@ -843,6 +879,11 @@ export const useStore = create<AppStore>()(
             state.animPlayback.activeClipId = firstLoop.id;
             state.animPlayback.playing = true;
             state.animPlayback.timeMs = 0;
+            const activeEntity = state.project.entities.find(candidate => candidate.id === entity.id);
+            if (activeEntity) {
+              activeEntity.activeAnimationClipId = firstLoop.id;
+              activeEntity.activeStateMachineId = null;
+            }
             startClipPlayback(state.project.animationClips as AnimationClip[], firstLoop.id, state.animPlayback.looping);
           }
         }
@@ -879,6 +920,8 @@ export const useStore = create<AppStore>()(
               if (entrySt) {
                 state.animPlayback.activeClipId = entrySt.clipId;
                 state.animPlayback.playing = true;
+                entity.activeAnimationClipId = entrySt.clipId;
+                entity.activeStateMachineId = sm.id;
                 startClipPlayback(state.project.animationClips as AnimationClip[], entrySt.clipId, state.animPlayback.looping);
               }
             } else {
@@ -886,6 +929,8 @@ export const useStore = create<AppStore>()(
               if (firstLoop) {
                 state.animPlayback.activeClipId = firstLoop.id;
                 state.animPlayback.playing = true;
+                entity.activeAnimationClipId = firstLoop.id;
+                entity.activeStateMachineId = null;
                 startClipPlayback(state.project.animationClips as AnimationClip[], firstLoop.id, state.animPlayback.looping);
               }
             }
@@ -1085,14 +1130,31 @@ export const useStore = create<AppStore>()(
         state.project.updatedAt = Date.now();
       });
     },
+    setEntityAppearance: (entityId, patch) => {
+        const entity = get().project.entities.find(candidate => candidate.id === entityId);
+        if (!entity) return;
+        const appearance: CharacterAppearance = {
+          sex: "male", slimness: 0, muscle: 0, fat: 0, nose: "none",
+          freckles: false, mole: false, scar: "none",
+          ...entity.appearance, ...patch,
+        };
+        for (const key of ["slimness", "muscle", "fat"] as const) {
+          appearance[key] = Math.max(0, Math.min(1, appearance[key]));
+        }
+        if (appearance.freckleIntensity !== undefined) {
+          appearance.freckleIntensity = Math.max(0, Math.min(1, appearance.freckleIntensity));
+        }
+        if (JSON.stringify(appearance) === JSON.stringify(entity.appearance)) return;
+        get().pushCommand({ type: "SET_APPEARANCE", entityId,
+          before: { appearance: entity.appearance }, after: { appearance }, label: "Change appearance" });
+    },
     setEntityFaceFeature: (entityId, feature, patch) => {
-      set(state => {
-        const e = state.project.entities.find(entity => entity.id === entityId);
+        const e = get().project.entities.find(entity => entity.id === entityId);
         if (!e) return;
         const current = e.faceCustomization ?? makeDefaultFaceCustomization();
         const currentFeature = current[feature];
         if (!currentFeature) return;
-        e.faceCustomization = {
+        const faceCustomization: FaceCustomization = {
           ...current,
           [feature]: {
             ...currentFeature,
@@ -1103,9 +1165,9 @@ export const useStore = create<AppStore>()(
             },
           },
         };
-        e.updatedAt = Date.now();
-        state.project.updatedAt = Date.now();
-      });
+        if (JSON.stringify(faceCustomization) === JSON.stringify(e.faceCustomization)) return;
+        get().pushCommand({ type: "SET_FACE_FEATURE", entityId,
+          before: { faceCustomization: e.faceCustomization }, after: { faceCustomization }, label: "Change face feature" });
     },
     setEntityFaceFeatureTransform: (entityId, feature, patch) => {
       set(state => {
@@ -1329,6 +1391,47 @@ export const useStore = create<AppStore>()(
     loadProject: (raw: unknown) => {
       animController.pause();
       const migrated = resetTransientProjectUiState(parseProjectSnapshot(raw) as Project);
+      for (const entity of migrated.entities) {
+        if (!entity.templateId.startsWith("biped_profile_reference_")) continue;
+        const template = migrated.templates.find(candidate => candidate.id === entity.templateId);
+        if (template?.boneParts) template.boneParts = template.boneParts.map(part => ({ ...part, svgData: normalizeReferenceSvg(part.svgData) }));
+        for (const doc of migrated.editorMeta.spriteEditorDocuments) {
+          if (doc.target.entityId !== entity.id || doc.target.kind !== "entity-visual") continue;
+          doc.authoringHint = { ...doc.authoringHint, preserveFrame: true };
+          const visual = entity.visuals?.find(candidate => candidate.id === doc.target.visualId);
+          if (visual) visual.metrics = getAuthoredDocumentMetrics(visual.svgData, doc.width, doc.height);
+        }
+      }
+      for (const item of PEASANT_EQUIPMENT) {
+        const index = migrated.items.findIndex(existing => existing.id === item.id);
+        if (index < 0) migrated.items.push(structuredClone(item));
+        else if (!migrated.items[index].parts?.some(part => part.editorDocumentId || part.source)) migrated.items[index] = structuredClone(item);
+      }
+      if (migrated.entities.some(entity => entity.templateId.startsWith("biped_profile_"))) {
+        for (const clip of CHIBI_ANIMATIONS) {
+          const index = migrated.animationClips.findIndex(candidate => candidate.id === clip.id);
+          if (index < 0) migrated.animationClips.push(clip);
+          else if (clip.id === "chibi_front__axe_strike" || clip.id === "chibi_front__pickup") {
+            migrated.animationClips[index] = upgradeChibiActionClip(migrated.animationClips[index]);
+          } else if (clip.id === "chibi_front__death") {
+            const previous = migrated.animationClips[index];
+            const tracks = previous.layers.flatMap(layer => layer.tracks);
+            // Upgrade only the old rigid built-in fall, not edited character clips.
+            if (previous.durationMs === 1100 && tracks.length === 1 && tracks[0].boneId === "root"
+              && tracks[0].keyframes.at(-1)?.transform.rotation === 90) {
+              migrated.animationClips[index] = clip;
+            }
+          }
+        }
+        for (const entity of migrated.entities.filter(entity => entity.templateId.startsWith("biped_profile_"))) {
+          entity.appearance = { ...DEFAULT_APPEARANCE, ...entity.appearance,
+            view: entity.appearance?.view === "left" ? "left" : "right" };
+          entity.activeStateMachineId = null;
+          if (!entity.activeAnimationClipId || PRESET_ANIMATIONS.some(clip => clip.id === entity.activeAnimationClipId && !clip.id.startsWith("chibi_front__"))) {
+            entity.activeAnimationClipId = "chibi_front__idle";
+          }
+        }
+      }
       debugLogProjectState(migrated as Project);
       set(state => {
         state.project = migrated as Project;
@@ -1364,6 +1467,32 @@ export const useStore = create<AppStore>()(
       });
     },
 
+    createReferenceChibi: source => {
+      const base = resolveTemplate(get().project, "biped_profile_base_v1");
+      if (!base) return;
+      const template = createReferenceChibiTemplate(base, `biped_profile_reference_${createId()}`);
+      set(state => { state.project.templates.push(template); });
+      get().createEntity("character", template.id, "Чиби по референсу");
+      const entity = get().getActiveEntity();
+      if (!entity) return;
+      const pieces = createReferenceChibiDocuments(template, entity.id, source);
+      animController.pause();
+      set(state => {
+        const target = state.project.entities.find(candidate => candidate.id === entity.id)!;
+        target.visuals = pieces.map(piece => piece.visual);
+        target.appearance = { ...DEFAULT_APPEARANCE, projection: "authored", view: "right" };
+        target.activeAnimationClipId = "chibi_front__idle";
+        state.project.editorMeta.spriteEditorDocuments.push(...pieces.map(piece => piece.doc));
+        state.project.editorMeta.activeSpriteDocumentId = pieces.find(piece => piece.visual.boneId === "head")!.doc.id;
+        state.project.editorMeta.activeAuthoringMode = "sprite-editor";
+        state.animPlayback.playing = false;
+        state.animPlayback.timeMs = 0;
+        state.animPlayback.activeClipId = "chibi_front__idle";
+        state.editor.selection = { kind: "none" };
+        state.project.updatedAt = Date.now();
+      });
+    },
+
     // ── Entity Visual Actions (undo-able) ────────────────────────────────────
     addEntityVisual: (entityId, visual) => {
       const entity = get().project.entities.find(e => e.id === entityId);
@@ -1378,6 +1507,7 @@ export const useStore = create<AppStore>()(
       if (!entity) return;
       const before = [...(entity.visuals ?? [])];
       const after  = before.filter(v => v.id !== visualId);
+      if (after.length === before.length) return;
       get().pushCommand(makeRemoveEntityVisualCommand(entityId, before, after, visualId));
     },
 
@@ -1758,17 +1888,28 @@ export const useStore = create<AppStore>()(
     setPlaybackClip: (clipId) => {
       const allClips = get().project.animationClips;
       const clip = clipId ? allClips.find(c => c.id === clipId) : null;
+      const chibi = get().getActiveEntity()?.templateId.startsWith("biped_profile_");
       animController.pause();
-      if (clip) { animController.setDuration(clip.durationMs); animController.setLoop(get().animPlayback.looping); }
+      if (clip) { animController.setDuration(clip.durationMs); animController.setLoop(chibi ? clip.loops : get().animPlayback.looping); }
       animController.seek(0);
       set(state => {
         state.animPlayback.activeClipId = clipId;
+        state.animPlayback.activeStateMachineId = null;
+        state.animPlayback.selectedStateId = null;
         state.animPlayback.timeMs = 0;
         state.animPlayback.playing = false;
+        if (chibi) {
+          state.animPlayback.upperClipId = null;
+          state.animPlayback.lowerClipId = null;
+          if (clip) state.animPlayback.looping = clip.loops;
+        }
         const entityId = state.project.activeEntityId;
         if (entityId) {
           const e = state.project.entities.find(e => e.id === entityId);
-          if (e) e.activeAnimationClipId = clipId;
+          if (e) {
+            e.activeAnimationClipId = clipId;
+            e.activeStateMachineId = null;
+          }
         }
       });
     },

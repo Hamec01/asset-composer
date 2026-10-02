@@ -10,14 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { resolveTemplate } from "@/data/templates";
 import { getStyleSetById, STYLE_SETS } from "@/data/styleSets";
 import { resolveItemFitPartTransform } from "@/lib/itemFitProfiles";
-import { createDocumentFromFaceOverlay } from "@/lib/spriteEditor";
+import { createDocumentFromEntityVisual, createDocumentFromFaceOverlay } from "@/lib/spriteEditor";
+import { buildImportedEntityVisual } from "@/lib/entityVisualImport";
 import {
   getFamilyLabelById,
   getTemplateFamilyLabel,
   getTemplatePresentationSummary,
 } from "@/lib/templatePresentation";
 import { itemSupportsTemplate, templateMatchesCompatibilityFamily } from "@/lib/templateCompatibility";
-import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, Pencil } from "lucide-react";
 import type {
   PaletteTokens,
   Item,
@@ -113,18 +114,24 @@ function getPaintTargetLabel(target?: SpriteEditorPaintTarget) {
 
 const FACE_PRESETS: Record<keyof Omit<FaceCustomization, "overlays">, Array<{ id: string; label: string }>> = {
   eyes: [
+    { id: "dot_cute", label: "Dot Cute" },
     { id: "round_kawaii", label: "Round Kawaii" },
+    { id: "wide_shine", label: "Wide Shine" },
     { id: "sleepy", label: "Sleepy" },
     { id: "none", label: "None" },
   ],
   mouth: [
+    { id: "tiny_smile", label: "Tiny Smile" },
     { id: "soft_smile", label: "Soft Smile" },
+    { id: "neutral", label: "Neutral" },
+    { id: "open_smile", label: "Open Smile" },
     { id: "frown", label: "Frown" },
     { id: "none", label: "None" },
   ],
   brows: [
     { id: "soft_arc", label: "Soft Arc" },
     { id: "stern", label: "Stern" },
+    { id: "worried", label: "Worried" },
     { id: "none", label: "None" },
   ],
   beard: [
@@ -133,8 +140,10 @@ const FACE_PRESETS: Record<keyof Omit<FaceCustomization, "overlays">, Array<{ id
     { id: "none", label: "None" },
   ],
   hair: [
+    { id: "messy_short", label: "Messy Short" },
     { id: "fringe_short", label: "Fringe Short" },
     { id: "fringe_long", label: "Fringe Long" },
+    { id: "tuft", label: "Tuft" },
     { id: "none", label: "None" },
   ],
 };
@@ -322,6 +331,8 @@ export function InspectorPanel() {
   const setEntitySlot        = useStore(s => s.setEntitySlot);
   const previewAttachmentOverride = useStore(s => s.previewAttachmentOverride);
   const removeEntityVisual   = useStore(s => s.removeEntityVisual);
+  const addEntityVisual = useStore(s => s.addEntityVisual);
+  const updateEntityVisual = useStore(s => s.updateEntityVisual);
   const previewTemplateSlotTransform = useStore(s => s.previewTemplateSlotTransform);
   const getActiveEntity      = useStore(s => s.getActiveEntity);
   const animPlayback         = useStore(s => s.animPlayback);
@@ -1419,7 +1430,16 @@ export function InspectorPanel() {
                   Entity Visual
                 </Label>
                 <div className="space-y-1 text-[10px] text-muted-foreground">
-                  <div className="flex justify-between"><span>Bone</span><span className="text-foreground">{selectedEntityVisual.boneId}</span></div>
+                  <Label className="text-[10px]">Bone</Label>
+                  <Select
+                    value={selectedEntityVisual.boneId}
+                    onValueChange={boneId => updateEntityVisual(activeEntity.id, selectedEntityVisual.id, { boneId })}
+                  >
+                    <SelectTrigger className="h-7 text-[11px]" aria-label="Attached bone"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {template.bones.map(bone => <SelectItem key={bone.id} value={bone.id}>{bone.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                   <div className="flex justify-between"><span>Pivot</span><span className="text-foreground">{`${selectedEntityVisual.pivot.x}, ${selectedEntityVisual.pivot.y}`}</span></div>
                 </div>
                 <Separator className="bg-border" />
@@ -1485,7 +1505,10 @@ export function InspectorPanel() {
                       data-testid="inspector-visual-zindex"
                       type="number"
                       value={selectedEntityVisual.zIndex}
-                      readOnly
+                      onChange={event => {
+                        const zIndex = event.currentTarget.valueAsNumber;
+                        if (Number.isFinite(zIndex)) updateEntityVisual(activeEntity.id, selectedEntityVisual.id, { zIndex });
+                      }}
                       className="h-6 text-[11px] bg-background border-border"
                     />
                   </div>
@@ -1623,6 +1646,37 @@ export function InspectorPanel() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
+                    data-testid="draw-attached-bone-part"
+                    className="inline-flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors"
+                    onClick={() => {
+                      const bodyPart = template.boneParts?.find(part => part.boneId === selectedBone.id);
+                      const width = Math.max(24, Math.ceil((bodyPart?.naturalWidth ?? 24) * 1.5));
+                      const height = Math.max(24, Math.ceil((bodyPart?.naturalHeight ?? selectedBone.length ?? 24) * 1.5));
+                      const visual = buildImportedEntityVisual({
+                        id: crypto.randomUUID(),
+                        boneId: selectedBone.id,
+                        svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}"></svg>`,
+                        zIndex: (bodyPart?.zOffset ?? -700) + 1,
+                        pivotPreset: "center",
+                      });
+                      visual.localTransform.x = bodyPart?.localX ?? 0;
+                      visual.localTransform.y = bodyPart?.localY ?? 0;
+                      const doc = createDocumentFromEntityVisual(activeEntity.id, visual);
+                      doc.name = `${selectedBone.name} detail`;
+                      doc.referenceAsset = null;
+                      visual.editorDocumentId = doc.id;
+                      addEntityVisual(activeEntity.id, visual);
+                      upsertSpriteEditorDocument(doc);
+                      setActiveSpriteDocument(doc.id);
+                      setEditorSelection({ kind: "entity-visual", entityId: activeEntity.id, visualId: visual.id });
+                      setActiveAuthoringMode("sprite-editor");
+                      setAnimBottomTab("authoring");
+                      setCanvasMode("select");
+                    }}
+                  >
+                    <Pencil size={12} /> Draw Attached Part
+                  </button>
+                  <button
                     className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                     onClick={() => {
                       const region = selectedBone.id === "head"
@@ -1683,7 +1737,8 @@ export function InspectorPanel() {
 
           <Separator className="bg-border" />
 
-            <div className="space-y-3">
+            <details className="space-y-3">
+              <summary className="text-xs cursor-pointer text-foreground">Пропорции тела</summary>
               <div className="flex items-center justify-between">
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Body Morph</Label>
                 <button
@@ -1694,14 +1749,6 @@ export function InspectorPanel() {
               >
                   Morph Mode
                 </button>
-              </div>
-              <div className="rounded border border-border bg-accent/20 p-2 space-y-1 text-[10px] text-muted-foreground">
-                <div className="flex justify-between"><span>Focus Region</span><span className="text-foreground">{BODY_REGION_LABELS[bodyAuthoring.focusRegion]}</span></div>
-                <div className="flex justify-between"><span>Target Bone</span><span className="text-foreground">{bodyAuthoring.activeBoneId ?? "auto"}</span></div>
-                <div className="flex justify-between"><span>Target Slot</span><span className="text-foreground">{bodyAuthoring.activeSlotId ?? "none"}</span></div>
-                <div className="flex justify-between"><span>Intent</span><span className="text-foreground">{bodyAuthoring.intent ?? "morph"}</span></div>
-                <div className="flex justify-between"><span>Viewport</span><span className="text-foreground">{bodyAuthoring.viewportMode ?? "focus_region"}</span></div>
-                <div className="flex justify-between"><span>Visible Sliders</span><span className="text-foreground">{visibleBodyMorphKeys.map(key => BODY_MORPH_LABELS[key]).join(", ")}</span></div>
               </div>
               <div className="grid grid-cols-3 gap-1">
                 {(Object.keys(BODY_REGION_LABELS) as BodyMorphRegionId[]).map(region => (
@@ -1747,11 +1794,12 @@ export function InspectorPanel() {
                 />
               ))}
             </div>
-          </div>
+          </details>
 
           <Separator className="bg-border" />
 
-          <div className="space-y-3">
+          <details className="space-y-3">
+            <summary className="text-xs cursor-pointer text-foreground">Лицо и волосы</summary>
             <div className="flex items-center justify-between">
               <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Face Editor</Label>
               <button
@@ -1991,7 +2039,7 @@ export function InspectorPanel() {
                 </div>
               </div>
             )}
-          </div>
+          </details>
 
           <Separator className="bg-border" />
 

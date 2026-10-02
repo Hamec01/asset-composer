@@ -58,6 +58,8 @@ const LocalTransformSchema = z.object({
 
 const EntityVisualSchema = z.object({
   id:             z.string(),
+  bodyPartId:     z.string().optional(),
+  bodyView: z.enum(["front", "side"]).optional(),
   svgData:        z.string(),
   boneId:         z.string(),
   metrics:        VectorAssetMetricsSchema,
@@ -318,6 +320,20 @@ export const EntitySchema = z.object({
     overallHeightScale: 1,
   }),
   bodyMorphPresetId: z.string().nullable().optional(),
+  appearance: z.object({
+    view: z.enum(["front", "right", "left"]).optional(),
+    projection: z.enum(["profile", "authored"]).optional(),
+    sex: z.enum(["male", "female"]),
+    slimness: z.number().min(0).max(1),
+    muscle: z.number().min(0).max(1),
+    fat: z.number().min(0).max(1),
+    nose: z.enum(["none", "button", "small", "straight", "pointed", "rounded", "broad", "upturned", "aquiline"]),
+    freckles: z.boolean(),
+    freckleStyle: z.enum(["light", "nose", "dense", "full"]).optional(),
+    freckleIntensity: z.number().min(0).max(1).optional(),
+    mole: z.boolean(),
+    scar: z.enum(["none", "cheek", "brow", "eye", "cross", "lip", "temple", "claw", "long"]),
+  }).optional(),
   bodyAuthoring: BodyAuthoringStateSchema.optional().default({
     focusRegion: "global",
     activePoseBoneId: null,
@@ -516,6 +532,18 @@ const ProjectEditorMetaSchema = z.object({
       mimeType: z.string(),
       dataUri: z.string().optional(),
     }).nullable().optional(),
+    tracingAsset: z.object({
+      format: z.enum(["svg", "png"]),
+      name: z.string(),
+      originalFileName: z.string(),
+      mimeType: z.string(),
+      dataUri: z.string().optional(),
+    }).nullable().optional(),
+    tracingOpacity: z.number().min(0).max(1).optional(),
+    tracingVisible: z.boolean().optional(),
+    tracingTransform: z.object({
+      x: z.number(), y: z.number(), scale: z.number().min(0.1).max(20),
+    }).optional(),
     layers: z.array(z.object({
       id: z.string(),
       name: z.string(),
@@ -536,6 +564,7 @@ const ProjectEditorMetaSchema = z.object({
       })),
     })).default([]),
         authoringHint: z.object({
+          preserveFrame: z.boolean().optional(),
           faceFeatureKey: z.enum(["eyes", "mouth", "brows", "beard", "hair", "generic"]).optional(),
           faceOverlayRole: FaceOverlayRoleSchema.optional(),
           symmetryMode: SpriteEditorSymmetryModeSchema.optional(),

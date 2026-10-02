@@ -238,6 +238,7 @@ function matchesTemplateRootBodyCloneVisual(visual: EntityVisual, template: Temp
 }
 
 export function isLegacyBodyCloneVisual(visual: EntityVisual, template: Template | undefined) {
+  if (visual.bodyPartId || visual.editorDocumentId) return false;
   if (!template?.boneParts?.length) {
     return false;
   }

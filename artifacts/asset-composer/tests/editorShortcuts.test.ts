@@ -18,6 +18,18 @@ function makeKeyboardEvent(
 }
 
 describe("editor shortcuts", () => {
+  it.each([
+    { key: "я", code: "KeyZ", action: "undo" },
+    { key: "ч", code: "KeyX", action: "redo" },
+  ])("supports Russian layout $code", ({ key, code, action }) => {
+    const undo = vi.fn();
+    const redo = vi.fn();
+    const event = makeKeyboardEvent(document.body, { key, code, ctrlKey: true });
+    expect(handleEditorShortcutKeydown(event, {
+      undo, redo, togglePlayback: vi.fn(), removeSelectedAttachment: vi.fn(() => false),
+    })).toBe(true);
+    expect(action === "undo" ? undo : redo).toHaveBeenCalledTimes(1);
+  });
   it("Ctrl+Z invokes undo", () => {
     const undo = vi.fn();
     const event = makeKeyboardEvent(document.body, { key: "z", ctrlKey: true });

@@ -160,6 +160,8 @@ export interface LocalTransform {
  */
 export interface EntityVisual {
   id:             string;
+  bodyPartId?:    string;
+  bodyView?: "front" | "side";
   svgData:        string;
   /** Bone this visual follows.  "root" for monolithic full-vector imports. */
   boneId:         string;
@@ -226,6 +228,21 @@ export type BodyAuthoringIntent = "morph" | "inspect" | "preview";
 export type BodyAuthoringViewportMode = "full_body" | "focus_region";
 
 export type FaceFeatureKey = "eyes" | "mouth" | "brows" | "beard" | "hair";
+
+export interface CharacterAppearance {
+  view?: "front" | "right" | "left";
+  projection?: "profile" | "authored";
+  sex: "male" | "female";
+  slimness: number;
+  muscle: number;
+  fat: number;
+  nose: "none" | "button" | "small" | "straight" | "pointed" | "rounded" | "broad" | "upturned" | "aquiline";
+  freckles: boolean;
+  freckleStyle?: "light" | "nose" | "dense" | "full";
+  freckleIntensity?: number;
+  mole: boolean;
+  scar: "none" | "cheek" | "brow" | "eye" | "cross" | "lip" | "temple" | "claw" | "long";
+}
 export type FaceOverlayRole = "base" | "line" | "detail" | "shadow" | "highlight";
 export type SpriteEditorSymmetryMode = "none" | "mirror_x";
 export type FaceAuthoringTool = "select" | "pencil" | "closed-pencil" | "fill" | "eraser";
@@ -331,8 +348,13 @@ export interface SpriteEditorDocument {
   height: number;
   pivot: Pivot;
   referenceAsset?: ImportedAssetSource | null;
+  tracingAsset?: ImportedAssetSource | null;
+  tracingOpacity?: number;
+  tracingVisible?: boolean;
+  tracingTransform?: { x: number; y: number; scale: number };
   layers: SpriteEditorLayer[];
   authoringHint?: {
+    preserveFrame?: boolean;
     faceFeatureKey?: FaceFeatureKey | "generic";
     faceOverlayRole?: FaceOverlayRole;
     symmetryMode?: SpriteEditorSymmetryMode;
@@ -711,6 +733,7 @@ export interface Entity {
   /** Full-vector or assembled SVG body parts (v2.0+). */
   visuals?: EntityVisual[];
   bodyMorphs?: BodyMorphValues;
+  appearance?: CharacterAppearance;
   bodyMorphPresetId?: string | null;
   bodyAuthoring?: BodyAuthoringState;
   poseOverrides?: Record<string, BoneTransform>;

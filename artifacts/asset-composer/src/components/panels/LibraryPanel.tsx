@@ -2,17 +2,18 @@ import { useMemo, useState } from "react";
 import { useStore } from "@/store";
 import { resolveTemplate } from "@/data/templates";
 import { sanitizeSvg } from "@/lib/sanitize";
-import { SKIN_PRESETS, getPresetsByStyleSet } from "@/data/skinPresets";
 import { getVisibleTemplateSlots } from "@/lib/slotVisibility";
 import { getTemplatePresentationSummary } from "@/lib/templatePresentation";
 import { itemSupportsTemplate } from "@/lib/templateCompatibility";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, ChevronRight, X, Wand2, AlertTriangle, Eye, EyeOff, Lock, Unlock, RotateCcw } from "lucide-react";
+import { Plus, Search, ChevronRight, X, AlertTriangle, Eye, EyeOff, Lock, Unlock, RotateCcw, Shirt } from "lucide-react";
 import type { Item, ItemCategory, SlotDef } from "@/domain/types";
+import { CharacterPartsPanel } from "./CharacterPartsPanel";
+import { AppearancePanel } from "./AppearancePanel";
 
-type LibraryTabId = "entities" | "slots" | "items" | "presets";
+export type LibraryTabId = "appearance" | "entities" | "body" | "slots" | "items";
 
 const CATEGORY_LABELS: Record<ItemCategory, string> = {
   head_cover: "Helmets",
@@ -43,13 +44,13 @@ const CATEGORY_LABELS: Record<ItemCategory, string> = {
 };
 
 const CATEGORY_GROUPS: { label: string; categories: ItemCategory[] }[] = [
-  { label: "All", categories: [] },
-  { label: "Armor", categories: ["head_cover", "torso", "arms", "hands", "legs", "feet"] },
-  { label: "Clothing", categories: ["hair", "eyes", "face", "beard", "neck", "waist", "cloak"] },
-  { label: "Weapons", categories: ["weapon_main", "weapon_off", "shield"] },
-  { label: "Accesso.", categories: ["ring", "amulet"] },
-  { label: "Creature", categories: ["creature_horn", "creature_wing", "creature_tail", "creature_saddle", "creature_pack", "creature_shell"] },
-  { label: "Static", categories: ["static_part"] },
+  { label: "Все", categories: [] },
+  { label: "Броня", categories: ["head_cover", "torso", "arms", "hands", "legs", "feet"] },
+  { label: "Одежда", categories: ["hair", "eyes", "face", "beard", "neck", "waist", "cloak"] },
+  { label: "Оружие", categories: ["weapon_main", "weapon_off", "shield"] },
+  { label: "Украшения", categories: ["ring", "amulet"] },
+  { label: "Существа", categories: ["creature_horn", "creature_wing", "creature_tail", "creature_saddle", "creature_pack", "creature_shell"] },
+  { label: "Объекты", categories: ["static_part"] },
 ];
 
 function ItemCard({
@@ -69,9 +70,11 @@ function ItemCard({
     <button
       data-testid={`item-card-${item.id}`}
       onClick={onClick}
+      disabled={disabled}
+      aria-pressed={isEquipped}
       title={`${item.name}: ${item.description}`}
       className={[
-        "flex flex-col items-center gap-1 rounded border p-1.5 text-center text-xs transition-colors",
+        "flex flex-col items-center gap-1 rounded border p-2 text-center text-xs transition-colors min-w-0",
         isEquipped
           ? "border-primary/60 bg-primary/10 text-primary"
           : isIncompat
@@ -90,7 +93,7 @@ function ItemCard({
           </div>
         )}
       </div>
-      <span className="truncate w-full text-[9px] leading-tight">{item.name}</span>
+      <span className="w-full text-xs leading-snug break-words">{item.name}</span>
       {item.compatibility.skeletonFamilies.length > 0 && (
         <span className="text-[8px] text-muted-foreground/70 truncate w-full">
           {item.compatibility.skeletonFamilies[0].split("_")[0]}
@@ -100,7 +103,7 @@ function ItemCard({
   );
 }
 
-export function LibraryPanel() {
+export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeTab: LibraryTabId; onTabChange: (tab: LibraryTabId) => void }) {
   const project = useStore(s => s.project);
   const editor = useStore(s => s.editor);
   const openWizard = useStore(s => s.openWizard);
@@ -108,7 +111,6 @@ export function LibraryPanel() {
   const deleteEntity = useStore(s => s.deleteEntity);
   const setSelectedSlot = useStore(s => s.setSelectedSlot);
   const setEntitySlot = useStore(s => s.setEntitySlot);
-  const applyOutfitPreset = useStore(s => s.applyOutfitPreset);
   const setSlotGizmoHidden = useStore(s => s.setSlotGizmoHidden);
   const setSlotGizmoLocked = useStore(s => s.setSlotGizmoLocked);
   const hideAllSlotGizmos = useStore(s => s.hideAllSlotGizmos);
@@ -120,7 +122,6 @@ export function LibraryPanel() {
 
   const [search, setSearch] = useState("");
   const [categoryGroup, setCategoryGroup] = useState(0);
-  const [activeTab, setActiveTab] = useState<LibraryTabId>("entities");
 
   const activeEntity = getActiveEntity();
   const template = getActiveTemplate();
@@ -133,7 +134,6 @@ export function LibraryPanel() {
   const lockedSlotIds = new Set(slotEditorState.lockedSlotIds);
   const selectedSlot = slots.find(slot => slot.id === editor.selectedSlotId);
   const selectedSlotAssignment = activeEntity?.slots.find(slot => slot.slotId === editor.selectedSlotId);
-  const entityFamily = template?.skeletonFamily ?? null;
 
   const displayedItems = useMemo(() => {
     const group = CATEGORY_GROUPS[categoryGroup];
@@ -166,9 +166,6 @@ export function LibraryPanel() {
     return acc;
   }, {} as Record<ItemCategory, SlotDef[]>);
 
-  const activeStyleSetId = activeEntity?.styleSetId ?? project.styleSets[0]?.id ?? "dark_fantasy";
-  const presetsForStyle = getPresetsByStyleSet(activeStyleSetId);
-  const visiblePresets = presetsForStyle.length ? presetsForStyle : SKIN_PRESETS;
 
   return (
     <aside
@@ -176,24 +173,28 @@ export function LibraryPanel() {
       className="flex flex-col h-full bg-sidebar border-r border-sidebar-border select-none"
     >
       <div className="px-2 pt-2 pb-0 flex-shrink-0">
-        <div className="flex w-full h-7 rounded-md bg-background/50 p-0.5">
-          {(["entities", "slots", "items", "presets"] as LibraryTabId[]).map(tabId => (
+        <div className="grid grid-cols-2 gap-1 w-full bg-background/50 p-1">
+          {(["appearance", "body", "entities", "items", "slots"] as LibraryTabId[]).map(tabId => (
             <button
               key={tabId}
               type="button"
               onClick={() => setActiveTab(tabId)}
+              aria-pressed={activeTab === tabId}
               className={[
-                "flex-1 h-6 rounded-sm text-xs transition-colors",
+                "h-8 rounded-sm text-xs transition-colors",
                 activeTab === tabId
-                  ? "bg-background text-foreground"
+                  ? "bg-primary/15 text-primary ring-1 ring-primary/40"
                   : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
               ].join(" ")}
             >
-              {tabId === "entities" ? "Entities" : tabId === "slots" ? "Slots" : tabId === "items" ? "Items" : "Presets"}
+              {tabId === "appearance" ? "Внешность" : tabId === "entities" ? "Персонажи" : tabId === "body" ? "Части тела" : tabId === "slots" ? "Крепления" : "Экипировка"}
             </button>
           ))}
         </div>
       </div>
+
+      {activeTab === "body" && <CharacterPartsPanel />}
+      <div hidden={activeTab !== "appearance"} className={activeTab === "appearance" ? "flex flex-1 min-h-0 flex-col" : "hidden"}><AppearancePanel /></div>
 
       {activeTab === "entities" && (
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -206,16 +207,14 @@ export function LibraryPanel() {
               onClick={openWizard}
             >
               <Plus className="w-3.5 h-3.5 mr-1" />
-              New Entity
+              Создать персонажа
             </Button>
           </div>
           <div className="flex-1 overflow-auto ide-scroll">
             <div className="px-2 pb-2 space-y-1">
               {project.entities.length === 0 && (
                 <div className="py-6 text-center text-xs text-muted-foreground">
-                  No entities yet.
-                  <br />
-                  Click "New Entity" to start.
+                  Нет персонажей
                 </div>
               )}
               {project.entities.map(entity => {
@@ -386,6 +385,22 @@ export function LibraryPanel() {
 
       {activeTab === "items" && (
         <div className="flex-1 overflow-hidden flex flex-col">
+          {activeEntity?.templateId.startsWith("biped_profile_") && <Button data-testid="equip-peasant-outfit" variant="outline"
+            aria-pressed={["peasant_shirt_25d", "peasant_trousers_25d", "peasant_boots_25d"].every(id => activeEntity.slots.some(slot => slot.itemId === id))}
+            className="m-2 h-8 text-xs" onClick={() => {
+            const slots = activeEntity.slots;
+            const outfit: Record<string, string> = { side_slot_torso: "peasant_shirt_25d", side_slot_legs: "peasant_trousers_25d", side_slot_foot_l: "peasant_boots_25d" };
+            const equipped = Object.entries(outfit).every(([slotId, id]) => slots.some(slot => slot.slotId === slotId && slot.itemId === id));
+            useStore.getState().pushCommand({ type: "SET_SLOT", entityId: activeEntity.id, before: { slots },
+              after: { slots: slots.map(slot => outfit[slot.slotId] ? { ...slot, itemId: equipped ? null : outfit[slot.slotId] } : slot) }, label: "Peasant outfit" });
+          }}><Shirt size={14} className="mr-2" />Крестьянский комплект</Button>}
+          <div className="px-2 pt-2 pb-1">
+            <select aria-label="Место крепления" value={editor.selectedSlotId ?? ""} onChange={event => setSelectedSlot(event.target.value || null)}
+              className="w-full min-w-0 h-9 rounded border border-border bg-background px-2 text-xs">
+              <option value="">Место крепления</option>
+              {slots.map(slot => <option key={slot.id} value={slot.id}>{slot.name}</option>)}
+            </select>
+          </div>
           <div className="px-2 pt-1.5 flex-shrink-0">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
@@ -393,7 +408,8 @@ export function LibraryPanel() {
                 data-testid="library-search"
                 value={search}
                 onChange={event => setSearch(event.target.value)}
-                placeholder="Search items..."
+                placeholder="Поиск предметов"
+                aria-label="Поиск предметов"
                 className="h-7 text-xs pl-6 bg-background border-border"
               />
             </div>
@@ -403,9 +419,9 @@ export function LibraryPanel() {
             <div className="px-2 pb-1 pt-0.5 flex-shrink-0">
               <div className="flex items-center gap-1.5">
                 <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
-                  Slot: {selectedSlot.name}
+                  {selectedSlot.name}
                 </Badge>
-                <button onClick={() => setSelectedSlot(null)} className="text-muted-foreground hover:text-foreground">
+                <button onClick={() => setSelectedSlot(null)} title="Снять фильтр крепления" aria-label="Снять фильтр крепления" className="text-muted-foreground hover:text-foreground">
                   <X className="w-3 h-3" />
                 </button>
               </div>
@@ -418,6 +434,7 @@ export function LibraryPanel() {
                 <button
                   key={group.label}
                   onClick={() => setCategoryGroup(index)}
+                  aria-pressed={categoryGroup === index}
                   className={[
                     "px-1.5 py-0.5 rounded text-[10px] transition-colors",
                     categoryGroup === index
@@ -433,7 +450,7 @@ export function LibraryPanel() {
 
           <div className="px-2 pb-0.5 flex-shrink-0 flex items-center justify-between">
             <span className="text-[10px] text-muted-foreground">
-              {selectedSlot ? `${gridItems.length} compatible` : `${displayedItems.length} items`}
+              {selectedSlot ? `${gridItems.length} совместимых` : `${displayedItems.length} предметов`}
             </span>
             {selectedSlot && (
               <span className="text-[10px] text-muted-foreground">
@@ -446,14 +463,15 @@ export function LibraryPanel() {
             <div className="px-2 pb-2">
               {gridItems.length === 0 && (
                 <div className="py-6 text-center text-xs text-muted-foreground">
-                  {selectedSlot ? "No compatible items for this slot." : "No items match your search."}
+                  {project.items.length === 0 ? "Нет предметов" : selectedSlot ? "Нет совместимых предметов" : "Ничего не найдено"}
                 </div>
               )}
-              <div className="grid grid-cols-3 gap-1 mt-0.5">
+              <div className="grid grid-cols-2 gap-2 mt-1">
                 {gridItems.map(item => {
-                  const assignment = activeEntity?.slots.find(slot => slot.slotId === editor.selectedSlotId);
+                  const targetSlot = editor.selectedSlotId ?? template?.slots.find(slot => item.allowedSlots.includes(slot.id) && itemSupportsTemplate(item, template))?.id;
+                  const assignment = activeEntity?.slots.find(slot => slot.slotId === targetSlot);
                   const isEquipped = !!activeEntity?.slots.some(slot => slot.itemId === item.id);
-                  const disabled = !activeEntity || !editor.selectedSlotId;
+                  const disabled = !activeEntity || !targetSlot;
                   return (
                     <ItemCard
                       key={item.id}
@@ -462,9 +480,9 @@ export function LibraryPanel() {
                       isIncompat={false}
                       disabled={disabled}
                       onClick={() => {
-                        if (activeEntity && editor.selectedSlotId) {
+                        if (activeEntity && targetSlot) {
                           const newItemId = assignment?.itemId === item.id ? null : item.id;
-                          setEntitySlot(activeEntity.id, editor.selectedSlotId, newItemId);
+                          setEntitySlot(activeEntity.id, targetSlot, newItemId);
                         }
                       }}
                     />
@@ -476,63 +494,6 @@ export function LibraryPanel() {
         </div>
       )}
 
-      {activeTab === "presets" && (
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {!activeEntity ? (
-            <div className="p-4 text-center text-xs text-muted-foreground">
-              Select an entity to apply outfit presets.
-            </div>
-          ) : (
-            <div className="flex-1 overflow-auto ide-scroll">
-              <div className="px-2 py-1.5 space-y-2">
-                <p className="text-[10px] text-muted-foreground px-1">
-                  Outfit presets apply a full set of items in one click. Current items will be replaced.
-                </p>
-                {visiblePresets.map(preset => {
-                  const slotCount = Object.keys(preset.slots).length;
-                  const compatible = preset.skeletonFamilies.length === 0 || (entityFamily && preset.skeletonFamilies.includes(entityFamily));
-                  return (
-                    <div
-                      key={preset.id}
-                      className="rounded border border-border bg-accent/20 p-2 space-y-1.5"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground truncate">{preset.name}</p>
-                          <p className="text-[10px] text-muted-foreground">{preset.description}</p>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={`text-[9px] flex-shrink-0 ${compatible ? "border-primary/40 text-primary" : "border-yellow-500/40 text-yellow-600"}`}
-                        >
-                          {preset.styleSetId === "dark_fantasy" ? "Fantasy" : "Farm"}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-muted-foreground">{slotCount} slots</span>
-                        {!compatible && (
-                          <span className="flex items-center gap-0.5 text-[9px] text-yellow-600">
-                            <AlertTriangle className="w-2.5 h-2.5" /> Skeleton mismatch
-                          </span>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-5 text-[10px] px-2 border-primary/30 text-primary hover:bg-primary/10"
-                          onClick={() => applyOutfitPreset(activeEntity.id, preset.id)}
-                        >
-                          <Wand2 className="w-2.5 h-2.5 mr-1" />
-                          Apply
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {selectedSlotAssignment && <div className="hidden" data-testid="library-selected-slot-assignment" />}
     </aside>

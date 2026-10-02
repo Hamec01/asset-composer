@@ -43,6 +43,12 @@ function makeEngineHarness() {
     setActiveObject: vi.fn((object: any) => { activeObject = object; }),
     getActiveObject: vi.fn(() => activeObject),
     getObjects: vi.fn(() => objects),
+    moveObjectTo: vi.fn((object: any, target: number) => {
+      const index = objects.indexOf(object);
+      if (index < 0) return;
+      objects.splice(index, 1);
+      objects.splice(target, 0, object);
+    }),
     getWidth: vi.fn(() => 100),
     getHeight: vi.fn(() => 100),
     setViewportTransform: vi.fn(),
@@ -93,6 +99,47 @@ function makeEngineHarness() {
 }
 
 describe("CanvasEngine persistent reconcile", () => {
+  it("sorts asynchronous artwork and updates cached depth when changing view", async () => {
+    const { engine, fakeCanvas, loadVisual } = makeEngineHarness();
+    engine._sortCanvasObjects = (CanvasEngine.prototype as any)._sortCanvasObjects;
+    const first = makeScene();
+    first.visuals = [
+      { ...first.visuals[0], id: "far-arm", zIndex: -920 },
+      { ...first.visuals[0], id: "torso", zIndex: -840 },
+      { ...first.visuals[0], id: "near-arm", zIndex: -813 },
+    ];
+    const originalLoad = engine._loadVisual;
+    engine._loadVisual = async (visual: any, generation: number) => {
+      if (visual.id === "far-arm") await new Promise(resolve => setTimeout(resolve, 10));
+      await originalLoad(visual, generation);
+    };
+    await engine.reconcileSceneStructure(first, engine.currentTemplate, null, []);
+    expect(fakeCanvas.getObjects().map((object: any) => object.__visualId)).toEqual(["far-arm", "torso", "near-arm"]);
+    const second = { ...first, visuals: first.visuals.map(visual => ({ ...visual, zIndex: visual.id === "far-arm" ? -800 : visual.zIndex })) };
+    await engine.reconcileSceneStructure(second, engine.currentTemplate, null, []);
+    expect(loadVisual).toHaveBeenCalledTimes(3);
+    expect(fakeCanvas.getObjects().map((object: any) => object.__visualId)).toEqual(["torso", "near-arm", "far-arm"]);
+    engine.updateSceneTransforms(first);
+    expect(fakeCanvas.getObjects().map((object: any) => object.__visualId)).toEqual(["far-arm", "torso", "near-arm"]);
+  });
+  it("applies reflection explicitly without repeated negative-scale flip toggles", async () => {
+    const { engine } = makeEngineHarness();
+    const scene = makeScene();
+    scene.visuals[0].worldMatrix = [-1, 0, 0, 1, 0, 0];
+    await engine.reconcileSceneStructure(scene, engine.currentTemplate, null, []);
+    const image = engine.fabricImages.get("visual-1");
+    engine.updateSceneTransforms(scene);
+    engine.updateSceneTransforms(scene);
+    const updates = image.set.mock.calls
+      .map((call: any[]) => call[0])
+      .filter((update: any) => typeof update.scaleX === "number");
+    expect(updates.length).toBeGreaterThanOrEqual(2);
+    for (const update of updates) {
+      expect(update.scaleX).toBeGreaterThan(0);
+      expect(update.scaleY).toBeGreaterThan(0);
+      expect(update.flipY).toBe(true);
+    }
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });

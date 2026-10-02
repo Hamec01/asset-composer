@@ -18,6 +18,28 @@ import {
 } from "../src/lib/spriteEditor";
 
 describe("sprite editor helpers", () => {
+  it("shows tracing images only in the editor, with adjustable placement and opacity", () => {
+    const doc = createDocumentFromFaceOverlay("entity-1");
+    doc.tracingAsset = { format: "png", name: "trace", originalFileName: "trace.png", mimeType: "image/png", dataUri: "data:image/png;base64,AAAA" };
+    doc.tracingOpacity = 0.4;
+    doc.tracingTransform = { x: -12, y: 5, scale: 2 };
+    doc.layers[0].shapes.push(createDefaultShape("ellipse"));
+    const preview = spriteEditorDocumentToSvg(doc, { preview: true });
+    expect(preview).toContain('<image');
+    expect(preview).toContain('opacity="0.4"');
+    expect(preview).toContain('translate(20 37) scale(2) translate(-32 -32)');
+    expect(preview).toContain('preserveAspectRatio="xMidYMid meet"');
+    expect(spriteEditorDocumentToSvg(doc)).not.toContain('<image');
+    expect(spriteEditorDocumentToSvg(doc)).toContain('<ellipse');
+    doc.tracingVisible = false;
+    expect(spriteEditorDocumentToSvg(doc, { preview: true })).not.toContain('<image');
+  });
+  it("preserves SVG default paint without inventing outlines", () => {
+    const shapes = extractSpriteShapesFromSvg('<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0L10 10" fill="#ffc899"/><path d="M0 0L10 10" fill="none" stroke="#543b29" stroke-width="0"/></svg>');
+    expect(shapes[0].stroke).toBe("none");
+    expect(shapes[0].fill).toBe("#ffc899");
+    expect(shapes[1].strokeWidth).toBe(0);
+  });
   it("serializes vector layers and optional reference into svg", () => {
     const doc = createDocumentFromFaceOverlay("entity-1");
     doc.referenceAsset = {

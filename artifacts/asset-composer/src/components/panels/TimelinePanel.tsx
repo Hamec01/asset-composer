@@ -30,9 +30,9 @@ const GROUP_NAMES: Record<string, string[]> = {
     "idle_13_tap_foot","idle_14_cross_arms","idle_15_lean",
   ],
   "Locomotion": ["idle_full","walk","run"],
-  "Combat": ["melee_attack","ranged_attack","cast","block"],
-  "Reactions": ["hurt","stagger","death"],
-  "Actions": ["sit","interact","farm_work","carry"],
+  "Combat": ["melee_attack","ranged_attack","cast","block","axe_strike","sword_strike"],
+  "Reactions": ["hurt","stagger","death","laugh"],
+  "Actions": ["sit","interact","farm_work","carry","pickup"],
   "Monster": ["roar","charge"],
   "Quadruped": ["idle","walk","trot","gallop","rear","bite","hurt","death"],
   "Bird": ["idle","flap","glide","peck","hurt","death"],
@@ -200,7 +200,7 @@ export function TimelinePanel() {
         {/* Rewind to start */}
         <Button size="icon" variant="ghost" className="h-6 w-6"
           onClick={() => { setPlaybackTime(0); setPlaybackPlaying(false); }}
-          data-testid="timeline-rewind" title="Rewind to start">
+          data-testid="timeline-rewind" title="В начало" aria-label="В начало">
           <SkipBack className="w-3 h-3" />
         </Button>
         {/* Step back 1 frame */}
@@ -209,19 +209,19 @@ export function TimelinePanel() {
             setPlaybackPlaying(false);
             setPlaybackTime(Math.max(0, timeMs - frameToTimeMs(1, fps)));
           }}
-          data-testid="timeline-step-back" title="Step back 1 frame">
+          data-testid="timeline-step-back" title="Предыдущий кадр" aria-label="Предыдущий кадр">
           <ChevronLeft className="w-3 h-3" />
         </Button>
         {/* Play / Pause */}
         <Button size="icon" variant={playing ? "default" : "ghost"} className="h-6 w-6"
           onClick={() => setPlaybackPlaying(!playing)}
-          data-testid="timeline-play">
+          data-testid="timeline-play" aria-label={playing ? "Пауза" : "Воспроизвести"} title={playing ? "Пауза" : "Воспроизвести"}>
           {playing ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
         </Button>
         {/* Stop (pause + rewind) */}
         <Button size="icon" variant="ghost" className="h-6 w-6"
           onClick={() => { setPlaybackPlaying(false); setPlaybackTime(0); }}
-          data-testid="timeline-stop" title="Stop">
+          data-testid="timeline-stop" title="Остановить" aria-label="Остановить">
           <Square className="w-3 h-3" />
         </Button>
         {/* Step forward 1 frame */}
@@ -230,17 +230,17 @@ export function TimelinePanel() {
             setPlaybackPlaying(false);
             setPlaybackTime(Math.min(durationMs, timeMs + frameToTimeMs(1, fps)));
           }}
-          data-testid="timeline-step-forward" title="Step forward 1 frame">
+          data-testid="timeline-step-forward" title="Следующий кадр" aria-label="Следующий кадр">
           <ChevronRight className="w-3 h-3" />
         </Button>
         {/* Skip to end */}
         <Button size="icon" variant="ghost" className="h-6 w-6"
           onClick={() => { setPlaybackTime(durationMs); setPlaybackPlaying(false); }}
-          data-testid="timeline-end" title="Skip to end">
+          data-testid="timeline-end" title="В конец" aria-label="В конец">
           <SkipForward className="w-3 h-3" />
         </Button>
         <Button size="icon" variant={looping ? "default" : "ghost"} className="h-6 w-6"
-          onClick={() => setPlaybackLooping(!looping)} title="Loop">
+          onClick={() => setPlaybackLooping(!looping)} title="Зациклить" aria-label="Зациклить" aria-pressed={looping}>
           <Repeat className="w-3 h-3" />
         </Button>
 
@@ -276,7 +276,7 @@ export function TimelinePanel() {
       </div>
 
       {/* ── Multi-clip blend row ── */}
-      {activeEntity && (
+      {activeEntity && !activeEntity.templateId.startsWith("biped_profile_") && (
         <div className="flex items-center gap-2 px-2 py-1 border-b border-border flex-shrink-0 bg-background/40">
           <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider w-14 flex-shrink-0">Blend</span>
           {/* Upper body override */}
@@ -288,7 +288,7 @@ export function TimelinePanel() {
             title="Upper-body clip overlay (plays simultaneously with base clip)"
           >
             <option value="">— none —</option>
-            {animationClips.map(c => (
+            {familyClips.map(c => (
               <option key={c.id} value={c.id}>{c.label}</option>
             ))}
           </select>
@@ -329,7 +329,7 @@ export function TimelinePanel() {
             title="Lower-body clip override (plays simultaneously with base clip)"
           >
             <option value="">— none —</option>
-            {animationClips.map(c => (
+            {familyClips.map(c => (
               <option key={c.id} value={c.id}>{c.label}</option>
             ))}
           </select>

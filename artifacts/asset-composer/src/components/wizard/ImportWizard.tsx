@@ -617,7 +617,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
         )}
 
         {ws.step === 2 && (
-          <div className="grid grid-cols-[1.2fr,0.8fr] gap-4">
+          <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-4">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -755,7 +755,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
               <div className="space-y-2">
                 <Label className="text-xs">Imported Parts</Label>
                 <div className="max-h-72 overflow-auto rounded border border-border bg-background/40">
-                  <div className="grid grid-cols-[1.05fr,0.95fr,0.8fr,0.4fr,0.55fr,0.55fr] gap-2 p-2 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <div className="grid grid-cols-[1.05fr_0.95fr_0.8fr_0.4fr_0.55fr_0.55fr] gap-2 p-2 text-[10px] uppercase tracking-wide text-muted-foreground">
                     <span>Asset</span>
                     <span>Role</span>
                     <span>Bone</span>
@@ -764,7 +764,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
                     <span>Pivot Y</span>
                   </div>
                   {ws.assets.map(asset => (
-                    <div key={asset.id} className="grid grid-cols-[1.05fr,0.95fr,0.8fr,0.4fr,0.55fr,0.55fr] gap-2 border-t border-border p-2">
+                    <div key={asset.id} className="grid grid-cols-[1.05fr_0.95fr_0.8fr_0.4fr_0.55fr_0.55fr] gap-2 border-t border-border p-2">
                       <div className="min-w-0">
                         <p className="truncate text-xs font-medium">{asset.displayName}</p>
                         <p className="truncate text-[10px] text-muted-foreground">{asset.source.format.toUpperCase()} · {asset.fileName}</p>

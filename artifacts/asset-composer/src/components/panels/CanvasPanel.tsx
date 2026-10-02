@@ -9,6 +9,7 @@ import {
 import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
 import { computeSceneBounds, fitSceneToViewport } from "@/lib/sceneUtils";
 import { animController } from "@/core-v2/AnimationController";
+import { entityVisualRevision } from "@/lib/entityVisualRevision";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Maximize2, MousePointer2, Move, LayoutGrid } from "lucide-react";
 import type { BodyMorphRegionId, CanvasMode, FaceAuthoringTool, FaceFeatureKey } from "@/domain/types";
@@ -74,6 +75,16 @@ const FACE_FEATURE_SLOT: Record<FaceFeatureKey, string> = {
   beard: "slot_beard",
   hair: "slot_hair",
 };
+
+function getUsableViewportSize(container: HTMLDivElement | null, fallbackWidth = 600, fallbackHeight = 500) {
+  const width = container?.clientWidth ?? 0;
+  const height = container?.clientHeight ?? 0;
+  return {
+    width: width >= 120 ? width : fallbackWidth,
+    height: height >= 120 ? height : fallbackHeight,
+    ready: width >= 120 && height >= 120,
+  };
+}
 
 function getBodyRegionFromBoneId(boneId: string | null | undefined): BodyMorphRegionId {
   if (!boneId) return "global";
@@ -678,7 +689,7 @@ export function CanvasPanel() {
         liveEntity,
         effectiveItems,
       );
-      const skeleton = evaluateSkeleton(liveTemplate.bones, pose, liveEntity.bodyMorphs);
+      const skeleton = evaluateSkeleton(liveTemplate.bones, pose, liveEntity.bodyMorphs, liveEntity.appearance);
       const scene    = evaluateScene(liveEntity, liveTemplate, skeleton, effectiveItems, store.project.itemFitProfiles);
 
       const itemsArr = effectiveItems;
@@ -698,8 +709,13 @@ export function CanvasPanel() {
 
       // Auto-fit on first render for this entity
       if (cameraDirtyRef.current) {
+        const viewport = getUsableViewportSize(containerRef.current);
+        if (!viewport.ready) {
+          return;
+        }
+        const bounds = computeSceneBounds(scene.visuals, liveTemplate.previewWidth, liveTemplate.previewHeight);
+        const cam = fitSceneToViewport(bounds, viewport.width, viewport.height);
         cameraDirtyRef.current = false;
-        const cam = engine.fitScene(scene, liveTemplate);
         applyViewport(cam);
       }
     };
@@ -713,12 +729,11 @@ export function CanvasPanel() {
   }, [
     initialized,
     project.activeEntityId,
-    JSON.stringify(activeEntity?.slots),
-    JSON.stringify(activeEntity?.palette),
-    JSON.stringify(activeEntity?.visuals),
+    entityVisualRevision(activeEntity),
     JSON.stringify(template?.slots),
     JSON.stringify(slotEditorState),
     activeEntity?.styleSetId,
+    activeEntity?.activeAnimationClipId === "chibi_front__laugh",
     editor.selectedSlotId,
   ]);
 
@@ -744,7 +759,7 @@ export function CanvasPanel() {
         ent,
         effectiveItems,
       );
-      const skeleton = evaluateSkeleton(tmpl.bones, pose, ent.bodyMorphs);
+      const skeleton = evaluateSkeleton(tmpl.bones, pose, ent.bodyMorphs, ent.appearance);
       const scene    = evaluateScene(ent, tmpl, skeleton, effectiveItems, store.project.itemFitProfiles);
       engineRef.current.updateSceneTransforms(scene);
     });
@@ -760,6 +775,7 @@ export function CanvasPanel() {
         const { width, height } = entry.contentRect;
         if (width > 0 && height > 0 && engineRef.current) {
           engineRef.current.resize(width, height);
+          cameraDirtyRef.current = true;
           rerenderRef.current?.();
         }
       }
@@ -809,9 +825,21 @@ export function CanvasPanel() {
     }
     const store    = useStore.getState();
     const effectiveItems = refreshCanonicalBuiltInTypedItems(store.project.items);
-    const skeleton = evaluateSkeleton(template.bones, new Map(), activeEntity.bodyMorphs);
+    const pose = buildMultiClipPose(
+      store.project.animationClips,
+      store.animPlayback.activeClipId,
+      store.animPlayback.upperClipId,
+      store.animPlayback.lowerClipId,
+      store.animPlayback.upperBlendWeight,
+      store.animPlayback.timeMs,
+      activeEntity,
+      effectiveItems,
+    );
+    const skeleton = evaluateSkeleton(template.bones, pose, activeEntity.bodyMorphs, activeEntity.appearance);
     const scene    = evaluateScene(activeEntity, template, skeleton, effectiveItems, store.project.itemFitProfiles);
-    const cam      = engineRef.current.fitScene(scene, template);
+    const viewport = getUsableViewportSize(containerRef.current);
+    const bounds = computeSceneBounds(scene.visuals, template.previewWidth, template.previewHeight);
+    const cam = fitSceneToViewport(bounds, viewport.width, viewport.height);
     applyViewport(cam);
   }, [activeEntity, template, applyViewport]);
 
@@ -830,10 +858,9 @@ export function CanvasPanel() {
       activeEntity,
       effectiveItems,
     );
-    const skeleton = evaluateSkeleton(template.bones, pose, activeEntity.bodyMorphs);
+    const skeleton = evaluateSkeleton(template.bones, pose, activeEntity.bodyMorphs, activeEntity.appearance);
     const scene = evaluateScene(activeEntity, template, skeleton, effectiveItems, store.project.itemFitProfiles);
-    const viewportW = containerRef.current.clientWidth || 600;
-    const viewportH = containerRef.current.clientHeight || 500;
+    const viewport = getUsableViewportSize(containerRef.current);
 
     let focusVisuals = scene.visuals;
     let padding = 0.12;
@@ -878,7 +905,7 @@ export function CanvasPanel() {
     }
 
     const bounds = computeSceneBounds(focusVisuals, template.previewWidth, template.previewHeight);
-    const cam = fitSceneToViewport(bounds, viewportW, viewportH, padding);
+    const cam = fitSceneToViewport(bounds, viewport.width, viewport.height, padding);
     applyViewport(cam);
   }, [
     activeAuthoringMode,
@@ -957,7 +984,7 @@ export function CanvasPanel() {
     <div
       data-testid="canvas-panel"
       ref={containerRef}
-      className="relative flex-1 min-w-0 bg-[#1e1e2e] overflow-hidden"
+      className="relative flex-1 min-w-0 bg-[#252729] overflow-hidden"
       style={{ cursor }}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
@@ -975,19 +1002,19 @@ export function CanvasPanel() {
             <Button
               key={mode}
               type="button"
-              size="sm"
+              size="icon"
               variant={active ? "default" : "secondary"}
               className={[
-                "h-8 gap-1.5 px-2.5 text-xs",
+                "h-8 w-8 text-xs",
                 active ? "shadow-sm" : "bg-card/70",
               ].join(" ")}
               onClick={() => setCanvasMode(mode)}
               aria-pressed={active}
               data-testid={`canvas-mode-${mode}`}
               title={title}
+              aria-label={label}
             >
               <Icon className="h-3.5 w-3.5" />
-              <span>{label}</span>
             </Button>
           );
         })}
@@ -1028,12 +1055,6 @@ export function CanvasPanel() {
         </span>
       </div>
 
-      {/* Pan hint */}
-      <div className="absolute top-3 right-3 z-10 pointer-events-none">
-        <span className="text-[10px] text-muted-foreground/40">
-          Wheel-click or Alt+drag to pan
-        </span>
-      </div>
 
       {/* No entity placeholder */}
       {!activeEntity && (
@@ -1047,42 +1068,13 @@ export function CanvasPanel() {
       {editor.selectedSlotId && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
           <div className="bg-primary/90 text-primary-foreground text-xs rounded-full px-3 py-1 shadow-lg animate-bounce">
-            Slot selected — pick an item from the library
+            {template?.slots.find(slot => slot.id === editor.selectedSlotId)?.name ?? editor.selectedSlotId}
           </div>
         </div>
       )}
 
-      {activeEntity && activeAuthoringMode && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-10">
-          <div className="rounded-lg border border-border bg-card/85 px-3 py-2 text-[11px] text-muted-foreground backdrop-blur">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-foreground">
-                {activeAuthoringMode === "body-morph" ? "Body Workflow" : activeAuthoringMode === "face-editor" ? "Face Workflow" : "Authoring"}
-              </span>
-              {activeAuthoringMode === "body-morph" && (
-                <span>
-                  focus: {BODY_REGION_LABELS[bodyAuthoring.focusRegion]}
-                  {bodyAuthoring.activeBoneId ? ` · bone ${bodyAuthoring.activeBoneId}` : ""}
-                  {bodyAuthoring.intent ? ` · ${bodyAuthoring.intent}` : ""}
-                  {bodyAuthoring.viewportMode ? ` · ${bodyAuthoring.viewportMode}` : ""}
-                </span>
-              )}
-              {activeAuthoringMode === "face-editor" && (
-                <span>
-                  feature: {activeFaceFeature ? FACE_FEATURE_LABELS[activeFaceFeature] : "Generic"}
-                  {faceAuthoring.activeSlotId ? ` · slot ${faceAuthoring.activeSlotId}` : ""}
-                  {faceAuthoring.workflowMode ? ` · ${faceAuthoring.workflowMode}` : ""}
-                </span>
-              )}
-              {faceAuthoring.overlayFilter !== "all" && activeAuthoringMode === "face-editor" && (
-                <span>overlay filter: {faceAuthoring.overlayFilter}</span>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
-      {activeEntity && (
+      {activeEntity && (activeAuthoringMode === "body-morph" || activeAuthoringMode === "face-editor") && (
         <div className="absolute top-14 left-3 z-10 flex flex-col gap-2">
           <div className="rounded-lg border border-border bg-card/85 p-2 backdrop-blur">
             <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Body Focus</div>

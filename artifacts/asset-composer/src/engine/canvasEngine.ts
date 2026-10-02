@@ -249,7 +249,7 @@ export class CanvasEngine {
       width:           opts.width,
       height:          opts.height,
       selection:       false,
-      backgroundColor: "#1e1e2e",
+      backgroundColor: "#252729",
     });
 
     // ── Slot zone click detection ─────────────────────────────────────────────
@@ -450,13 +450,18 @@ export class CanvasEngine {
     if (generation !== this.reconcileGeneration) return;
     this._pruneOrphanedFabricObjects(newIds);
 
-    // ── 3. Sort canvas objects by zIndex (bottom → top) ───────────────────────
+    // Cached artwork can keep its SVG while changing depth between views.
+    for (const visual of scene.visuals) {
+      const image = this.fabricImages.get(visual.id);
+      if (image) image.__zIndex = visual.zIndex;
+    }
 
     // ── 4. Rebuild slot zones ─────────────────────────────────────────────────
     this._rebuildSlotZones(scene.skeleton, template, highlightedSlotId, slotEditorState);
 
     // ── 5. Rebuild anchor gizmos ──────────────────────────────────────────────
     this._rebuildAnchorGizmos(scene.skeleton, template);
+    this._sortCanvasObjects();
 
     // ── 6. Apply mode selectability ───────────────────────────────────────────
     this._applyModeSelectability();
@@ -484,9 +489,10 @@ export class CanvasEngine {
   }
 
   private _sortCanvasObjects(): void {
-    (this.canvas as any)._objects = this.canvas
+    const ordered = this.canvas
       .getObjects()
       .sort((a: any, b: any) => (a.__zIndex ?? 0) - (b.__zIndex ?? 0));
+    ordered.forEach((object, index) => this.canvas.moveObjectTo(object, index));
   }
 
   private async _loadVisual(visual: EvaluatedVisual, generation: number): Promise<void> {
@@ -506,8 +512,10 @@ export class CanvasEngine {
         left:      placement.translateX,
         top:       placement.translateY,
         angle:     placement.angle,
-        scaleX:    placement.scaleX,
-        scaleY:    placement.scaleY,
+        scaleX:    Math.abs(placement.scaleX),
+        scaleY:    Math.abs(placement.scaleY),
+        flipX: placement.scaleX < 0,
+        flipY: placement.scaleY < 0,
         skewX:     placement.skewX ?? 0,
         skewY:     placement.skewY ?? 0,
         originX:   "center",
@@ -577,9 +585,14 @@ export class CanvasEngine {
   updateSceneTransforms(scene: EvaluatedScene): void {
     if (this.isTransforming) return;
 
+    let depthChanged = false;
     for (const visual of scene.visuals) {
       const img = this.fabricImages.get(visual.id);
       if (!img) continue;
+      if (img.__zIndex !== visual.zIndex) {
+        img.__zIndex = visual.zIndex;
+        depthChanged = true;
+      }
       const localCenterX = (visual.localBounds.minX + visual.localBounds.maxX) / 2;
       const localCenterY = (visual.localBounds.minY + visual.localBounds.maxY) / 2;
       const placement = makeFabricImagePlacement(visual.worldMatrix, localCenterX, localCenterY);
@@ -589,13 +602,16 @@ export class CanvasEngine {
         left: placement.translateX,
         top: placement.translateY,
         angle: placement.angle,
-        scaleX: placement.scaleX,
-        scaleY: placement.scaleY,
+        scaleX: Math.abs(placement.scaleX),
+        scaleY: Math.abs(placement.scaleY),
+        flipX: placement.scaleX < 0,
+        flipY: placement.scaleY < 0,
         skewX: placement.skewX ?? 0,
         skewY: placement.skewY ?? 0,
       });
       img.setCoords();
     }
+    if (depthChanged) this._sortCanvasObjects();
 
     // Update anchor gizmo positions
     this.currentScene = scene;
@@ -685,6 +701,8 @@ export class CanvasEngine {
       const center = getTemplateSlotWorldCenter(slotDef, wb);
 
       const isHigh = slotDef.id === highlightedSlotId;
+      const isEditSlots = this.mode === "edit-template-slots";
+      if (!isEditSlots && !isHigh) continue;
 
       const group  = boneGroups.get(slotDef.boneId) ?? [slotDef.id];
       const idx    = group.indexOf(slotDef.id);
@@ -694,7 +712,6 @@ export class CanvasEngine {
       const cx = center.x + ofsX;
       const cy = center.y;
 
-      const isEditSlots = this.mode === "edit-template-slots";
       const isLocked = lockedSlotIds.has(slotDef.id);
       const zone = new Rect({
         left:            cx,
@@ -1182,8 +1199,10 @@ export class CanvasEngine {
           left: placement.translateX,
           top: placement.translateY,
           angle: placement.angle,
-          scaleX: placement.scaleX,
-          scaleY: placement.scaleY,
+          scaleX: Math.abs(placement.scaleX),
+          scaleY: Math.abs(placement.scaleY),
+          flipX: placement.scaleX < 0,
+          flipY: placement.scaleY < 0,
           skewX: placement.skewX ?? 0,
           skewY: placement.skewY ?? 0,
         });
@@ -1300,7 +1319,7 @@ export class CanvasEngine {
     pose:              BoneTransformMap | null,
     isAnimTick         = false,
   ): Promise<void> {
-    const skeleton = evaluateSkeleton(template.bones, pose ?? new Map(), entity.bodyMorphs);
+    const skeleton = evaluateSkeleton(template.bones, pose ?? new Map(), entity.bodyMorphs, entity.appearance);
     const scene    = evaluateScene(entity, template, skeleton, [...items.values()], fitProfiles);
 
     if (isAnimTick) {
@@ -1346,7 +1365,7 @@ export class CanvasEngine {
     this.currentEntityId = null;
 
     this.canvas.clear();
-    this.canvas.backgroundColor = "#1e1e2e";
+    this.canvas.backgroundColor = "#252729";
     const cw = this.canvas.getWidth();
     const ch = this.canvas.getHeight();
     this.canvas.add(new FabricText(message, {

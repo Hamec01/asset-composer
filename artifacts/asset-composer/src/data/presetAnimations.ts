@@ -1,4 +1,5 @@
 import type { AnimationClip, SkeletonFamilyId, LayerMask } from "@/domain/types";
+import { CHIBI_ANIMATIONS } from "./chibiAnimations";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const kf = (t: number, tx = 0, ty = 0, rot = 0, sx = 1, sy = 1) => ({
@@ -542,6 +543,7 @@ const HUMANOID_SIDE_CLIPS    = makeHumanoidClips("humanoid_side_v1");
 const MONSTER_CLIPS          = makeHumanoidClips("humanoid_monster_v1", makeMonsterExtras());
 
 export const PRESET_ANIMATIONS: AnimationClip[] = [
+  ...CHIBI_ANIMATIONS,
   ...HUMANOID_TOPDOWN_CLIPS,
   ...HUMANOID_SIDE_CLIPS,
   ...MONSTER_CLIPS,

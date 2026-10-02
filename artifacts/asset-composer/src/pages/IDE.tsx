@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toolbar } from "@/components/toolbar/Toolbar";
 import { LibraryPanel } from "@/components/panels/LibraryPanel";
+import type { LibraryTabId } from "@/components/panels/LibraryPanel";
 import { CanvasPanel } from "@/components/panels/CanvasPanel";
 import { InspectorPanel } from "@/components/panels/InspectorPanel";
 import { TimelinePanel } from "@/components/panels/TimelinePanel";
@@ -10,7 +11,7 @@ import { PixiPreviewPanel } from "@/components/panels/PixiPreviewPanel";
 import { AuthoringPanel } from "@/components/panels/AuthoringPanel";
 import { NewEntityWizard } from "@/components/wizard/NewEntityWizard";
 import { ExportDialog } from "@/components/export/ExportDialog";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, UserRound, Pencil, Shirt, Clapperboard } from "lucide-react";
 import { useStore } from "@/store";
 import type { AnimBottomTab } from "@/store";
 import { useEditorShortcuts } from "@/features/shortcuts/useEditorShortcuts";
@@ -23,10 +24,10 @@ const COLLAPSED_SIDE_W = 28;
 const COLLAPSED_TIMELINE_H = 28;
 
 const BOTTOM_TABS: { id: AnimBottomTab; label: string }[] = [
-  { id: "timeline",     label: "Timeline" },
-  { id: "preview",      label: "Preview" },
-  { id: "statemachine", label: "State Machine" },
-  { id: "authoring",    label: "Authoring" },
+  { id: "timeline",     label: "Клипы" },
+  { id: "preview",      label: "Предпросмотр" },
+  { id: "statemachine", label: "Состояния" },
+  { id: "authoring",    label: "Редактор" },
 ];
 
 function useDragHandle() {
@@ -83,22 +84,33 @@ function useDragHandle() {
 export function IDE() {
   useEditorShortcuts();
 
-  const [libraryWidth,   setLibraryWidth]   = useState(220);
-  const [inspectorWidth, setInspectorWidth] = useState(220);
+  const [libraryWidth,   setLibraryWidth]   = useState(260);
+  const [inspectorWidth, setInspectorWidth] = useState(280);
   const [timelineHeight, setTimelineHeight] = useState(200);
 
   const [libraryCollapsed,   setLibraryCollapsed]   = useState(false);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
-  const [timelineCollapsed,  setTimelineCollapsed]  = useState(false);
+  const [timelineCollapsed,  setTimelineCollapsed]  = useState(true);
 
   const activeTab    = useStore(s => s.animPlayback.activeTab);
   const setActiveTab = useStore(s => s.setAnimBottomTab);
+  const authoringMode = useStore(s => s.project.editorMeta.activeAuthoringMode);
+  const activeEntityId = useStore(s => s.project.activeEntityId);
+  const [workspace, setWorkspace] = useState("character");
+  const [libraryTab, setLibraryTab] = useState<LibraryTabId>("appearance");
+  useEffect(() => {
+    if (activeTab === "authoring") {
+      setTimelineCollapsed(authoringMode === "sprite-editor");
+      setTimelineHeight(authoringMode === "sprite-editor" ? 160 : 360);
+    }
+  }, [activeTab, authoringMode]);
 
   const { startHDrag, startVDrag } = useDragHandle();
 
   const effectiveLibW    = libraryCollapsed   ? COLLAPSED_SIDE_W   : libraryWidth;
   const effectiveInspW   = inspectorCollapsed ? COLLAPSED_SIDE_W   : inspectorWidth;
   const effectiveTimeH   = timelineCollapsed  ? COLLAPSED_TIMELINE_H : timelineHeight;
+  const drawingWorkspace = activeTab === "authoring" && authoringMode === "sprite-editor";
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -108,6 +120,31 @@ export function IDE() {
       >
         {/* ─── Toolbar ─────────────────────────────────────────── */}
         <Toolbar />
+        <nav className="flex items-center gap-1 px-3 py-1 border-b border-border bg-sidebar overflow-x-auto flex-shrink-0" aria-label="Рабочие разделы">
+          {[
+            { id: "character", label: "Персонаж", icon: UserRound },
+            { id: "draw", label: "Рисование", icon: Pencil },
+            { id: "equipment", label: "Экипировка", icon: Shirt },
+            { id: "animate", label: "Анимация", icon: Clapperboard },
+          ].map(({ id, label, icon: Icon }) => {
+            const active = authoringMode === "sprite-editor" ? id === "draw" : workspace === id;
+            return <button key={id} data-testid={`workspace-${id}`} disabled={!activeEntityId} aria-pressed={active}
+              className={`flex items-center gap-2 px-3 h-8 text-xs border-b-2 whitespace-nowrap transition-colors disabled:opacity-40 ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              onClick={() => {
+                const store = useStore.getState();
+                setWorkspace(id);
+                setLibraryCollapsed(false);
+                setInspectorCollapsed(id === "draw");
+                setLibraryTab(id === "equipment" ? "items" : id === "draw" ? "body" : "appearance");
+                store.setActiveAuthoringMode(id === "draw" ? "sprite-editor" : null);
+                store.setCanvasMode(id === "equipment" ? "edit-attachment" : "select");
+                setTimelineCollapsed(id === "character" || id === "equipment");
+                if (id === "draw") store.setAnimBottomTab("authoring");
+                if (id === "character" || id === "equipment") store.setAnimBottomTab("timeline");
+                if (id === "animate") { store.setAnimBottomTab("timeline"); setTimelineHeight(220); }
+              }}><Icon size={15} />{label}</button>;
+          })}
+        </nav>
 
         {/* ─── Main work area ──────────────────────────────────── */}
         <div className="flex flex-1 overflow-hidden">
@@ -147,7 +184,7 @@ export function IDE() {
                   </button>
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <LibraryPanel />
+                  <LibraryPanel activeTab={libraryTab} onTabChange={setLibraryTab} />
                 </div>
               </div>
             )}
@@ -164,8 +201,8 @@ export function IDE() {
           {/* Center: Canvas + Bottom Panel stacked */}
           <div className="flex-1 flex flex-col overflow-hidden min-w-0">
             {/* Canvas area */}
-            <div className="flex-1 overflow-hidden">
-              <CanvasPanel />
+            <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
+              {drawingWorkspace ? <AuthoringPanel standalone /> : <CanvasPanel />}
             </div>
 
             {/* Horizontal resize handle */}
@@ -203,6 +240,7 @@ export function IDE() {
                         <button
                           key={tab.id}
                           data-testid={`bottom-tab-${tab.id}`}
+                          aria-pressed={activeTab === tab.id}
                           onClick={() => setActiveTab(tab.id)}
                           className={`
                             h-7 px-3 text-[10px] font-semibold uppercase tracking-wider border-r border-border
@@ -228,11 +266,11 @@ export function IDE() {
                   </div>
 
                   {/* Active tab content */}
-                  <div className="flex-1 overflow-hidden">
+                  <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
                     {activeTab === "timeline"     && <TimelinePanel />}
                     {activeTab === "preview"      && <PixiPreviewPanel />}
                     {activeTab === "statemachine" && <StateMachinePanel />}
-                    {activeTab === "authoring"    && <AuthoringPanel />}
+                    {activeTab === "authoring"    && (drawingWorkspace ? <CanvasPanel /> : <AuthoringPanel />)}
                   </div>
                 </div>
               )}

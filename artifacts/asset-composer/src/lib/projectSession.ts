@@ -12,6 +12,13 @@ const SESSION_DEBUG_KEY = "asset-composer:session-debug:v1";
 const MAX_RECENT_PROJECTS = 6;
 const MAX_DEBUG_EVENTS = 120;
 
+export function clearProjectSessions() {
+  if (typeof window === "undefined") return;
+  for (const key of [LAST_PROJECT_KEY, LAST_PROJECT_KEY_LEGACY, RECENT_PROJECTS_KEY, SESSION_DEBUG_KEY]) {
+    window.localStorage.removeItem(key);
+  }
+}
+
 interface SessionDebugEvent {
   time: number;
   event: string;

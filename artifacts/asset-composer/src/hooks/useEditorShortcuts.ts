@@ -8,6 +8,18 @@ interface EditorShortcutActions {
   removeSelectedAttachment: () => boolean;
 }
 
+export function getHistoryShortcut(event: KeyboardEvent): "undo" | "redo" | null {
+  if (event.repeat || event.altKey || isTypingTarget(event.target)) return null;
+  const key = event.code === "KeyZ" ? "z" : event.code === "KeyX" ? "x"
+    : event.code === "KeyY" ? "y" : event.key.toLowerCase();
+  if (event.ctrlKey && !event.metaKey) {
+    if (key === "z" && !event.shiftKey) return "undo";
+    if (key === "x" || key === "y" || (key === "z" && event.shiftKey)) return "redo";
+  }
+  if (event.metaKey && !event.ctrlKey && key === "z") return event.shiftKey ? "redo" : "undo";
+  return null;
+}
+
 export function isTypingTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   if (!el) return false;
@@ -29,37 +41,15 @@ export function handleEditorShortcutKeydown(
   const key = event.key.toLowerCase();
   const typingTarget = isTypingTarget(event.target);
 
-  if (event.ctrlKey && !event.metaKey && !event.altKey) {
-    if (!typingTarget && key === "z" && !event.shiftKey) {
-      event.preventDefault();
-      event.stopPropagation();
-      actions.undo();
-      return true;
-    }
-    if (!typingTarget && (key === "x" || key === "y" || (key === "z" && event.shiftKey))) {
-      event.preventDefault();
-      event.stopPropagation();
-      actions.redo();
-      return true;
-    }
-    return false;
+  const historyAction = getHistoryShortcut(event);
+  if (historyAction) {
+    event.preventDefault();
+    event.stopPropagation();
+    actions[historyAction]();
+    return true;
   }
 
-  if (event.metaKey && !event.ctrlKey && !event.altKey) {
-    if (key === "z" && !event.shiftKey && !typingTarget) {
-      event.preventDefault();
-      event.stopPropagation();
-      actions.undo();
-      return true;
-    }
-    if (key === "z" && event.shiftKey && !typingTarget) {
-      event.preventDefault();
-      event.stopPropagation();
-      actions.redo();
-      return true;
-    }
-    return false;
-  }
+  if (event.ctrlKey || event.metaKey || event.altKey) return false;
 
   if (typingTarget) return false;
 
@@ -108,7 +98,17 @@ export function useEditorShortcuts(): void {
       });
     };
 
+    // Some embedded browsers deliver Ctrl+X as a native cut command, without keydown.
+    const onCut = (event: ClipboardEvent) => {
+      if (isTypingTarget(event.target)) return;
+      event.preventDefault();
+      redo();
+    };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("cut", onCut);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("cut", onCut);
+    };
   }, [redo, setEntitySlot, setPlaybackPlaying, undo]);
 }

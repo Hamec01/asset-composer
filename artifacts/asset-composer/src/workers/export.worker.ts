@@ -11,7 +11,8 @@
  */
 
 import { resolveClipPose } from "@/lib/animationRuntime";
-import { templateSupportsAnimationFamily } from "@/lib/animationCompatibility";
+import { getSideGaitClip } from "@/data/chibiAnimations";
+import { templateSupportsAnimationClip } from "@/lib/animationCompatibility";
 import { evaluateSkeleton, evaluateScene } from "@/lib/evaluationPipeline";
 import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
 import { packSprites } from "@/lib/spritePacker";
@@ -92,7 +93,7 @@ async function renderFrame(
     ctx.fillRect(0, 0, frameSz, frameSz);
   }
 
-  const canonicalSkeleton = evaluateSkeleton(template.bones, pose, entity.bodyMorphs);
+  const canonicalSkeleton = evaluateSkeleton(template.bones, pose, entity.bodyMorphs, entity.appearance);
   const canonicalScene = evaluateScene(entity, template, canonicalSkeleton, [...itemsMap.values()], fitProfiles);
   const canonicalScale = frameSz / Math.max(template.previewWidth, template.previewHeight);
 
@@ -146,7 +147,7 @@ async function renderFrame(
   const skelScale = frameSz / 220;
   const cx        = frameSz / 2;
   const cy        = frameSz / 2;
-  const skeleton  = evaluateSkeleton(template.bones, pose, entity.bodyMorphs);
+  const skeleton  = evaluateSkeleton(template.bones, pose, entity.bodyMorphs, entity.appearance);
 
   type DrawCall = { zIndex: number; draw: () => Promise<void> };
   const calls: DrawCall[] = [];
@@ -338,7 +339,7 @@ async function exportEntity(
   if (!needsRendering) return files;
 
   const entityClips = allClips.filter(c =>
-    templateSupportsAnimationFamily(template, c.skeletonFamily) &&
+    templateSupportsAnimationClip(template, c) &&
     (!selectedClipIds?.length || selectedClipIds.includes(c.id))
   );
   const renderedFrames: { frameName: string; bitmap: ImageBitmap; clipName: string }[] = [];
@@ -351,7 +352,7 @@ async function exportEntity(
 
     for (let fi = 0; fi < totalFrames; fi++) {
       const timeMs    = (fi / fps) * 1000;
-      const pose      = resolveClipPose(clip, timeMs);
+      const pose      = resolveClipPose(entity.appearance?.view && entity.appearance.view !== "front" && clip.id.startsWith("chibi_front__") ? getSideGaitClip(clip) : clip, timeMs);
       const frameName = formatFrameName(profile.namingTemplate, {
         entity: entity.name, animation: clip.name, frame: fi,
       });
@@ -455,7 +456,7 @@ async function exportCombined(
     if (!template) continue;
 
     const entityClips = animationClips.filter(c =>
-      templateSupportsAnimationFamily(template, c.skeletonFamily) &&
+      templateSupportsAnimationClip(template, c) &&
       (!job.selectedClipIds?.length || job.selectedClipIds.includes(c.id))
     );
 
@@ -468,7 +469,7 @@ async function exportCombined(
 
         for (let fi = 0; fi < totalFrames; fi++) {
           const timeMs    = (fi / fps) * 1000;
-          const pose      = resolveClipPose(clip, timeMs);
+          const pose      = resolveClipPose(entity.appearance?.view && entity.appearance.view !== "front" && clip.id.startsWith("chibi_front__") ? getSideGaitClip(clip) : clip, timeMs);
           const frameName = formatFrameName(profile.namingTemplate, {
             entity: entity.name, animation: clip.name, frame: fi,
           });
@@ -506,7 +507,7 @@ async function exportCombined(
     if (!template) continue;
 
     const entityClips = animationClips.filter(c =>
-      templateSupportsAnimationFamily(template, c.skeletonFamily) &&
+      templateSupportsAnimationClip(template, c) &&
       (!job.selectedClipIds?.length || job.selectedClipIds.includes(c.id))
     );
     for (const clip of entityClips) allClipsUsed.add(clip);
@@ -517,7 +518,7 @@ async function exportCombined(
 
       for (let fi = 0; fi < totalFrames; fi++) {
         const timeMs    = (fi / fps) * 1000;
-        const pose      = resolveClipPose(clip, timeMs);
+        const pose      = resolveClipPose(entity.appearance?.view && entity.appearance.view !== "front" && clip.id.startsWith("chibi_front__") ? getSideGaitClip(clip) : clip, timeMs);
         const frameName = formatFrameName(profile.namingTemplate, {
           entity: `${entity.id}_${entity.name}`, animation: clip.name, frame: fi,
         });

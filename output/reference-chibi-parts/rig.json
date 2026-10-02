@@ -1,0 +1,614 @@
+{
+  "format": "asset-composer-rigid-parts-v1",
+  "name": "Чиби по референсу",
+  "note": "Editable vector parts and attachment metadata; not a Godot scene or animation importer.",
+  "bones": [
+    {
+      "id": "root",
+      "name": "Root",
+      "parentId": null,
+      "restPose": {
+        "tx": 0,
+        "ty": 0,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 10
+    },
+    {
+      "id": "pelvis",
+      "name": "Pelvis",
+      "parentId": "root",
+      "restPose": {
+        "tx": 0,
+        "ty": 0,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 11
+    },
+    {
+      "id": "spine",
+      "name": "Spine",
+      "parentId": "pelvis",
+      "restPose": {
+        "tx": 0,
+        "ty": -11.7,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 15
+    },
+    {
+      "id": "chest",
+      "name": "Chest",
+      "parentId": "spine",
+      "restPose": {
+        "tx": 0,
+        "ty": -13.95,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 13
+    },
+    {
+      "id": "neck",
+      "name": "Neck",
+      "parentId": "chest",
+      "restPose": {
+        "tx": -0.27,
+        "ty": -5.85,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 5
+    },
+    {
+      "id": "head",
+      "name": "Head",
+      "parentId": "neck",
+      "restPose": {
+        "tx": -0.18,
+        "ty": -18.9,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 18
+    },
+    {
+      "id": "shoulder_l",
+      "name": "Shoulder L",
+      "parentId": "chest",
+      "restPose": {
+        "tx": -13.41,
+        "ty": -1.3499999999999999,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 11
+    },
+    {
+      "id": "elbow_l",
+      "name": "Elbow L",
+      "parentId": "shoulder_l",
+      "restPose": {
+        "tx": -6.569999999999999,
+        "ty": 13.229999999999999,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 10
+    },
+    {
+      "id": "hand_l",
+      "name": "Hand L",
+      "parentId": "elbow_l",
+      "restPose": {
+        "tx": -4.14,
+        "ty": 12.42,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 7
+    },
+    {
+      "id": "shoulder_r",
+      "name": "Shoulder R",
+      "parentId": "chest",
+      "restPose": {
+        "tx": 12.51,
+        "ty": -0.8099999999999999,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 11
+    },
+    {
+      "id": "elbow_r",
+      "name": "Elbow R",
+      "parentId": "shoulder_r",
+      "restPose": {
+        "tx": 6.029999999999999,
+        "ty": 13.5,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 10
+    },
+    {
+      "id": "hand_r",
+      "name": "Hand R",
+      "parentId": "elbow_r",
+      "restPose": {
+        "tx": 4.59,
+        "ty": 12.059999999999999,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 7
+    },
+    {
+      "id": "hip_l",
+      "name": "Hip L",
+      "parentId": "pelvis",
+      "restPose": {
+        "tx": -8.91,
+        "ty": 6.029999999999999,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 11
+    },
+    {
+      "id": "knee_l",
+      "name": "Knee L",
+      "parentId": "hip_l",
+      "restPose": {
+        "tx": -2.52,
+        "ty": 12.059999999999999,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 10
+    },
+    {
+      "id": "foot_l",
+      "name": "Foot L",
+      "parentId": "knee_l",
+      "restPose": {
+        "tx": -2.52,
+        "ty": 12.51,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 7
+    },
+    {
+      "id": "hip_r",
+      "name": "Hip R",
+      "parentId": "pelvis",
+      "restPose": {
+        "tx": 9.09,
+        "ty": 6.75,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 11
+    },
+    {
+      "id": "knee_r",
+      "name": "Knee R",
+      "parentId": "hip_r",
+      "restPose": {
+        "tx": 0.36,
+        "ty": 11.969999999999999,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 10
+    },
+    {
+      "id": "foot_r",
+      "name": "Foot R",
+      "parentId": "knee_r",
+      "restPose": {
+        "tx": 1.53,
+        "ty": 11.879999999999999,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "length": 7
+    }
+  ],
+  "appearance": {
+    "view": "right",
+    "projection": "authored",
+    "sex": "male",
+    "slimness": 0,
+    "muscle": 0,
+    "fat": 0,
+    "nose": "none",
+    "freckles": false,
+    "freckleStyle": "light",
+    "freckleIntensity": 0.65,
+    "mole": false,
+    "scar": "none"
+  },
+  "attachments": [
+    {
+      "file": "hip_r.svg",
+      "name": "Правое бедро",
+      "boneId": "hip_r",
+      "bodyPartId": "hero_thigh_r",
+      "pivot": {
+        "x": 82,
+        "y": 91.5,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": 0.09,
+        "y": 6.705,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -930,
+      "width": 164,
+      "height": 183
+    },
+    {
+      "file": "knee_r.svg",
+      "name": "Правая голень",
+      "boneId": "knee_r",
+      "bodyPartId": "hero_calf_r",
+      "pivot": {
+        "x": 72.5,
+        "y": 95,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": -0.40499999999999997,
+        "y": 7.38,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.08999999999999998
+      },
+      "zIndex": -930,
+      "width": 145,
+      "height": 190
+    },
+    {
+      "file": "foot_r.svg",
+      "name": "Правая стопа",
+      "boneId": "foot_r",
+      "bodyPartId": "hero_foot_r",
+      "pivot": {
+        "x": 113.5,
+        "y": 52,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": 2.205,
+        "y": 2.6999999999999997,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -930,
+      "width": 227,
+      "height": 104
+    },
+    {
+      "file": "shoulder_r.svg",
+      "name": "Правое плечо",
+      "boneId": "shoulder_r",
+      "bodyPartId": "hero_arm_r_upper",
+      "pivot": {
+        "x": 60.5,
+        "y": 112.5,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": 3.2849999999999997,
+        "y": 6.5249999999999995,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -920,
+      "width": 121,
+      "height": 225
+    },
+    {
+      "file": "elbow_r.svg",
+      "name": "Правое предплечье",
+      "boneId": "elbow_r",
+      "bodyPartId": "hero_arm_r_lower",
+      "pivot": {
+        "x": 71.5,
+        "y": 105,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": 1.755,
+        "y": 6.66,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -920,
+      "width": 143,
+      "height": 210
+    },
+    {
+      "file": "hand_r.svg",
+      "name": "Правая кисть",
+      "boneId": "hand_r",
+      "bodyPartId": "hero_hand_r",
+      "pivot": {
+        "x": 62.5,
+        "y": 65,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": 1.125,
+        "y": 3.69,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -920,
+      "width": 125,
+      "height": 130
+    },
+    {
+      "file": "hip_l.svg",
+      "name": "Левое бедро",
+      "boneId": "hip_l",
+      "bodyPartId": "hero_thigh_l",
+      "pivot": {
+        "x": 91.5,
+        "y": 93.5,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": -1.305,
+        "y": 6.885,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -890,
+      "width": 183,
+      "height": 187
+    },
+    {
+      "file": "knee_l.svg",
+      "name": "Левая голень",
+      "boneId": "knee_l",
+      "bodyPartId": "hero_calf_l",
+      "pivot": {
+        "x": 82,
+        "y": 97.5,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": -0.99,
+        "y": 7.785,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09000000000000001
+      },
+      "zIndex": -890,
+      "width": 164,
+      "height": 195
+    },
+    {
+      "file": "foot_l.svg",
+      "name": "Левая стопа",
+      "boneId": "foot_l",
+      "bodyPartId": "hero_foot_l",
+      "pivot": {
+        "x": 88,
+        "y": 52,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": -0.27,
+        "y": 2.6999999999999997,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -880,
+      "width": 176,
+      "height": 104
+    },
+    {
+      "file": "chest.svg",
+      "name": "Корпус",
+      "boneId": "chest",
+      "bodyPartId": "hero_torso",
+      "pivot": {
+        "x": 172.5,
+        "y": 152.5,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": 0.22499999999999998,
+        "y": 8.775,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -840,
+      "width": 345,
+      "height": 305
+    },
+    {
+      "file": "spine.svg",
+      "name": "Живот",
+      "boneId": "spine",
+      "bodyPartId": "hero_belly",
+      "pivot": {
+        "x": 157.5,
+        "y": 105,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": 0.045,
+        "y": 7.199999999999999,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -830,
+      "width": 315,
+      "height": 210
+    },
+    {
+      "file": "pelvis.svg",
+      "name": "Таз / бельё",
+      "boneId": "pelvis",
+      "bodyPartId": "hero_pelvis",
+      "pivot": {
+        "x": 186.5,
+        "y": 82,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": 0.585,
+        "y": 4.77,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -820,
+      "width": 373,
+      "height": 164
+    },
+    {
+      "file": "shoulder_l.svg",
+      "name": "Левое плечо",
+      "boneId": "shoulder_l",
+      "bodyPartId": "hero_arm_l_upper",
+      "pivot": {
+        "x": 86,
+        "y": 121,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": -4.41,
+        "y": 6.21,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -813,
+      "width": 172,
+      "height": 242
+    },
+    {
+      "file": "elbow_l.svg",
+      "name": "Левое предплечье",
+      "boneId": "elbow_l",
+      "bodyPartId": "hero_arm_l_lower",
+      "pivot": {
+        "x": 79,
+        "y": 110,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": -4.05,
+        "y": 6.93,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -812,
+      "width": 158,
+      "height": 220
+    },
+    {
+      "file": "hand_l.svg",
+      "name": "Левая кисть",
+      "boneId": "hand_l",
+      "bodyPartId": "hero_hand_l",
+      "pivot": {
+        "x": 77.5,
+        "y": 67.5,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": -0.495,
+        "y": 4.005,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -811,
+      "width": 155,
+      "height": 135
+    },
+    {
+      "file": "neck.svg",
+      "name": "Шея",
+      "boneId": "neck",
+      "bodyPartId": "hero_neck",
+      "pivot": {
+        "x": 95,
+        "y": 67.5,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": -0.63,
+        "y": -0.045,
+        "rotation": 0,
+        "scaleX": 0.08999999999999998,
+        "scaleY": 0.09
+      },
+      "zIndex": -800,
+      "width": 190,
+      "height": 135
+    },
+    {
+      "file": "head.svg",
+      "name": "Голова",
+      "boneId": "head",
+      "bodyPartId": "hero_head",
+      "pivot": {
+        "x": 255,
+        "y": 217.5,
+        "preset": "center"
+      },
+      "localTransform": {
+        "x": -0.44999999999999996,
+        "y": -2.475,
+        "rotation": 0,
+        "scaleX": 0.09,
+        "scaleY": 0.09
+      },
+      "zIndex": -790,
+      "width": 510,
+      "height": 435
+    }
+  ]
+}

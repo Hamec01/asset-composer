@@ -3,6 +3,8 @@ import type { Entity, SlotAssignment, PaletteTokens, EntityVisual, LocalTransfor
 export type CommandType =
   | "SET_SLOT"
   | "SET_PALETTE"
+  | "SET_APPEARANCE"
+  | "SET_FACE_FEATURE"
   | "RENAME_ENTITY"
   | "SET_STYLE_SET"
   | "ADD_ENTITY"

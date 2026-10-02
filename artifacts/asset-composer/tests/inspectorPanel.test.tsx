@@ -8,6 +8,7 @@ import { InspectorPanel } from "../src/components/panels/InspectorPanel";
 import { resolveTemplate } from "../src/data/templates";
 import type { EntityVisual, LocalTransform } from "../src/domain/types";
 import { useStore } from "../src/store";
+import { ITEMS } from "../src/data/items";
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -70,6 +71,7 @@ function blurInput(input: HTMLInputElement) {
 
 function setItemPartSelection() {
   useStore.getState().newProject();
+  useStore.setState(state => { state.project.items = structuredClone(ITEMS.filter(item => item.id === "hair_test_v2")); });
   useStore.getState().createEntity("character", "humanoid_topdown_v1", "Inspector Test");
   const entityId = useStore.getState().project.activeEntityId!;
   useStore.getState().setEntitySlot(entityId, "slot_hair", "hair_test_v2");
@@ -102,6 +104,7 @@ function setTemplateSlotSelection() {
 
 function setEquippedItemSelection() {
   useStore.getState().newProject();
+  useStore.setState(state => { state.project.items = structuredClone(ITEMS.filter(item => item.id === "hair_test_v2")); });
   useStore.getState().createEntity("character", "humanoid_topdown_v1", "Equipped Inspector");
   const entityId = useStore.getState().project.activeEntityId!;
   useStore.getState().setEntitySlot(entityId, "slot_hair", "hair_test_v2");

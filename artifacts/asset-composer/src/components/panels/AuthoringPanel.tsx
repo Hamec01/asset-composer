@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { MousePointer2, Pencil, Spline, PaintBucket, Eraser, Undo2, Redo2, Square, Circle, X } from "lucide-react";
 import { useStore } from "@/store";
+import { HISTORY_LIMIT } from "@/lib/history";
+import { getHistoryShortcut } from "@/hooks/useEditorShortcuts";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +18,9 @@ import { resolveTemplate } from "@/data/templates";
 import { renderFrameToCanvas } from "@/lib/frameRenderer";
 import { sanitizeSvg } from "@/lib/sanitize";
 import { parseMetrics } from "@/lib/svgMetrics";
+import { getCharacterBodyParts } from "@/data/chibiBody";
+import { createEditableBodyPart } from "@/lib/bodyPartAuthoring";
+import { getAuthoredDocumentMetrics } from "@/lib/referenceChibi";
 import {
   buildPathDataFromPoints,
   computeShapeBounds,
@@ -190,6 +196,14 @@ const BODY_QUICK_ACTIONS: Record<BodyMorphRegionId, Array<{ id: string; label: s
   ],
 };
 
+const PART_BONE_LABELS: Record<string, string> = {
+  head: "Голова", neck: "Шея", chest: "Грудь", spine: "Живот", pelvis: "Таз",
+  shoulder_l: "Левое плечо", elbow_l: "Левое предплечье", hand_l: "Левая кисть",
+  shoulder_r: "Правое плечо", elbow_r: "Правое предплечье", hand_r: "Правая кисть",
+  hip_l: "Левое бедро", knee_l: "Левая голень", foot_l: "Левая стопа",
+  hip_r: "Правое бедро", knee_r: "Правая голень", foot_r: "Правая стопа",
+};
+
 const BODY_POSE_PRESETS: Array<{
   id: string;
   label: string;
@@ -246,18 +260,24 @@ const FACE_FEATURE_TO_SLOT: Partial<Record<FaceFeatureKey, string>> = {
 
 const FACE_PRESETS: Record<keyof Omit<FaceCustomization, "overlays">, Array<{ id: string; label: string }>> = {
   eyes: [
+    { id: "dot_cute", label: "Dot Cute" },
     { id: "round_kawaii", label: "Round Kawaii" },
+    { id: "wide_shine", label: "Wide Shine" },
     { id: "sleepy", label: "Sleepy" },
     { id: "none", label: "None" },
   ],
   mouth: [
+    { id: "tiny_smile", label: "Tiny Smile" },
     { id: "soft_smile", label: "Soft Smile" },
+    { id: "neutral", label: "Neutral" },
+    { id: "open_smile", label: "Open Smile" },
     { id: "frown", label: "Frown" },
     { id: "none", label: "None" },
   ],
   brows: [
     { id: "soft_arc", label: "Soft Arc" },
     { id: "stern", label: "Stern" },
+    { id: "worried", label: "Worried" },
     { id: "none", label: "None" },
   ],
   beard: [
@@ -266,8 +286,10 @@ const FACE_PRESETS: Record<keyof Omit<FaceCustomization, "overlays">, Array<{ id
     { id: "none", label: "None" },
   ],
   hair: [
+    { id: "messy_short", label: "Messy Short" },
     { id: "fringe_short", label: "Fringe Short" },
     { id: "fringe_long", label: "Fringe Long" },
+    { id: "tuft", label: "Tuft" },
     { id: "none", label: "None" },
   ],
 };
@@ -343,6 +365,8 @@ const FACE_QUICK_ACTION_LABELS: Record<string, string> = {
   mouth_open: "Open Mouth",
   hair_fringe: "Fringe",
   beard_goatee: "Goatee",
+  button_nose: "Button Nose",
+  cheek_scar: "Cheek Scar",
   generic_mark: "Accent Mark",
 };
 
@@ -408,7 +432,7 @@ function getFaceQuickActionIds(featureKey: FaceFeatureKey | "generic" | null | u
     case "beard":
       return ["beard_goatee"];
     default:
-      return ["generic_mark"];
+      return ["button_nose", "cheek_scar", "generic_mark"];
   }
 }
 
@@ -591,13 +615,13 @@ function LiveAuthoringPreview({
   }, [frameSize, previewEntity, project]);
 
   return (
-    <div className="rounded border border-border bg-[#141622] p-3">
-      <div className="flex items-center justify-center rounded border border-border bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05),rgba(255,255,255,0.02)_55%,transparent_100%)]">
+    <div className="min-w-0 border border-border bg-[#252729] p-2">
+      <div className="flex min-w-0 items-center justify-center">
         <canvas
           ref={canvasRef}
           width={frameSize}
           height={frameSize}
-          className={canvasClassName}
+          className={`${canvasClassName} max-w-full`}
         />
       </div>
     </div>
@@ -691,7 +715,7 @@ type PreviewInteraction =
       moved: boolean;
     };
 
-export function AuthoringPanel() {
+export function AuthoringPanel({ standalone = false }: { standalone?: boolean }) {
   const project = useStore(s => s.project);
   const editor = useStore(s => s.editor);
   const setAnimBottomTab = useStore(s => s.setAnimBottomTab);
@@ -713,6 +737,8 @@ export function AuthoringPanel() {
   const setEntityFaceFeatureTransform = useStore(s => s.setEntityFaceFeatureTransform);
   const updateProjectItemPart = useStore(s => s.updateProjectItemPart);
   const updateEntityVisual = useStore(s => s.updateEntityVisual);
+  const addEntityVisual = useStore(s => s.addEntityVisual);
+  const createReferenceChibi = useStore(s => s.createReferenceChibi);
   const upsertEntityFaceOverlay = useStore(s => s.upsertEntityFaceOverlay);
   const removeEntityFaceOverlay = useStore(s => s.removeEntityFaceOverlay);
   const setEntityFaceAuthoringState = useStore(s => s.setEntityFaceAuthoringState);
@@ -768,6 +794,10 @@ export function AuthoringPanel() {
   const [toolStrokeColor, setToolStrokeColor] = useState("#1A1208");
   const [toolFillColor, setToolFillColor] = useState("#B87333");
   const [toolStrokeWidth, setToolStrokeWidth] = useState(1.5);
+  const [newPartBone, setNewPartBone] = useState("head");
+  const [tracingError, setTracingError] = useState("");
+  const [creatingReference, setCreatingReference] = useState(false);
+  const bodyPieces = activeEntity && activeTemplate ? getCharacterBodyParts(activeTemplate, activeEntity) : [];
 
   const itemPartSelection = editor.selection.kind === "item-part" ? editor.selection : null;
   const equippedItemSelection = editor.selection.kind === "equipped-item" ? editor.selection : null;
@@ -808,7 +838,7 @@ export function AuthoringPanel() {
   const selectedShape = currentLayer?.shapes.find(shape => shape.id === selectedShapeId) ?? currentLayer?.shapes[0] ?? null;
 
   const previewSvg = useMemo(
-    () => (activeDoc ? sanitizeSvg(spriteEditorDocumentToSvg(activeDoc)) : ""),
+    () => (activeDoc ? sanitizeSvg(spriteEditorDocumentToSvg(activeDoc, { preview: true })) : ""),
     [activeDoc],
   );
   const contentBounds = useMemo(
@@ -901,7 +931,7 @@ export function AuthoringPanel() {
     ) ?? null;
   }, [activeEntity, project.editorMeta.spriteEditorDocuments, selectedFaceOverlay]);
   const previewScale = activeDoc
-    ? Math.min(560 / Math.max(activeDoc.width, 1), 560 / Math.max(activeDoc.height, 1), 4)
+    ? Math.min(480 / Math.max(activeDoc.width, 1), 480 / Math.max(activeDoc.height, 1), 32)
     : 1;
   const relatedDocuments = useMemo(() => {
     if (!activeDoc) return [] as SpriteEditorDocument[];
@@ -1025,21 +1055,20 @@ export function AuthoringPanel() {
   }, [activeDoc, selectedLayerId, selectedShapeId]);
 
   useEffect(() => {
-    if (activeMode === "sprite-editor" && activeDoc) {
+    if (project.editorMeta.activeAuthoringMode === "sprite-editor" && activeDoc?.id) {
       setIsSpriteStudioOpen(true);
     }
-  }, [activeDoc, activeMode]);
+  }, [activeDoc?.id, project.editorMeta.activeAuthoringMode]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!activeDoc || activeMode !== "sprite-editor" || event.repeat) return;
       if (isTypingTarget(event.target)) return;
-      const key = event.key.toLowerCase();
-      const redoPressed =
-        ((event.ctrlKey || event.metaKey) && !event.altKey && key === "y") ||
-        ((event.ctrlKey || event.metaKey) && !event.altKey && event.shiftKey && key === "z");
-      const undoPressed =
-        (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && key === "z";
+      const target = event.target as HTMLElement | null;
+      if (target && target !== document.body && !target.closest('[data-document-history="true"]')) return;
+      const historyAction = getHistoryShortcut(event);
+      const redoPressed = historyAction === "redo";
+      const undoPressed = historyAction === "undo";
 
       if (undoPressed) {
         if (!undoDocumentEdit()) return;
@@ -1055,8 +1084,20 @@ export function AuthoringPanel() {
       }
     };
 
+    const onCut = (event: ClipboardEvent) => {
+      if (!activeDoc || activeMode !== "sprite-editor" || isTypingTarget(event.target)) return;
+      const target = event.target as HTMLElement | null;
+      if (target && target !== document.body && !target.closest('[data-document-history="true"]')) return;
+      if (!redoDocumentEdit()) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
     window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
+    window.addEventListener("cut", onCut, true);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("cut", onCut, true);
+    };
   }, [activeDoc, activeMode]);
 
   useEffect(() => {
@@ -1117,14 +1158,7 @@ export function AuthoringPanel() {
       }
       return;
     }
-    if (activeDoc.target.kind === "face-overlay") {
-      if (editor.selectedSlotId !== null) {
-        setSelectedSlot(null);
-      }
-      if (editor.selection.kind !== "none") {
-        setEditorSelection({ kind: "none" });
-      }
-    }
+    // Face overlays are synchronized by the dedicated effect below.
   }, [activeDoc, editor.selectedSlotId, editor.selection, project.entities, setEditorSelection, setSelectedSlot]);
 
   useEffect(() => {
@@ -1196,7 +1230,9 @@ export function AuthoringPanel() {
 
   function applyDocumentToTarget(doc: SpriteEditorDocument) {
     const svgData = spriteEditorDocumentToSvg(doc);
-    const metrics = parseMetrics(svgData);
+    const metrics = doc.authoringHint?.preserveFrame
+      ? getAuthoredDocumentMetrics(svgData, doc.width, doc.height)
+      : parseMetrics(svgData);
 
     if (doc.target.kind === "item-part" && doc.target.itemId && doc.target.partId) {
       updateProjectItemPart(doc.target.itemId, doc.target.partId, {
@@ -1316,7 +1352,7 @@ export function AuthoringPanel() {
     if (spriteDocumentsEqual(beforeDoc, afterDoc)) return;
     const history = getDocumentHistory(afterDoc.id);
     history.past.push(cloneSpriteEditorDocument(beforeDoc));
-    if (history.past.length > 100) history.past.shift();
+    if (history.past.length > HISTORY_LIMIT) history.past.shift();
     history.future = [];
     setHistoryRevision(value => value + 1);
   }
@@ -1330,6 +1366,7 @@ export function AuthoringPanel() {
     if (!previous) return false;
     history.future.unshift(cloneSpriteEditorDocument(current));
     upsertSpriteEditorDocument({ ...cloneSpriteEditorDocument(previous), updatedAt: Date.now() });
+    if (autoPreviewEnabled) applyDocumentToTarget(previous);
     setActiveSpriteDocument(previous.id);
     setSelectedLayerId(previous.layers[0]?.id ?? null);
     ensureSelection(previous.layers[0]?.shapes[0]?.id ?? null);
@@ -1346,6 +1383,7 @@ export function AuthoringPanel() {
     if (!next) return false;
     history.past.push(cloneSpriteEditorDocument(current));
     upsertSpriteEditorDocument({ ...cloneSpriteEditorDocument(next), updatedAt: Date.now() });
+    if (autoPreviewEnabled) applyDocumentToTarget(next);
     setActiveSpriteDocument(next.id);
     setSelectedLayerId(next.layers[0]?.id ?? null);
     ensureSelection(next.layers[0]?.shapes[0]?.id ?? null);
@@ -1424,6 +1462,148 @@ export function AuthoringPanel() {
   ) {
     if (!activeEntity) return;
     setEntityBodyAuthoringState(activeEntity.id, patch);
+  }
+
+  function createBlankBodyPiece() {
+    if (!activeEntity) return;
+    const part = bodyPieces.find(piece => piece.boneId === newPartBone);
+    if (!part) return;
+    const visual = createEditableBodyPart(part);
+    visual.bodyView = "side";
+    const existing = activeEntity.visuals?.find(candidate => candidate.bodyPartId === part.id && candidate.bodyView === "side");
+    if (existing) visual.id = existing.id;
+    const doc = createDocumentFromEntityVisual(activeEntity.id, visual);
+    doc.name = `${PART_BONE_LABELS[newPartBone] ?? newPartBone} — рисунок`;
+    doc.layers = [createEmptySpriteLayer()];
+    doc.referenceAsset = null;
+    visual.svgData = spriteEditorDocumentToSvg(doc);
+    visual.editorDocumentId = doc.id;
+    if (existing) updateEntityVisual(activeEntity.id, existing.id, visual);
+    else addEntityVisual(activeEntity.id, visual);
+    upsertSpriteEditorDocument(doc);
+    setActiveSpriteDocument(doc.id);
+    setActiveAuthoringMode("sprite-editor");
+    setSpriteTool("closed-pencil");
+    setIsSpriteStudioOpen(false);
+  }
+
+  async function importTracingImage(file: File | undefined) {
+    if (!file || !activeDoc) return;
+    const docId = activeDoc.id;
+    setTracingError("");
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) {
+      setTracingError("Нужен PNG, JPG или WebP до 10 МБ");
+      return;
+    }
+    try {
+      const dataUri = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      const latest = useStore.getState().project.editorMeta.spriteEditorDocuments.find(doc => doc.id === docId);
+      if (!latest) return;
+      const next = { ...latest, tracingAsset: { format: "png" as const, name: file.name, originalFileName: file.name, mimeType: file.type, dataUri }, tracingOpacity: 0.35, tracingVisible: true, tracingTransform: { x: 0, y: 0, scale: 1 }, updatedAt: Date.now() };
+      recordDocumentHistory(latest, next);
+      upsertSpriteEditorDocument(next);
+    } catch {
+      setTracingError("Не удалось прочитать картинку");
+    }
+  }
+
+  async function createReferenceExample(file: File | undefined) {
+    if (!file) return;
+    setCreatingReference(true);
+    setTracingError("");
+    try {
+      if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) throw new Error();
+      const url = URL.createObjectURL(file);
+      let dataUri: string;
+      try {
+        const image = new Image();
+        image.src = url;
+        await image.decode();
+        // Keep the shared tracing reference small enough for local project storage.
+        const canvas = document.createElement("canvas");
+        canvas.width = 512;
+        canvas.height = 768;
+        canvas.getContext("2d")!.drawImage(image, 0, 0, 512, 768);
+        dataUri = canvas.toDataURL("image/jpeg", 0.78);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+      createReferenceChibi({ format: "png", name: file.name, originalFileName: file.name, mimeType: "image/jpeg", dataUri });
+    } catch {
+      setTracingError("Не удалось загрузить референс (PNG, JPG или WebP до 10 МБ)");
+    } finally {
+      setCreatingReference(false);
+    }
+  }
+
+  function renderTracingControls() {
+    if (!activeDoc) return null;
+    return (
+      <div className="flex flex-wrap items-center gap-2 py-2">
+        <label className="text-xs">
+          Подложка
+          <input aria-label="Загрузить картинку-подложку" type="file" accept="image/png,image/jpeg,image/webp"
+            className="block max-w-[220px] text-xs" onChange={event => {
+              void importTracingImage(event.target.files?.[0]);
+              event.target.value = "";
+            }} />
+        </label>
+        {activeDoc.tracingAsset && <>
+          <span className="max-w-32 truncate text-xs text-muted-foreground" title={activeDoc.tracingAsset.name}>{activeDoc.tracingAsset.name}</span>
+          <label className="flex items-center gap-1 text-xs">
+            <input type="checkbox" checked={activeDoc.tracingVisible !== false}
+              onChange={event => patchDocument(doc => ({ ...doc, tracingVisible: event.target.checked }))} />
+            Видна
+          </label>
+          <input aria-label="Прозрачность подложки" type="range" min="0" max="1" step="0.05"
+            value={activeDoc.tracingOpacity ?? 0.35}
+            onChange={event => patchDocument(doc => ({ ...doc, tracingOpacity: Number(event.target.value) }))} />
+          {(["scale", "x", "y"] as const).map(key => (
+            <label key={key} className="text-xs">{key === "scale" ? "Масштаб" : key.toUpperCase()}
+              <input aria-label={`Подложка: ${key}`} type="number" step={key === "scale" ? 0.1 : 1}
+                min={key === "scale" ? 0.1 : undefined} max={key === "scale" ? 20 : undefined}
+                className="ml-1 w-16 rounded border border-border bg-background p-1"
+                value={activeDoc.tracingTransform?.[key] ?? (key === "scale" ? 1 : 0)}
+                onChange={event => {
+                  const value = Number(event.target.value);
+                  if (!Number.isFinite(value)) return;
+                  patchDocument(doc => ({ ...doc, tracingTransform: {
+                    ...{ x: 0, y: 0, scale: 1 }, ...doc.tracingTransform,
+                    [key]: key === "scale" ? Math.max(0.1, Math.min(20, value)) : value,
+                  } }));
+                }} />
+            </label>
+          ))}
+          <Button size="icon" variant="outline" className="h-7 w-7" title="Убрать подложку" aria-label="Убрать подложку"
+            onClick={() => patchDocument(doc => ({ ...doc, tracingAsset: null }))}><X className="h-3 w-3" /></Button>
+        </>}
+        {activeDoc.target.kind === "entity-visual" && activeTemplate && (
+          <label className="text-xs">Кость
+            <select aria-label="Привязка рисунка к кости" className="ml-2 border border-border bg-background rounded p-1"
+              value={activeDocumentContext?.boneLabel ?? "head"}
+              onChange={event => {
+                if (!activeDoc.target.entityId || !activeDoc.target.visualId) return;
+                const piece = bodyPieces.find(part => part.boneId === event.target.value);
+                updateEntityVisual(activeDoc.target.entityId, activeDoc.target.visualId, {
+                  boneId: event.target.value, bodyPartId: piece?.id,
+                  ...(piece ? { zIndex: piece.zOffset, localTransform: {
+                    x: piece.localX, y: piece.localY, rotation: 0,
+                    scaleX: piece.naturalWidth / activeDoc.width, scaleY: piece.naturalHeight / activeDoc.height,
+                  } } : {}),
+                });
+              }}>
+              {activeTemplate.bones.map(bone => <option key={bone.id} value={bone.id}>{PART_BONE_LABELS[bone.id] ?? bone.id}</option>)}
+            </select>
+          </label>
+        )}
+        {tracingError && <p role="alert" className="text-xs text-red-400">{tracingError}</p>}
+      </div>
+    );
   }
 
   function patchPoseOverride(boneId: string, patch: Partial<BoneTransform>) {
@@ -1894,6 +2074,50 @@ export function AuthoringPanel() {
           strokeWidth: Math.max(1.1, toolStrokeWidth),
           pathData: "M 24 30 C 23 38, 25 46, 32 52 C 39 46, 41 38, 40 30 C 37 33, 35 34, 32 34 C 29 34, 27 33, 24 30 Z",
         });
+        break;
+      case "button_nose":
+        shapes.push({
+          id: crypto.randomUUID(),
+          type: "ellipse",
+          x: 30,
+          y: 28,
+          width: 5,
+          height: 3.5,
+          rotation: 0,
+          fill: "none",
+          stroke,
+          strokeWidth: Math.max(0.8, toolStrokeWidth * 0.75),
+        });
+        break;
+      case "cheek_scar":
+        shapes.push(
+          {
+            id: crypto.randomUUID(),
+            type: "path",
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            rotation: 0,
+            fill: "none",
+            stroke: "#C97C6B",
+            strokeWidth: Math.max(1, toolStrokeWidth),
+            pathData: "M 41 29 L 50 23",
+          },
+          {
+            id: crypto.randomUUID(),
+            type: "path",
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            rotation: 0,
+            fill: "none",
+            stroke: "#C97C6B",
+            strokeWidth: Math.max(0.8, toolStrokeWidth * 0.75),
+            pathData: "M 43 24 L 45 28 M 47 22 L 49 26",
+          },
+        );
         break;
       default:
         shapes.push({
@@ -2469,13 +2693,13 @@ export function AuthoringPanel() {
 
   return (
     <>
-    <div className="flex h-full bg-background">
-      <div className="w-64 border-r border-border bg-sidebar/40">
+    <div className="flex h-full min-w-0 bg-background" data-document-history="true">
+      <div className={`${standalone ? "w-44" : "w-64"} flex-shrink-0 border-r border-border bg-sidebar/40`}>
         <div className="h-full overflow-auto">
           <div className="p-3 space-y-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Authoring</p>
-              <p className="text-[11px] text-muted-foreground mt-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Рисунок</p>
+              <p className="sr-only">
                 Open the selected item part or entity visual, draw vector shapes, then save back into the project.
               </p>
             </div>
@@ -2487,7 +2711,7 @@ export function AuthoringPanel() {
                 className="h-8 text-[11px]"
                 onClick={() => switchMode("sprite-editor")}
               >
-                Sprite
+                Рисунок
               </Button>
               <Button
                 size="sm"
@@ -2496,7 +2720,7 @@ export function AuthoringPanel() {
                 onClick={() => switchMode("body-morph")}
                 disabled={!activeEntity}
               >
-                Morph
+                Форма
               </Button>
               <Button
                 size="sm"
@@ -2505,18 +2729,35 @@ export function AuthoringPanel() {
                 onClick={() => switchMode("face-editor")}
                 disabled={!activeEntity}
               >
-                Face
+                Лицо
               </Button>
             </div>
 
             <div className="space-y-2">
+              <label className="block text-xs">Чиби по образцу
+                <input aria-label="Референс для заготовки чиби" type="file" accept="image/png,image/jpeg,image/webp"
+                  disabled={creatingReference} className="mt-1 block w-full text-xs" onChange={event => {
+                    void createReferenceExample(event.target.files?.[0]);
+                    event.target.value = "";
+                  }} />
+              </label>
+              {creatingReference && <p role="status" className="text-xs">Создание частей…</p>}
+              {tracingError && <p role="alert" className="text-xs text-red-400">{tracingError}</p>}
+              <label className="block text-xs">Новая часть
+                <select aria-label="Часть тела для нового рисунка" value={newPartBone}
+                  onChange={event => setNewPartBone(event.target.value)} className="mt-1 w-full rounded border border-border bg-background p-1">
+                  {bodyPieces.map(part => <option key={part.id} value={part.boneId}>{PART_BONE_LABELS[part.boneId] ?? part.boneId}</option>)}
+                </select>
+              </label>
+              <Button size="sm" variant="outline" className="w-full h-8 text-xs" disabled={!bodyPieces.length}
+                onClick={createBlankBodyPiece}><Pencil className="mr-1 h-3 w-3" />Нарисовать с нуля</Button>
               <Button
                 size="sm"
                 className="w-full h-8 text-xs"
                 onClick={handleOpenSelection}
                 disabled={!selectedItem && !selectedVisual}
               >
-                Open Current Selection
+                Открыть выбранное
               </Button>
               <Button
                 size="sm"
@@ -2526,7 +2767,7 @@ export function AuthoringPanel() {
                 disabled={!activeEntity}
               >
                 {activeFaceFeature === "generic"
-                  ? "Open Or Create Generic Overlay"
+                  ? "Новый слой лица"
                   : `Open Or Create ${FACE_WORKSPACE_LABELS[activeFaceFeature]} Overlay`}
               </Button>
               <Button
@@ -2536,7 +2777,7 @@ export function AuthoringPanel() {
                 onClick={() => setIsSpriteStudioOpen(true)}
                 disabled={!activeDoc}
               >
-                Open Sprite Studio
+                Развернуть редактор
               </Button>
             </div>
 
@@ -2712,7 +2953,7 @@ export function AuthoringPanel() {
       </div>
 
       {activeMode === "body-morph" ? (
-        <div className="flex-1 grid grid-cols-[0.9fr,1.1fr]">
+        <div className="flex-1 grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="border-r border-border p-3">
             <div className="space-y-3">
               <div>
@@ -2962,7 +3203,7 @@ export function AuthoringPanel() {
           </div>
         </div>
       ) : activeMode === "face-editor" ? (
-        <div className="flex-1 grid grid-cols-[0.9fr,1.1fr]">
+        <div className="flex-1 grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="border-r border-border p-3">
             <div className="space-y-3">
               <div>
@@ -3328,7 +3569,7 @@ export function AuthoringPanel() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-[1fr,140px] gap-2">
+                    <div className="grid grid-cols-[minmax(0,1fr)_140px] gap-2">
                       <div className="space-y-1">
                         <Label className="text-[10px] text-muted-foreground">Overlay Name</Label>
                         <Input
@@ -3399,13 +3640,13 @@ export function AuthoringPanel() {
           </div>
         </div>
       ) : (
-      <div className="flex-1 grid grid-cols-[1.1fr,0.9fr]">
+      <div className={`flex-1 min-w-0 grid ${standalone ? "grid-cols-[minmax(0,1fr)_200px]" : "grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"}`}>
         <div className="border-r border-border p-3 overflow-hidden">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-xs font-semibold text-foreground">{activeDoc?.name ?? "No document selected"}</p>
+              <p className="text-xs font-semibold text-foreground">{activeDoc?.name ?? "Не выбран рисунок"}</p>
               <p className="text-[11px] text-muted-foreground">
-                {activeDoc ? `${activeDoc.width}×${activeDoc.height}` : "Open a selection to start editing."}
+                {activeDoc ? `${activeDoc.width}×${activeDoc.height}` : ""}
               </p>
             </div>
             {activeDoc && (
@@ -3436,19 +3677,20 @@ export function AuthoringPanel() {
                     checked={autoPreviewEnabled}
                     onChange={event => setAutoPreviewEnabled(event.target.checked)}
                   />
-                  Live Preview
+                  На персонаже
                 </label>
-                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => patchDocument(doc => ({ ...doc, referenceAsset: null }))}>
-                  Clear Underlay
+                <Button size="sm" variant="outline" className="h-8 text-xs" disabled={!activeDoc.referenceAsset} onClick={() => patchDocument(doc => ({ ...doc, referenceAsset: null }))}>
+                  Убрать исходник
                 </Button>
                 <Button size="sm" className="h-8 text-xs" onClick={handleSaveToTarget}>
-                  Save To Target
+                  Применить
                 </Button>
               </div>
             )}
           </div>
 
-          <div className="h-[calc(100%-3rem)] rounded border border-border bg-[#141622] p-3 overflow-auto">
+          {renderTracingControls()}
+          <div className="h-[calc(100%-7rem)] rounded border border-border bg-[#141622] p-3 overflow-auto">
             {activeDoc ? (
               <div
                 ref={previewFrameRef}
@@ -3502,7 +3744,7 @@ export function AuthoringPanel() {
                       className="absolute h-3 w-3 rounded-full border border-amber-300 bg-[#141622] shadow-sm"
                       style={{
                         left: (selectedShapeBounds.minX + selectedShapeBounds.width / 2) * previewScale,
-                        top: (selectedShapeBounds.minY - 12) * previewScale,
+                        top: selectedShapeBounds.minY * previewScale - 12,
                         transform: "translate(-50%, -50%)",
                       }}
                     />
@@ -3557,7 +3799,7 @@ export function AuthoringPanel() {
                     <div className="absolute inset-[5px] rounded-full border border-amber-400 bg-[#141622]" />
                   </div>
                 </div>
-                <div className="absolute left-2 bottom-2 rounded bg-black/40 px-2 py-1 text-[10px] text-muted-foreground pointer-events-none">
+                <div className="sr-only">
                   {spriteTool === "pencil"
                     ? "Pencil: drag to draw a smooth freehand stroke."
                     : spriteTool === "closed-pencil"
@@ -3571,7 +3813,7 @@ export function AuthoringPanel() {
               </div>
             ) : (
               <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                Select an item-part or entity visual, then click “Open Current Selection”.
+                <Button variant="outline" onClick={() => handleOpenOrCreateFaceOverlay()} disabled={!activeEntity}>Новый слой лица</Button>
               </div>
             )}
           </div>
@@ -3656,7 +3898,6 @@ export function AuthoringPanel() {
                       Feet Pivot
                     </Button>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Tip: click anywhere on the preview to place the pivot.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -3841,48 +4082,53 @@ export function AuthoringPanel() {
                   variant={spriteTool === "select" ? "default" : "outline"}
                   className="h-8 text-xs"
                   onClick={() => selectSpriteTool("select")}
+                  title="Выделение" aria-label="Выделение" aria-pressed={spriteTool === "select"}
                   disabled={!activeDoc}
                 >
-                  Select
+                  <MousePointer2 size={16} aria-label="Выделение" />
                 </Button>
                 <Button
                   size="sm"
                   variant={spriteTool === "pencil" ? "default" : "outline"}
                   className="h-8 text-xs"
                   onClick={() => selectSpriteTool("pencil")}
+                  title="Карандаш" aria-label="Карандаш" aria-pressed={spriteTool === "pencil"}
                   disabled={!activeDoc || !currentLayer}
                 >
-                  Pencil
+                  <Pencil size={16} aria-label="Карандаш" />
                 </Button>
                 <Button
                   size="sm"
                   variant={spriteTool === "closed-pencil" ? "default" : "outline"}
                   className="h-8 text-xs"
                   onClick={() => selectSpriteTool("closed-pencil")}
+                  title="Замкнутый контур" aria-label="Замкнутый контур" aria-pressed={spriteTool === "closed-pencil"}
                   disabled={!activeDoc || !currentLayer}
                 >
-                  Closed Pencil
+                  <Spline size={16} aria-label="Замкнутый контур" />
                 </Button>
                   <Button
                     size="sm"
                     variant={spriteTool === "fill" ? "default" : "outline"}
                     className="h-8 text-xs"
                     onClick={() => selectSpriteTool("fill")}
+                    title="Заливка" aria-label="Заливка" aria-pressed={spriteTool === "fill"}
                     disabled={!activeDoc}
                   >
-                    Fill Bucket
+                    <PaintBucket size={16} aria-label="Заливка" />
                   </Button>
                   <Button
                     size="sm"
                     variant={spriteTool === "eraser" ? "default" : "outline"}
                     className="h-8 text-xs"
                     onClick={() => selectSpriteTool("eraser")}
+                    title="Ластик" aria-label="Ластик" aria-pressed={spriteTool === "eraser"}
                     disabled={!activeDoc}
                   >
-                    Eraser
+                    <Eraser size={16} aria-label="Ластик" />
                   </Button>
                 </div>
-              <div className="grid grid-cols-[1fr,1fr,92px] gap-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_92px] gap-2">
                 <div className="space-y-1">
                   <Label className="text-[10px]">Stroke</Label>
                   <input
@@ -3913,33 +4159,35 @@ export function AuthoringPanel() {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <Button
                   size="sm"
                   variant="outline"
                   className="h-8 text-xs"
+                  title="Отменить" aria-label="Отменить"
                   onClick={() => undoDocumentEdit()}
                   disabled={!canUndoDocument}
                 >
-                  Undo
+                  <Undo2 size={16} />
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="h-8 text-xs"
                   onClick={() => redoDocumentEdit()}
+                  title="Повторить" aria-label="Повторить"
                   disabled={!canRedoDocument}
                 >
-                  Redo
+                  <Redo2 size={16} />
                 </Button>
-                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleAddShape("rect")} disabled={!activeDoc}>
-                  Add Rect
+                <Button size="sm" variant="outline" className="h-8 text-xs" title="Добавить прямоугольник" aria-label="Добавить прямоугольник" onClick={() => handleAddShape("rect")} disabled={!activeDoc}>
+                  <Square size={16} />
                 </Button>
-                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleAddShape("ellipse")} disabled={!activeDoc}>
-                  Add Ellipse
+                <Button size="sm" variant="outline" className="h-8 text-xs" title="Добавить эллипс" aria-label="Добавить эллипс" onClick={() => handleAddShape("ellipse")} disabled={!activeDoc}>
+                  <Circle size={16} />
                 </Button>
-                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleAddShape("path")} disabled={!activeDoc}>
-                  Add Path
+                <Button size="sm" variant="outline" className="h-8 text-xs" title="Добавить контур" aria-label="Добавить контур" onClick={() => handleAddShape("path")} disabled={!activeDoc}>
+                  <Spline size={16} />
                 </Button>
               </div>
             </div>
@@ -4055,25 +4303,25 @@ export function AuthoringPanel() {
       )}
     </div>
     <Dialog open={isSpriteStudioOpen && !!activeDoc} onOpenChange={setIsSpriteStudioOpen}>
-      <DialogContent className="h-[92vh] w-[96vw] max-w-[96vw] border-border bg-background p-0">
+      <DialogContent data-document-history="true" className="h-[92vh] w-[96vw] max-w-[96vw] border-border bg-background p-0">
         <DialogHeader className="border-b border-border px-6 py-4">
           <DialogTitle>{activeDoc?.name ?? "Sprite Studio"}</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="sr-only">
             Large authoring workspace for editing item parts, entity visuals and face overlays without squeezing tools into the timeline panel.
           </DialogDescription>
         </DialogHeader>
 
         {activeDoc && (
-          <div className="grid h-[calc(92vh-88px)] grid-cols-[1.35fr,0.65fr] overflow-hidden">
-            <div className="border-r border-border p-4 overflow-hidden">
-              <div className="flex items-center justify-between mb-4">
+          <div className="grid h-[calc(92vh-88px)] grid-cols-[minmax(0,1.35fr)_minmax(260px,0.65fr)] overflow-hidden">
+            <div className="min-w-0 flex flex-col border-r border-border p-4 overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">{activeDoc.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {activeDoc.width}x{activeDoc.height} document
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     size="sm"
                     variant="outline"
@@ -4104,18 +4352,38 @@ export function AuthoringPanel() {
                       checked={autoPreviewEnabled}
                       onChange={event => setAutoPreviewEnabled(event.target.checked)}
                     />
-                    Live Preview
+                    На персонаже
                   </label>
-                  <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => patchDocument(doc => ({ ...doc, referenceAsset: null }))}>
-                    Clear Underlay
+                  <Button size="sm" variant="outline" className="h-8 text-xs" disabled={!activeDoc.referenceAsset} onClick={() => patchDocument(doc => ({ ...doc, referenceAsset: null }))}>
+                    Убрать исходник
                   </Button>
                   <Button size="sm" className="h-8 text-xs" onClick={handleSaveToTarget}>
-                    Save To Target
+                    Применить
                   </Button>
                 </div>
               </div>
 
-              <div className="h-[calc(100%-3.5rem)] rounded border border-border bg-[#141622] p-4 overflow-auto">
+              {renderTracingControls()}
+              <div className="flex flex-wrap items-center gap-1 mb-3" role="toolbar" aria-label="Инструменты рисования">
+                {([
+                  ["select", MousePointer2, "Выделение"],
+                  ["pencil", Pencil, "Карандаш"],
+                  ["closed-pencil", Spline, "Замкнутый контур"],
+                  ["fill", PaintBucket, "Заливка"],
+                  ["eraser", Eraser, "Ластик"],
+                ] as const).map(([tool, Icon, label]) => (
+                  <Button key={tool} size="icon" className="h-8 w-8" title={label} aria-label={label}
+                    aria-pressed={spriteTool === tool} variant={spriteTool === tool ? "default" : "outline"}
+                    onClick={() => selectSpriteTool(tool)}>
+                    <Icon className="h-4 w-4" />
+                  </Button>
+                ))}
+                <input type="color" aria-label="Цвет линии" title="Цвет линии" value={toolStrokeColor}
+                  onChange={event => setToolStrokeColor(event.target.value)} className="h-8 w-8 border border-border bg-transparent" />
+                <input type="color" aria-label="Цвет заливки" title="Цвет заливки" value={toolFillColor}
+                  onChange={event => setToolFillColor(event.target.value)} className="h-8 w-8 border border-border bg-transparent" />
+              </div>
+              <div className="flex-1 min-h-0 rounded border border-border bg-[#252729] p-4 overflow-auto">
                 <div
                   ref={previewFrameRef}
                     className="mx-auto relative bg-white/5 rounded border border-border overflow-hidden cursor-crosshair"
@@ -4168,7 +4436,7 @@ export function AuthoringPanel() {
                         className="absolute h-3 w-3 rounded-full border border-amber-300 bg-[#141622] shadow-sm"
                         style={{
                           left: (selectedShapeBounds.minX + selectedShapeBounds.width / 2) * previewScale,
-                          top: (selectedShapeBounds.minY - 12) * previewScale,
+                          top: selectedShapeBounds.minY * previewScale - 12,
                           transform: "translate(-50%, -50%)",
                         }}
                       />
@@ -4245,7 +4513,7 @@ export function AuthoringPanel() {
                       <div className="absolute inset-[5px] rounded-full border border-amber-400 bg-[#141622]" />
                     </div>
                   </div>
-                  <div className="absolute left-2 bottom-2 rounded bg-black/40 px-2 py-1 text-[10px] text-muted-foreground pointer-events-none">
+                  <div className="sr-only">
                     {spriteTool === "pencil"
                       ? "Pencil: drag to draw a smooth freehand stroke."
                       : spriteTool === "closed-pencil"
@@ -4260,17 +4528,17 @@ export function AuthoringPanel() {
               </div>
             </div>
 
-            <div className="h-full overflow-auto">
-              <div className="p-4 space-y-3">
+            <div className="h-full min-w-0 overflow-y-auto overflow-x-hidden">
+              <div className="min-w-0 p-4 space-y-3">
                 {relatedDocuments.length > 1 && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Related Parts</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Части персонажа</p>
                       <span className="text-[10px] text-muted-foreground">
                         {Math.max(activeRelatedDocIndex + 1, 1)} / {relatedDocuments.length}
                       </span>
                     </div>
-                    <div className="space-y-1">
+                    <div className="max-h-40 overflow-auto space-y-1">
                       {relatedDocuments.map(doc => (
                         <button
                           key={`related-${doc.id}`}
@@ -4307,7 +4575,7 @@ export function AuthoringPanel() {
                       frameSize={activeDoc?.target.kind === "face-overlay" && activeFaceCanvasFocusMode === "head" ? 320 : 256}
                       canvasClassName={activeDoc?.target.kind === "face-overlay" && activeFaceCanvasFocusMode === "head" ? "h-64 w-64 object-contain" : "h-52 w-52 object-contain"}
                     />
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="sr-only">
                       {activeDoc?.target.kind === "face-overlay" && activeFaceCanvasFocusMode === "head"
                         ? "Head focus is active: keep painting while watching the face overlay in the same runtime stack."
                         : "Uses the same evaluated scene path as canvas and export. When editing an item part, this preview isolates the current equipped slot."}
@@ -4521,7 +4789,7 @@ export function AuthoringPanel() {
                       Eraser
                     </Button>
                   </div>
-                  <div className="grid grid-cols-[1fr,1fr,92px] gap-2">
+                  <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_92px] gap-2">
                     <div className="space-y-1">
                       <Label className="text-[10px]">Stroke</Label>
                       <input

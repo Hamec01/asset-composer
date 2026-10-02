@@ -1,16 +1,19 @@
 import { useStore } from "@/store";
+import { useState } from "react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ProjectSchema } from "@/domain/schema";
 import { Button } from "@/components/ui/button";
 import { STYLE_SETS } from "@/data/styleSets";
 import { migrateProject } from "@/lib/projectMigration";
 import { triggerDownload } from "@/lib/download";
-import { getRecentProjectFolderPath, saveLastProjectSnapshot } from "@/lib/projectSession";
+import { clearProjectSessions, getRecentProjectFolderPath, saveLastProjectSnapshot } from "@/lib/projectSession";
 import {
-  Plus, Save, FolderOpen, Undo2, Redo2, Download, Layers, Upload, Home,
+  Plus, Save, FolderOpen, Undo2, Redo2, Download, Layers, Upload, Home, Trash2,
 } from "lucide-react";
 import { ImportWizard } from "@/components/wizard/ImportWizard";
 
 export function Toolbar() {
+  const [resetOpen, setResetOpen] = useState(false);
   const project           = useStore(s => s.project);
   const history           = useStore(s => s.history);
   const editor            = useStore(s => s.editor);
@@ -35,9 +38,9 @@ export function Toolbar() {
     if (!result.success) {
       const msgs = result.error.issues
         .slice(0, 5)
-        .map(i => `вЂў ${i.path.join(".")}: ${i.message}`)
+        .map(i => `• ${i.path.join(".")}: ${i.message}`)
         .join("\n");
-      alert(`Cannot save вЂ” project has validation errors:\n${msgs}`);
+      alert(`Cannot save — project has validation errors:\n${msgs}`);
       return;
     }
 
@@ -58,21 +61,6 @@ export function Toolbar() {
     triggerDownload(blob, `${project.name.replace(/\s+/g, "_")}.json`);
   }
 
-  function handleSave() {
-    const result = ProjectSchema.safeParse(project);
-    if (!result.success) {
-      const msgs = result.error.issues
-        .slice(0, 5)
-        .map(i => `• ${i.path.join(".")}: ${i.message}`)
-        .join("\n");
-      alert(`Cannot save — project has validation errors:\n${msgs}`);
-      return;
-    }
-    const data = JSON.stringify(result.data, null, 2);
-    saveLastProjectSnapshot(result.data);
-    const blob = new Blob([data], { type: "application/json" });
-    triggerDownload(blob, `${project.name.replace(/\s+/g, "_")}.json`);
-  }
 
   function handleLoad() {
     const input    = document.createElement("input");
@@ -134,7 +122,7 @@ export function Toolbar() {
     <>
       <header
         data-testid="toolbar"
-        className="flex items-center gap-2 px-3 h-10 bg-sidebar border-b border-sidebar-border flex-shrink-0 select-none"
+        className="flex items-center gap-1 px-3 min-h-11 flex-wrap py-1 bg-sidebar border-b border-sidebar-border flex-shrink-0 select-none"
       >
         {/* Logo */}
         <div className="flex items-center gap-1.5 mr-2">
@@ -160,7 +148,8 @@ export function Toolbar() {
           variant="ghost"
           className="h-7 w-7"
           onClick={handleBackToDashboard}
-          title="Back to Main Menu"
+          title="Главное меню"
+          aria-label="Главное меню"
         ><Home className="w-3.5 h-3.5" /></Button>
 
         {/* New Entity */}
@@ -169,7 +158,8 @@ export function Toolbar() {
           size="icon" variant="ghost"
           className="h-7 w-7 text-primary hover:bg-primary/10"
           onClick={openWizard}
-          title="New Entity (Ctrl+N)"
+          title="Создать персонажа (Ctrl+N)"
+          aria-label="Создать персонажа"
         ><Plus className="w-4 h-4" /></Button>
 
         {/* Import SVG */}
@@ -179,7 +169,8 @@ export function Toolbar() {
           className="h-7 w-7 text-emerald-400 hover:bg-emerald-400/10"
           onClick={openImportWizard}
           disabled={!activeEntity}
-          title="Import SVG Asset"
+          title="Импортировать SVG"
+          aria-label="Импортировать SVG"
         ><Upload className="w-3.5 h-3.5" /></Button>
 
         <div className="w-px h-5 bg-border mx-0.5" />
@@ -190,7 +181,8 @@ export function Toolbar() {
           size="icon" variant="ghost"
           className="h-7 w-7 disabled:opacity-30"
           onClick={undo} disabled={!canUndo}
-          title="Undo (Ctrl+Z)"
+          title="Отменить (Ctrl+Z)"
+          aria-label="Отменить изменение"
         ><Undo2 className="w-3.5 h-3.5" /></Button>
 
         <Button
@@ -198,7 +190,8 @@ export function Toolbar() {
           size="icon" variant="ghost"
           className="h-7 w-7 disabled:opacity-30"
           onClick={redo} disabled={!canRedo}
-          title="Redo (Ctrl+X / Ctrl+Shift+Z / Ctrl+Y)"
+          title="Повторить (Ctrl+X / Ctrl+Shift+Z / Ctrl+Y)"
+          aria-label="Повторить изменение"
         ><Redo2 className="w-3.5 h-3.5" /></Button>
 
         <div className="w-px h-5 bg-border mx-0.5" />
@@ -209,7 +202,8 @@ export function Toolbar() {
           size="icon" variant="ghost"
           className="h-7 w-7"
           onClick={handleSaveProject}
-          title="Save Project"
+          title="Сохранить проект"
+          aria-label="Сохранить проект"
         ><Save className="w-3.5 h-3.5" /></Button>
 
         <Button
@@ -217,16 +211,20 @@ export function Toolbar() {
           size="icon" variant="ghost"
           className="h-7 w-7"
           onClick={handleLoad}
-          title="Load Project"
+          title="Открыть проект"
+          aria-label="Открыть проект"
         ><FolderOpen className="w-3.5 h-3.5" /></Button>
+
+        <Button data-testid="toolbar-reset-workspace" size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive" title="Очистить проекты и рисунки редактора" aria-label="Очистить рабочую область" onClick={() => setResetOpen(true)}><Trash2 className="w-3.5 h-3.5" /></Button>
 
         <div className="flex-1" />
 
         {/* Style set switcher */}
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground hidden md:block">Style</span>
+          <span className="text-xs text-muted-foreground hidden md:block">Стиль</span>
           <select
             data-testid="toolbar-styleset"
+            aria-label="Стиль проекта"
             value={currentStyleSetId}
             onChange={event => handleStyleSetChange(event.target.value)}
             className="h-7 w-36 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring"
@@ -248,9 +246,19 @@ export function Toolbar() {
           onClick={openExport}
         >
           <Download className="w-3.5 h-3.5 mr-1.5" />
-          Export
+          Экспорт
         </Button>
       </header>
+      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Очистить рабочую область?</AlertDialogTitle><AlertDialogDescription>Проекты, персонажи и импортированные рисунки в памяти редактора будут удалены. Файлы на диске останутся.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Отмена</AlertDialogCancel><AlertDialogAction data-testid="confirm-reset-workspace" onClick={() => {
+            clearProjectSessions();
+            useStore.getState().newProject();
+            useStore.getState().createEntity("character", "biped_profile_base_v1", "Персонаж");
+          }}>Очистить</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Import SVG Wizard */}
       <ImportWizard

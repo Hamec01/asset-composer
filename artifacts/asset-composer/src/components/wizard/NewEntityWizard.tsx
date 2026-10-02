@@ -9,7 +9,7 @@ import { getTemplatePresentationSummary } from "@/lib/templatePresentation";
 import type { EntityType } from "@/domain/types";
 import { User, Ghost, Bird, Sword, Box, Music } from "lucide-react";
 
-const ENTITY_TYPES: { type: EntityType; label: string; icon: React.ReactNode; description: string }[] = [
+const LEGACY_ENTITY_TYPES: { type: EntityType; label: string; icon: React.ReactNode; description: string }[] = [
   { type: "character", label: "Character", icon: <User className="w-5 h-5" />, description: "Playable hero or NPC humanoid" },
   { type: "monster", label: "Monster", icon: <Ghost className="w-5 h-5" />, description: "Enemy creature or boss" },
   { type: "animal", label: "Animal / Mount", icon: <Bird className="w-5 h-5" />, description: "Quadruped, bird, or mount" },
@@ -17,6 +17,7 @@ const ENTITY_TYPES: { type: EntityType; label: string; icon: React.ReactNode; de
   { type: "static_object", label: "Static Object", icon: <Box className="w-5 h-5" />, description: "Chest, barrel, tree, catapult" },
   { type: "animation_pack", label: "Animation Pack", icon: <Music className="w-5 h-5" />, description: "Reusable animation set" },
 ];
+const ENTITY_TYPES = LEGACY_ENTITY_TYPES.filter(entry => entry.type === "character");
 
 type Step = "type" | "template" | "name";
 
@@ -25,19 +26,19 @@ export function NewEntityWizard() {
   const closeWizard = useStore(s => s.closeWizard);
   const createEntity = useStore(s => s.createEntity);
 
-  const [step, setStep] = useState<Step>("type");
-  const [selectedType, setSelectedType] = useState<EntityType | null>(null);
+  const [step, setStep] = useState<Step>("template");
+  const [selectedType, setSelectedType] = useState<EntityType | null>("character");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [name, setName] = useState("");
 
   const compatibleTemplates = selectedType
-    ? getTemplatesForEntityType(selectedType)
+    ? getTemplatesForEntityType(selectedType).filter(template => template.id.startsWith("biped_profile_"))
     : [];
 
   useEffect(() => {
     if (editor.isWizardOpen) return;
-    setStep("type");
-    setSelectedType(null);
+    setStep("template");
+    setSelectedType("character");
     setSelectedTemplateId(null);
     setName("");
   }, [editor.isWizardOpen]);
@@ -60,8 +61,8 @@ export function NewEntityWizard() {
         <DialogHeader>
           <DialogTitle className="text-base font-semibold text-foreground">
             {step === "type" && "Choose Entity Type"}
-            {step === "template" && "Choose Template"}
-            {step === "name" && "Name Your Entity"}
+            {step === "template" && "Телосложение"}
+            {step === "name" && "Имя персонажа"}
           </DialogTitle>
           <DialogDescription className="sr-only">
             Create a new entity by choosing its type, template, and name.
@@ -99,7 +100,7 @@ export function NewEntityWizard() {
                 <button
                   key={t.id}
                   data-testid={`wizard-template-${t.id}`}
-                  onClick={() => { setSelectedTemplateId(t.id); setStep("name"); setName(`New ${t.name}`); }}
+                  onClick={() => { setSelectedTemplateId(t.id); setStep("name"); setName("Персонаж"); }}
                   className="flex items-center gap-4 rounded-lg border border-border bg-accent/40 p-3 text-left hover:border-primary/60 hover:bg-accent transition-colors"
                 >
                   <div
@@ -107,18 +108,14 @@ export function NewEntityWizard() {
                     dangerouslySetInnerHTML={{ __html: sanitizeSvg(t.thumbnailSvg) }}
                   />
                   <div>
-                    <p className="text-sm font-medium text-foreground">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.description}</p>
-                    <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                      {getTemplatePresentationSummary(t)}
-                    </p>
+                    <p className="text-sm font-medium text-foreground">{t.id.includes("slim") ? "Стройное" : t.id.includes("sturdy") ? "Крепкое" : "Обычное"}</p>
                   </div>
                 </button>
               ))}
             </div>
             <div className="flex gap-2 pt-2 border-t border-border">
-              <Button variant="ghost" size="sm" onClick={() => setStep("type")} className="text-xs">
-                ← Back
+              <Button variant="ghost" size="sm" onClick={handleClose} className="text-xs">
+                Отмена
               </Button>
             </div>
           </div>
@@ -128,7 +125,7 @@ export function NewEntityWizard() {
         {step === "name" && (
           <div className="space-y-4">
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Entity name</label>
+              <label className="text-xs text-muted-foreground mb-1 block">Имя</label>
               <Input
                 data-testid="wizard-name-input"
                 value={name}
@@ -150,7 +147,7 @@ export function NewEntityWizard() {
                 disabled={!name.trim()}
                 className="ml-auto bg-primary text-primary-foreground hover:bg-primary/90 text-xs"
               >
-                Create Entity
+                Создать персонажа
               </Button>
             </div>
           </div>
