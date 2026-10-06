@@ -23,17 +23,24 @@ import { resolveClipPose, blendPoses } from "./animationRuntime";
 import { getCharacterBodyParts } from "@/data/chibiBody";
 import { chibiFeatureSvg, DEFAULT_APPEARANCE } from "@/data/characterAppearance";
 import type { CharacterAppearance } from "@/domain/types";
-import { getSideGaitClip } from "@/data/chibiAnimations";
+import { getSideGaitClip, upgradeBowClip } from "@/data/chibiAnimations";
 import type { BoneTransformMap } from "./animationRuntime";
 import { applyPaletteToSvg } from "./svgUtils";
 import { parseMetrics } from "./svgMetrics";
+import { appearanceItemAllowed, appearancePresetAllowed } from "./appearanceCompatibility";
+import { getAnimationContext, setAnimationContext, meshDeformAt, attachmentAt } from "./animationContext";
+import { skinVertices, renderSkinMesh } from "./skinning";
+import { createGarmentMesh } from "./garmentMesh";
+import { applyDrawOrder } from "./drawOrder";
+import { ikContext, solveIkPose } from "./ikConstraint";
+import { deformAttachmentLine } from "./dynamicAttachment";
 import { refreshCanonicalBuiltInTypedItems } from "./canonicalItems";
 import { resolveItemFitAnchorOverride, resolveItemFitPartTransform } from "./itemFitProfiles";
 import { isLegacyBodyCloneVisual } from "./projectNormalization";
 import { ITEM_SOURCE_PALETTE } from "@/data/items";
 import {
   identity, multiply, translation, worldBoneToMatrix,
-  localTransformToMatrix, transformAABB,
+  localTransformToMatrix, transformAABB, transformPoint, setWorldBoneMatrix,
 } from "./matrixUtils";
 
 // ── Legacy layer types (unchanged — kept for Pixi / frameRenderer compat) ─────
@@ -96,7 +103,8 @@ export function buildMultiClipPose(
   const findClip = (id: string | null) =>
     id ? (allClips.find(c => c.id === id) ?? null) : null;
 
-  const baseClip  = findClip(activeClipId);
+  const savedBaseClip = findClip(activeClipId);
+  const baseClip = savedBaseClip?.id === "chibi_front__bow_shoot" ? upgradeBowClip(savedBaseClip) : savedBaseClip;
   const upperClip = findClip(upperClipId);
   const lowerClip = findClip(lowerClipId);
   const heldHands = entity.slots.flatMap(slot => {
@@ -158,7 +166,35 @@ export function evaluateSkeleton(
   bodyMorphs?: BodyMorphValues,
   appearance?: CharacterAppearance,
 ): EvaluatedSkeleton {
+  const ik = ikContext(localPose);
+  const pose = ik
+    ? solveIkPose(localPose, ik, candidate => evaluateWorldBones(bones, candidate, bodyMorphs, appearance), id => bones.find(bone => bone.id === id)?.parentId ?? null)
+    : localPose;
+  const world = evaluateWorldBones(bones, pose, bodyMorphs, appearance);
+
+  if (appearance?.view === "left") {
+    for (const bone of world.values()) {
+      setWorldBoneMatrix(bone, multiply([-1,0,0,1,0,0], worldBoneToMatrix(bone)));
+      bone.x = -bone.x;
+      bone.rotation = -bone.rotation;
+      bone.scaleX = -bone.scaleX;
+    }
+  }
+  const result = { bones: world };
+  const context = getAnimationContext(localPose);
+  if (context) setAnimationContext(result,context.clip,context.timeMs);
+  return result;
+}
+
+/** Forward kinematics in skeleton space, before view mirroring. */
+function evaluateWorldBones(
+  bones:     Bone[],
+  localPose: BoneTransformMap,
+  bodyMorphs?: BodyMorphValues,
+  appearance?: CharacterAppearance,
+): Map<string, WorldBone> {
   const world = new Map<string, WorldBone>();
+  const inherit = getAnimationContext(localPose)?.clip.inherit;
 
   for (const bone of bones) {
     const restPose = { ...applyBodyMorphToRestPose(bone, bodyMorphs) };
@@ -205,16 +241,23 @@ export function evaluateSkeleton(
         scaleY:   parent.scaleY * lSy,
       });
     }
-  }
-
-  if (appearance?.view === "left") {
-    for (const bone of world.values()) {
-      bone.x = -bone.x;
-      bone.rotation = -bone.rotation;
-      bone.scaleX = -bone.scaleX;
+    const evaluated = world.get(bone.id)!;
+    const parentBone = bone.parentId ? world.get(bone.parentId) : undefined;
+    let parentMatrix = parentBone ? worldBoneToMatrix(parentBone) : identity();
+    if (parentBone && inherit?.[bone.id] === "noScale") {
+      // Spine Inherit.noScale: keep the parent's position and orientation, drop its scale and shear.
+      const origin = transformPoint(parentMatrix, lx, ly);
+      const angle = Math.atan2(parentMatrix[1], parentMatrix[0]);
+      const flip = parentMatrix[0] * parentMatrix[3] - parentMatrix[1] * parentMatrix[2] < 0 ? -1 : 1;
+      parentMatrix = [Math.cos(angle), Math.sin(angle), -flip * Math.sin(angle), flip * Math.cos(angle), origin.x, origin.y];
+      lx = 0; ly = 0;
+      evaluated.scaleX = lSx; evaluated.scaleY = lSy;
     }
+    const matrix = multiply(parentMatrix, localTransformToMatrix(lx,ly,lRot,lSx,lSy));
+    evaluated.x = matrix[4]; evaluated.y = matrix[5];
+    setWorldBoneMatrix(evaluated, matrix);
   }
-  return { bones: world };
+  return world;
 }
 
 export function evaluateRestSkeleton(
@@ -387,6 +430,7 @@ function makeFaceCustomizationVisuals(entity: Entity, skeleton: EvaluatedSkeleto
   for (const def of defs) {
     const config = face[def.key];
     if (!config?.visible || !config.presetId || config.presetId === "none") continue;
+    if (chibi && !appearancePresetAllowed(def.key, config.presetId, entity.appearance?.sex)) continue;
     const presetId = laughing && def.key === "eyes" ? "closed_happy"
       : laughing && def.key === "mouth" ? "open_smile" : config.presetId;
     const svgData = chibi ? chibiFeatureSvg(def.key, presetId, config.color, { ...DEFAULT_APPEARANCE, ...entity.appearance }) : makeFaceFeatureSvg(def.key, presetId, config.color);
@@ -577,7 +621,7 @@ function getCoveredBodyBoneIds(entity: Entity, template: Template, items: Item[]
   for (const slotAssign of entity.slots) {
     if (!slotAssign.itemId) continue;
     const item = items.find(i => i.id === slotAssign.itemId);
-    if (!item) continue;
+    if (!item || !appearanceItemAllowed(item, entity.appearance?.sex)) continue;
 
     const hasV2Parts = item.parts?.some(part => part.coordinateMode === "bone_local") ?? false;
     if (hasV2Parts) {
@@ -712,6 +756,7 @@ export function evaluateScene(
   const fw = template.previewWidth;
   const fh = template.previewHeight;
   const bodyParts = getCharacterBodyParts(template, entity);
+  const neutralParts = entity.appearance ? getCharacterBodyParts(template, { ...entity, appearance: { ...entity.appearance, sex: "male", slimness: 0, muscle: 0, fat: 0 } }) : bodyParts;
 
   // ── 1. Entity visuals (full-vector body, v2.0) ─────────────────────────────
   for (const visual of getRenderableEntityVisuals(entity, template)) {
@@ -762,7 +807,10 @@ export function evaluateScene(
     for (const part of bodyParts) {
       if (entity.visuals?.some(visual => visual.bodyPartId === part.id && (visual.bodyView ?? "front") === (entity.appearance?.view && entity.appearance.view !== "front" ? "side" : "front"))) continue;
       if (coveredBodyBoneIds.has(part.boneId)) continue;
-      const svgData = applyPaletteToSvg(part.svgData, template.paletteTokens, entity.palette);
+      // Spine-style slot: an attachment key swaps the drawing, not the bone binding.
+      const attachment = attachmentAt(getAnimationContext(skeleton), part.boneId);
+      const source = attachment ? part.attachments?.[attachment] ?? part.svgData : part.svgData;
+      const svgData = applyPaletteToSvg(source, template.paletteTokens, entity.palette);
 
       const wb = skeleton.bones.get(part.boneId);
       const boneM: Matrix2D = wb ? worldBoneToMatrix(wb) : identity();
@@ -829,14 +877,33 @@ export function evaluateScene(
     if (!slotAssign.itemId) continue;
     const item    = effectiveItems.find(i => i.id === slotAssign.itemId);
     const slotDef = template.slots.find(s => s.id === slotAssign.slotId);
-    if (!item || !slotDef) continue;
+    if (!item || !slotDef || !appearanceItemAllowed(item, entity.appearance?.sex)) continue;
 
     const effectivePalette: PaletteTokens = { ...entity.palette, ...slotAssign.paletteOverride };
 
     if (item.parts && item.parts.length > 0) {
       // v2.0: multi-bone item parts
       for (const part of item.parts) {
-        const svgData = applyPaletteToSvg(part.svgData, ITEM_SOURCE_PALETTE, effectivePalette);
+        const continuousShirt = item.tags.includes("rig-depth") && item.category === "torso"
+          && !item.parts.some(piece => piece.editorDocumentId || piece.source)
+          && !Object.keys(slotAssign.attachmentOverride ?? {}).length
+          && !fitProfiles.some(profile => profile.templateId === template.id && profile.slotId === slotDef.id && profile.fitProfile === item.fitProfile);
+        if (continuousShirt && ["shirt_waist_bridge", "shirt_hem"].includes(part.id)) continue;
+        if (part.mesh || continuousShirt && part.id === "shirt_chest") {
+          const rest=evaluateSkeleton(template.bones,new Map(),entity.bodyMorphs,entity.appearance);
+          const matrices=new Map([...skeleton.bones].map(([id,bone])=>[id,worldBoneToMatrix(bone)]));
+          const bind=new Map([...rest.bones].map(([id,bone])=>[id,worldBoneToMatrix(bone)]));
+          const cloth=applyPaletteToSvg(part.svgData,ITEM_SOURCE_PALETTE,effectivePalette).match(/fill="(#[0-9a-fA-F]+)"/)?.[1]??"#8C5A3C";
+          const mesh=part.mesh ?? createGarmentMesh(bind,bodyParts,cloth,entity.appearance?.sex==="female");
+          const {bounds,svgData}=renderSkinMesh(mesh,skinVertices(mesh,matrices,meshDeformAt(getAnimationContext(skeleton),part.id)));
+          const id=`slot__${slotAssign.slotId}__${item.id}__${part.id}`;
+          // The tunic hangs over the trouser waistband (seat sits at pelvis depth -819).
+          const zIndex=part.mesh?slotDef.zIndex+part.zOffset:-818;
+          visuals.push({id,svgData,zIndex,worldMatrix:identity(),localBounds:bounds,worldBounds:bounds,sourceKind:"item-part",slotId:slotAssign.slotId,itemId:item.id,partId:part.id,svgFitMode:"v2_vector"});
+          layers.push({id,svgData,zIndex,opacity:1,boneId:null,localX:0,localY:0,rotation:0,scaleX:1,scaleY:1,naturalWidth:bounds.maxX-bounds.minX,naturalHeight:bounds.maxY-bounds.minY});
+          continue;
+        }
+        let svgData = applyPaletteToSvg(part.svgData, ITEM_SOURCE_PALETTE, effectivePalette);
         const binding = part.coordinateMode === "bone_local"
           ? resolveItemPartBinding(entity, template, skeleton, item, slotAssign, slotDef, part, fitProfiles) : null;
         const heldItem = ["weapon_main", "weapon_off", "shield"].includes(item.category);
@@ -886,8 +953,9 @@ export function evaluateScene(
             piv.y,
           );
           const partBinding = binding ?? resolveItemPartBinding(entity, template, skeleton, item, slotAssign, slotDef, part, fitProfiles);
+          const palm = heldItem ? bodyParts.find(body => body.boneId === partBinding.boneId)?.grip : undefined;
           const worldM = multiply(
-            partBinding.parentMatrix,
+            palm ? multiply(partBinding.parentMatrix, translation(palm.x, palm.y)) : partBinding.parentMatrix,
             multiply(
               partBinding.anchorMatrix,
               multiply(
@@ -896,6 +964,21 @@ export function evaluateScene(
               ),
             ),
           );
+          // Clothing follows the same silhouette as the covered body segment.
+          if (item.tags.includes("rig-depth") && ["torso", "legs", "arms"].includes(item.category)) {
+            const shaped = bodyParts.find(body => body.boneId === part.boneId);
+            const neutral = neutralParts.find(body => body.boneId === part.boneId);
+            if (shaped && neutral && neutral.naturalWidth > 0) {
+              const fit = shaped.naturalWidth / neutral.naturalWidth;
+              worldM[0] *= fit; worldM[1] *= fit;
+            }
+          }
+          // Convert the drawing hand into the bow's authored SVG frame.
+          // Both canvas and export receive the same deformed string.
+          const stringBone = part.dynamicLine ? skeleton.bones.get(part.dynamicLine.targetBoneId) : undefined;
+          const stringPalm = part.dynamicLine ? bodyParts.find(body => body.boneId === part.dynamicLine!.targetBoneId)?.grip : undefined;
+          const stringTarget = stringBone ? transformPoint(worldBoneToMatrix(stringBone), stringPalm?.x ?? 0, stringPalm?.y ?? 0) : undefined;
+          svgData = deformAttachmentLine(svgData,part,worldM,stringTarget,getAnimationContext(skeleton));
           const localBounds = makeMetricBounds(part.metrics, piv.x, piv.y);
           const worldBounds = transformAABB(worldM, localBounds);
           const partWidth = part.metrics.visualWidth;
@@ -951,6 +1034,8 @@ export function evaluateScene(
     }
   }
 
+  applyDrawOrder(visuals,effectiveItems,getAnimationContext(skeleton),entity.appearance?.view === "left" ? "r" : "l");
+  for(const layer of layers) { const visual=visuals.find(v=>v.id===layer.id); if(visual)layer.zIndex=visual.zIndex; }
   visuals.sort((a, b) => a.zIndex - b.zIndex);
   layers.sort((a, b)  => a.zIndex - b.zIndex);
 

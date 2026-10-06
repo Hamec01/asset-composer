@@ -107,7 +107,21 @@ const TemplateViewsSchema = z.object({
   south_west: TemplateViewSchema.optional(),
 });
 
+const SkinMeshSchema = z.object({
+  vertices: z.array(z.object({x:z.number().finite(),y:z.number().finite(),weights:z.array(z.object({boneId:z.string(),weight:z.number().finite().nonnegative()})).min(1)})).min(3),
+  bindMatrices:z.record(z.string(),z.tuple([z.number().finite(),z.number().finite(),z.number().finite(),z.number().finite(),z.number().finite(),z.number().finite()])),
+  triangles:z.array(z.number().int().nonnegative()),
+  paths:z.array(z.object({indices:z.array(z.number().int().nonnegative()).min(2),closed:z.boolean(),smooth:z.boolean(),fill:z.string(),stroke:z.string(),strokeWidth:z.number().finite().nonnegative()})).min(1),
+}).superRefine((mesh,ctx)=>{
+  const invalid = mesh.triangles.length%3!==0 || [...mesh.triangles,...mesh.paths.flatMap(p=>p.indices)].some(i=>i>=mesh.vertices.length)
+    || mesh.vertices.some(v=>v.weights.reduce((s,w)=>s+w.weight,0)<=0 || v.weights.some(w=>!mesh.bindMatrices[w.boneId]))
+    || Object.values(mesh.bindMatrices).some(m=>Math.abs(m[0]*m[3]-m[1]*m[2])<1e-9);
+  if(invalid)ctx.addIssue({code:z.ZodIssueCode.custom,message:"Invalid mesh topology, weights or bind matrices"});
+});
+
 const ItemPartSchema = z.object({
+  mesh: SkinMeshSchema.optional(),
+  dynamicLine:z.object({pathId:z.string(),targetBoneId:z.string(),clipId:z.string(),start:z.object({x:z.number().finite(),y:z.number().finite()}),end:z.object({x:z.number().finite(),y:z.number().finite()}),attachMs:z.number().finite().nonnegative(),releaseMs:z.number().finite().nonnegative(),settleMs:z.number().finite().positive()}).optional(),
   id:             z.string(),
   boneId:         z.string(),
   svgData:        z.string(),
@@ -266,6 +280,8 @@ const BonePartSchema = z.object({
   localX:        z.number(),
   localY:        z.number(),
   zOffset:       z.number(),
+  attachments:   z.record(z.string(), z.string()).optional(),
+  grip:          z.object({ x: z.number().finite(), y: z.number().finite() }).optional(),
 });
 
 // ── Core schemas ──────────────────────────────────────────────────────────────
@@ -452,6 +468,12 @@ const AnimationLayerSchema = z.object({
 });
 
 const AnimationClipSchema = z.object({
+  drawOrder:z.array(z.object({timeMs:z.number().finite().nonnegative(),boneOrder:z.array(z.string()),slotOrder:z.array(z.string()),raise:z.array(z.object({boneId:z.string(),above:z.string(),onlyNear:z.boolean().optional()})).optional()})).optional(),
+  deform:z.array(z.object({partId:z.string(),keyframes:z.array(z.object({timeMs:z.number().finite().nonnegative(),offsets:z.array(z.object({x:z.number().finite(),y:z.number().finite()}))}))})).optional(),
+  attachments:z.array(z.object({boneId:z.string(),keyframes:z.array(z.object({timeMs:z.number().finite().nonnegative(),name:z.string().nullable()}))})).optional(),
+  inherit:z.record(z.string(),z.enum(["normal","noScale"])).optional(),
+  ik:z.array(z.object({bones:z.tuple([z.string(),z.string(),z.string()]),bend:z.union([z.literal(1),z.literal(-1)]),stretch:z.boolean().optional(),
+    keyframes:z.array(z.object({timeMs:z.number().finite().nonnegative(),x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional(),mix:z.number().finite().min(0).max(1)}))})).optional(),
   id: z.string(),
   name: z.string(),
   label: z.string(),

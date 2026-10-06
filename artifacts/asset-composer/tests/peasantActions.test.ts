@@ -9,10 +9,17 @@ import { buildMultiClipPose, evaluateSkeleton, evaluateScene } from "../src/lib/
 import { resolveTemplate } from "../src/data/templates";
 import { useStore } from "../src/store";
 import { animController } from "../src/core-v2/AnimationController";
-import { transformPoint } from "../src/lib/matrixUtils";
+import { transformPoint, worldBoneToMatrix } from "../src/lib/matrixUtils";
+import { getCharacterBodyParts } from "../src/data/chibiBody";
 
 afterEach(() => animController.pause());
 const actions = CHIBI_ANIMATIONS.filter(clip => ["axe_strike", "sword_strike", "laugh", "pickup", "carry"].includes(clip.name));
+
+/** Held items sit at the hand part's grip point (palm centre), not at the wrist pivot. */
+function palmOf(entity: Parameters<typeof getCharacterBodyParts>[1], template: Parameters<typeof getCharacterBodyParts>[0], skeleton: ReturnType<typeof evaluateSkeleton>) {
+  const grip = getCharacterBodyParts(template, entity).find(part => part.boneId === "hand_l")?.grip ?? { x: 0, y: 0 };
+  return transformPoint(worldBoneToMatrix(skeleton.bones.get("hand_l")!), grip.x, grip.y);
+}
 
 describe("2.5D peasant actions", () => {
   for (const clip of actions) {
@@ -94,7 +101,7 @@ describe("2.5D peasant actions", () => {
     const project = useStore.getState().project;
     const entity = structuredClone(project.entities[0]);
     const template = resolveTemplate(project, entity.templateId)!;
-    for (const item of PEASANT_EQUIPMENT) {
+    for (const item of PEASANT_EQUIPMENT.filter(item => !item.tags.includes("female"))) {
       expect(template.slots.some(slot => item.allowedSlots.includes(slot.id))).toBe(true);
       entity.slots.find(slot => slot.slotId === item.allowedSlots[0])!.itemId = item.id;
       for (const part of item.parts!) expect(template.bones.some(bone => bone.id === part.boneId)).toBe(true);
@@ -104,7 +111,7 @@ describe("2.5D peasant actions", () => {
     const near = scene.visuals.find(visual => visual.partId === "sleeve_upper_l")!;
     const far = scene.visuals.find(visual => visual.partId === "sleeve_upper_r")!;
     expect(near.zIndex).toBeGreaterThan(far.zIndex);
-    expect(scene.visuals.filter(visual => visual.sourceKind === "item-part")).toHaveLength(17);
+    expect(scene.visuals.filter(visual => visual.sourceKind === "item-part")).toHaveLength(15);
   });
 
   it("keeps an axe grip inside its hand and swaps weapon / shield depth when turning", () => {
@@ -129,7 +136,7 @@ describe("2.5D peasant actions", () => {
       const axeVisual = scene.visuals.find(visual => visual.itemId === axe.id)!;
       const shieldVisual = scene.visuals.find(visual => visual.itemId === shield.id)!;
       const grip = transformPoint(axeVisual.worldMatrix, 0, 0);
-      const hand = skeleton.bones.get("hand_l")!;
+      const hand = palmOf(entity, template, skeleton);
       expect(grip.x).toBeCloseTo(hand.x);
       expect(grip.y).toBeCloseTo(hand.y);
       expect(axeVisual.zIndex > shieldVisual.zIndex).toBe(view === "right");
@@ -177,7 +184,7 @@ describe("2.5D peasant actions", () => {
         expect(skeleton.bones.get("hand_l")!.rotation).toBeCloseTo(0);
         const visual = evaluateScene(entity, template, skeleton, [weapon]).visuals.find(visual => visual.itemId === itemId)!;
         const grip = transformPoint(visual.worldMatrix, 0, 0);
-        const hand = skeleton.bones.get("hand_l")!;
+        const hand = palmOf(entity, template, skeleton);
         expect(grip.x).toBeCloseTo(hand.x);
         expect(grip.y).toBeCloseTo(hand.y);
         const tip = transformPoint(visual.worldMatrix, 0, itemId === "iron_sword_25d" ? -35 : -30);

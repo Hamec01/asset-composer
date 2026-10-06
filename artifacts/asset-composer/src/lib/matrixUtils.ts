@@ -162,9 +162,15 @@ export function localTransformToMatrix(
 }
 
 /** Build a world matrix from an EvaluatedSkeleton WorldBone. */
+const evaluatedMatrices = new WeakMap<object, Matrix2D>();
+export function setWorldBoneMatrix(bone: object, matrix: Matrix2D): void {
+  evaluatedMatrices.set(bone, matrix);
+}
 export function worldBoneToMatrix(wb: {
   x: number; y: number; rotation: number; scaleX: number; scaleY: number;
 }): Matrix2D {
+  const evaluated = evaluatedMatrices.get(wb);
+  if (evaluated) return [...evaluated];
   return multiply(
     multiply(translation(wb.x, wb.y), rotationDeg(wb.rotation)),
     scaling(wb.scaleX, wb.scaleY),

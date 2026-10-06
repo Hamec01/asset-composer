@@ -71,11 +71,11 @@ export interface ExportWorkerJob {
   animationClips: AnimationClip[];
   profile: ExportProfile;
   /**
-   * Pre-rasterized PNG images keyed by cache key (produced on the main thread).
-   * Keys:  "base:{entityId}:{layerId}"  and  "slot:{entityId}:{slotId}"
-   * This avoids SVG-in-createImageBitmap failures inside the Web Worker.
+   * Whole frames rendered on the main thread from the editor's evaluated scene
+   * (skinned meshes, attachment swaps and draw order included), keyed by
+   * exportFrameKey(entityId, clipId, frame). Transferred, not copied.
    */
-  rasterizedImages: Record<string, ArrayBuffer>;
+  frames: Record<string, ImageBitmap>;
   /**
    * Clip IDs to include in the export. When absent/empty, all clips are included.
    * Allows the user to select a subset of animations to pack.
@@ -97,13 +97,25 @@ export type WorkerOutputMessage =
 export type WorkerInputMessage =
   | { type: "start"; job: ExportWorkerJob };
 
+const CYRILLIC: Record<string, string> = {
+  а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m",
+  н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "ts", ч: "ch", ш: "sh", щ: "sch",
+  ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya", і: "i", ї: "yi", є: "ye", ґ: "g",
+};
+
+/** File-safe ASCII name; Cyrillic is transliterated instead of collapsing to underscores. */
+export function exportSlug(name: string): string {
+  const latin = [...name.toLowerCase()].map(ch => CYRILLIC[ch] ?? ch).join("");
+  return latin.replace(/[^a-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || "export";
+}
+
 export function formatFrameName(template: string, vars: {
   entity: string;
   animation: string;
   frame: number;
   slot?: string;
 }): string {
-  const safe = (s: string) => s.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+  const safe = (s: string) => s ? exportSlug(s) : "";
   return template
     .replace(/\{entity\}/g, safe(vars.entity))
     .replace(/\{animation\}/g, safe(vars.animation))

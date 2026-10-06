@@ -3,6 +3,7 @@ import { UserRound, Smile, Scissors, RotateCcw, Check } from "lucide-react";
 import { useStore } from "@/store";
 import { APPEARANCE_PRESETS, NOSE_PRESETS, FRECKLE_PRESETS, SCAR_PRESETS, chibiFeatureSvg, DEFAULT_APPEARANCE } from "@/data/characterAppearance";
 import { sanitizeSvg } from "@/lib/sanitize";
+import { appearancePresetAllowed } from "@/lib/appearanceCompatibility";
 import type { FaceFeatureKey, CharacterAppearance } from "@/domain/types";
 
 const SKIN_COLORS = ["#FFD0A8", "#F1B88D", "#D99A70", "#AF7451", "#80553F", "#553B30"];
@@ -46,7 +47,7 @@ export function AppearancePanel() {
   if (!entity.templateId.startsWith("biped_profile_")) return <div className="p-3 text-sm text-muted-foreground">Выберите базу чиби</div>;
   const store = useStore.getState();
   const appearance = { ...DEFAULT_APPEARANCE, ...entity.appearance };
-  const currentFeature = section === "hair" ? "hair" : feature;
+  const currentFeature = section === "hair" ? "hair" : feature === "beard" && entity.appearance?.sex === "female" ? "eyes" : feature;
   const config = currentFeature !== "nose" && currentFeature !== "marks" ? entity.faceCustomization?.[currentFeature] : undefined;
   const presetId = currentFeature === "nose" ? appearance.nose : config?.visible ? config.presetId : "none";
   const color = config?.color ?? (currentFeature === "hair" ? entity.palette.hair : "#382A24");
@@ -107,10 +108,10 @@ export function AppearancePanel() {
           <input type="color" aria-label="Цвет кожи" value={entity.palette.skin} onChange={event => store.setEntityPaletteToken(entity.id, "skin", event.target.value)} className="h-7 w-10 bg-transparent" />
         </div>
       </> : <>
-        {section === "face" && <select aria-label="Часть лица" value={feature} onChange={event => setFeature(event.target.value as typeof feature)}
+        {section === "face" && <select aria-label="Часть лица" value={currentFeature} onChange={event => setFeature(event.target.value as typeof feature)}
           className="h-9 w-full min-w-0 rounded border border-border bg-background px-2 text-xs">
           <option value="eyes">Глаза</option><option value="brows">Брови</option><option value="mouth">Рот и губы</option>
-          <option value="nose">Нос</option><option value="beard">Борода</option><option value="marks">Детали кожи</option>
+          <option value="nose">Нос</option>{appearance.sex !== "female" && <option value="beard">Борода</option>}<option value="marks">Детали кожи</option>
         </select>}
         {currentFeature === "marks" ? <>
           <fieldset className="space-y-2"><legend className="text-xs mb-2">Веснушки</legend>
@@ -131,7 +132,7 @@ export function AppearancePanel() {
           </fieldset>
         </> : <>
           <div className="grid grid-cols-2 gap-2">
-            {presets.map(preset => {
+            {presets.filter(preset => appearancePresetAllowed(currentFeature, preset.id, appearance.sex)).map(preset => {
               const svg = chibiFeatureSvg(currentFeature, preset.id, color, appearance, true);
               return <button key={preset.id} data-testid={`appearance-${currentFeature}-${preset.id}`} aria-pressed={presetId === preset.id}
                 className={`relative min-w-0 rounded border p-2 ${presetId === preset.id ? "border-primary bg-primary/15 ring-1 ring-primary/50" : "border-border hover:bg-accent/40"}`}

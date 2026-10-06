@@ -186,6 +186,12 @@ export interface EntityVisual {
  * legacy_full_frame: the part uses a viewBox-sized full-frame overlay (v1.x compat).
  */
 export interface ItemPart {
+  mesh?: SkinMesh;
+  dynamicLine?: {
+    pathId: string; targetBoneId: string; clipId: string;
+    start: {x:number;y:number}; end: {x:number;y:number};
+    attachMs: number; releaseMs: number; settleMs: number;
+  };
   id:             string;
   boneId:         string;
   svgData:        string;
@@ -196,6 +202,14 @@ export interface ItemPart {
   zOffset:        number;
   source?:        ImportedAssetSource;
   editorDocumentId?: string | null;
+}
+
+/** Vector mesh in skeleton setup coordinates. Matrices map bone local to setup space. */
+export interface SkinMesh {
+  vertices: { x: number; y: number; weights: { boneId: string; weight: number }[] }[];
+  bindMatrices: Record<string, Matrix2D>;
+  triangles: number[];
+  paths: { indices: number[]; closed: boolean; smooth: boolean; fill: string; stroke: string; strokeWidth: number }[];
 }
 
 export type AssetSourceFormat = "svg" | "png";
@@ -510,6 +524,10 @@ export interface BonePart {
   localY:        number;
   /** Used as EvaluatedVisual.zIndex — keep negative to stay below slot items */
   zOffset:       number;
+  /** Named alternative drawings for this bone's slot, selected by AnimationClip.attachments. */
+  attachments?:  Record<string, string>;
+  /** Point attachment in bone coordinates where held items and strings are gripped (palm centre). */
+  grip?:         { x: number; y: number };
 }
 
 export interface TemplateView {
@@ -628,7 +646,29 @@ export interface AnimationLayer {
   tracks: KeyframeTrack[];
 }
 
+export type BoneInherit = "normal" | "noScale";
+
 export interface AnimationClip {
+  /**
+   * Stepped draw-order keys. `raise` moves only the listed bones (with the garments and
+   * held items bound to them) above another bone; everything else keeps setup depth.
+   * `onlyNear` applies the raise only while that limb faces the viewer in the current view.
+   * `boneOrder`/`slotOrder` are full explicit orders kept for older projects.
+   */
+  drawOrder?: { timeMs: number; boneOrder: string[]; slotOrder: string[]; raise?: { boneId: string; above: string; onlyNear?: boolean }[] }[];
+  deform?: { partId: string; keyframes: { timeMs: number; offsets: { x: number; y: number }[] }[] }[];
+  /** Stepped attachment swaps per body bone; null restores the setup drawing. */
+  attachments?: { boneId: string; keyframes: { timeMs: number; name: string | null }[] }[];
+  /**
+   * Two-bone IK constraints solved at runtime (Spine IkConstraint). `bones` is
+   * [chain root, child, effector]; targets are skeleton-space positions for the
+   * effector, `rotation` its angle relative to the chain root's parent, `mix` the
+   * blend over the FK keys. `bend` picks the elbow side; `stretch` allows reaching further.
+   */
+  ik?: { bones: [string, string, string]; bend: 1 | -1; stretch?: boolean;
+    keyframes: { timeMs: number; x: number; y: number; rotation?: number; mix: number }[] }[];
+  /** Per-bone scale inheritance while this clip plays. noScale keeps the parent's rotation and position only. */
+  inherit?: Record<string, BoneInherit>;
   id: string;
   name: string;
   label: string;

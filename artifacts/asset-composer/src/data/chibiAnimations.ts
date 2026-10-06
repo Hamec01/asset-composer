@@ -144,7 +144,305 @@ const carry = action("carry", "Нести", 1100, true, {
   foot_l: [{ rotation: 10 }, { rotation: -12 }, { rotation: -14 }, {}, { rotation: 10 }],
   foot_r: [{ rotation: -14 }, {}, { rotation: 10 }, { rotation: -12 }, { rotation: -14 }],
 }, [0, .25, .5, .75, 1]);
-export const CHIBI_ANIMATIONS = [idle, gait("walk", 900, 1), gait("run", 550, 2), death, axeStrike, swordStrike, laugh, pickup, carry];
+const previousBowShoot = action("bow_shoot", "Стрельба из лука", 1250, false, {
+  root: [{}, { ty: -1 }, { ty: -2 }, { ty: 1 }, { ty: .5 }, {}],
+  chest: [{}, { rotation: -5 }, { rotation: -8 }, { rotation: 8 }, { rotation: 3 }, {}],
+  head: [{}, { rotation: 4 }, { rotation: 6 }, { rotation: -4 }, { rotation: -2 }, {}],
+  shoulder_l: [{}, { rotation: -25 }, { rotation: -42 }, { rotation: -32 }, { rotation: -15 }, {}],
+  elbow_l: [{}, { rotation: -18 }, { rotation: -30 }, { rotation: -12 }, { rotation: -5 }, {}],
+  hand_l: [{}, { rotation: -10 }, { rotation: -18 }, { rotation: -5 }, {}, {}],
+  shoulder_r: [{}, { rotation: 30 }, { rotation: 48 }, { rotation: 65 }, { rotation: 18 }, {}],
+  elbow_r: [{}, { rotation: 65 }, { rotation: 85 }, { rotation: 55 }, { rotation: 20 }, {}],
+  hand_r: [{}, { rotation: -20 }, { rotation: -34 }, { rotation: -18 }, { rotation: -5 }, {}],
+}, [0, .18, .42, .58, .82, 1]);
+// Extend the bow arm horizontally; counter-rotate the wrist to keep the bow upright.
+const previousBowShootV2 = action("bow_shoot", "Стрельба из лука", 1600, false, {
+  shoulder_l: [ {}, { rotation: -70 }, { rotation: -90 }, { rotation: -90 }, { rotation: -90 }, { rotation: -65 }, {} ],
+  elbow_l: [ {}, { rotation: -10 }, {}, {}, {}, { rotation: -10 }, {} ],
+  hand_l: [ {}, { rotation: 80 }, { rotation: 90 }, { rotation: 90 }, { rotation: 90 }, { rotation: 75 }, {} ],
+  shoulder_r: [ {}, { rotation: -65 }, { rotation: -95 }, { rotation: 45 }, { rotation: 60 }, { rotation: -20 }, {} ],
+  elbow_r: [ {}, { rotation: -35 }, { rotation: -80 }, { rotation: -170 }, { rotation: -170 }, { rotation: -50 }, {} ],
+  head: [ {}, {}, { rotation: 2 }, { rotation: 2 }, {}, {}, {} ],
+}, [0, .2, .35, .62, .68, .85, 1]);
+
+// Solve a two-segment arm from a wrist target (screen Y points down).
+function bowArm(x: number, y: number, bend: number) {
+  const elbow = bend * Math.acos(Math.max(-1, Math.min(1, (x*x + y*y - 15*15 - 13*13) / (2*15*13))));
+  const shoulder = Math.atan2(-x, y) - Math.atan2(13*Math.sin(elbow), 15+13*Math.cos(elbow));
+  return [shoulder * 180/Math.PI, elbow * 180/Math.PI];
+}
+const bowShoot: AnimationClip = (() => {
+  const durationMs = 2000;
+  const poses: Record<string, Partial<BoneTransform>[]> = { shoulder_l: [], elbow_l: [], hand_l: [], shoulder_r: [], elbow_r: [], hand_r: [] };
+  const stops = [0, .2, .32, .57, .68, .71, .82, 1];
+  // Grip stays fixed while the string hand moves from the string to the cheek.
+  const targets = [[-6,-7,4,-7], [20,-42,10,-42], [20,-42,10,-42], [20,-42,0,-42], [20,-42,0,-42], [20,-42,-3,-45], [20,-42,-3,-45], [-6,-7,4,-7]];
+  const fractions = Array.from({ length: 101 }, (_, i) => i/100);
+  for (const t of fractions) {
+    let i = 0;
+    while (i < stops.length-2 && t > stops[i+1]) i++;
+    const u = (t-stops[i])/(stops[i+1]-stops[i]);
+    const ease = u*u*(3-2*u);
+    const target = targets[i].map((v,j) => v+(targets[i+1][j]-v)*ease);
+    for (const [side, offset, sx, bend] of [["l",0,-6,1],["r",2,4,-1]] as const) {
+      const [shoulder, elbow] = bowArm(target[offset]-sx, target[offset+1]+35, bend);
+      poses[`shoulder_${side}`].push({ rotation: shoulder });
+      poses[`elbow_${side}`].push({ rotation: elbow });
+      const release = side === "r" && t > .68 ? 75 * Math.min(1, (1-t)/.18) : 0;
+      poses[`hand_${side}`].push({ rotation: -shoulder-elbow+release });
+    }
+  }
+  return action("bow_shoot", "Стрельба из лука", durationMs, false, poses, fractions);
+})();
+
+const previousBowShootV3 = structuredClone(bowShoot);
+// Step the near foot back, settle both soles, then return after the shot.
+// Compensate at the spine so the aiming hands do not drift with the pelvis.
+for (const boneId of ["pelvis", "spine", "hip_l", "knee_l", "foot_l", "hip_r", "knee_r", "foot_r"]) {
+  bowShoot.layers[0].tracks.push({ boneId, keyframes: Array.from({ length: 101 }, (_, i) => {
+    const t = i/100;
+    const phase = t < .2 ? t/.2 : t > .82 ? (1-t)/.18 : 1;
+    const weight = phase*phase*(3-2*phase);
+    const lift = phase < 1 ? 2*Math.sin(Math.PI*phase) : 0;
+    let rotation = 0, ty = 0;
+    if (boneId === "pelvis") ty = 3*weight;
+    else if (boneId === "spine") ty = -3*weight;
+    else {
+      const back = boneId.endsWith("_l");
+      const x = back ? -10*weight : 0;
+      const y = 23-3*weight-(back ? lift : 0);
+      const knee = Math.acos(Math.max(-1,Math.min(1,(x*x+y*y-13*13-10*10)/(2*13*10))));
+      const hip = Math.atan2(-x,y)-Math.atan2(10*Math.sin(knee),13+10*Math.cos(knee));
+      rotation = (boneId.startsWith("hip") ? hip : boneId.startsWith("knee") ? knee : -hip-knee)*180/Math.PI;
+    }
+    return { timeMs: t*bowShoot.durationMs, easing: "linear" as const,
+      transform: { tx: 0, ty, rotation, scaleX: 1, scaleY: 1 } };
+  }) });
+}
+
+const previousBowShootV4 = structuredClone(bowShoot);
+const previousBowShootV5 = structuredClone(bowShoot);
+// Chibi arms need additional reach to clear the oversized head silhouette.
+// Scale the chain during aiming and cancel it at the wrist: bow and hand stay their original size.
+for (let i = 0; i <= 100; i++) {
+  const t = i/100;
+  const p = t < .2 ? t/.2 : t > .82 ? (1-t)/.18 : 1;
+  const w = p*p*(3-2*p);
+  const stops = [0,.2,.32,.57,.68,.71,.82,1];
+  const targets = [[-6,-7,4,-7],[38,-40,28,-40],[38,-40,28,-40],[38,-40,10,-40],[38,-40,10,-40],[38,-40,7,-43],[38,-40,7,-43],[-6,-7,4,-7]];
+  let k=0;
+  while (k<stops.length-2 && t>stops[k+1]) k++;
+  const u=(t-stops[k])/(stops[k+1]-stops[k]);
+  const ease=u*u*(3-2*u);
+  const target=targets[k].map((v,j)=>v+(targets[k+1][j]-v)*ease);
+  for (const [side,offset,sx,bend] of [["l",0,-6,1],["r",2,4,-1]] as const) {
+    const reach = side === "l" ? 1+.6*w : 1;
+    const [shoulder,elbow]=bowArm((target[offset]-sx)/reach,(target[offset+1]+35)/reach,bend);
+    const frame=(id: string)=>bowShoot.layers[0].tracks.find(track=>track.boneId===id)!.keyframes[i].transform;
+    Object.assign(frame(`shoulder_${side}`),{rotation:shoulder,scaleX:reach,scaleY:reach});
+    frame(`elbow_${side}`).rotation=elbow;
+    const release=side==="r" && t>.68 ? 75*Math.min(1,(1-t)/.18) : 0;
+    Object.assign(frame(`hand_${side}`),{rotation:-shoulder-elbow+release,scaleX:1/reach,scaleY:1/reach});
+    const oldReach = 1+.6*w;
+    const [oldShoulder,oldElbow] = bowArm((target[offset]-sx)/oldReach,(target[offset+1]+35)/oldReach,bend);
+    const oldFrame = (id: string) => previousBowShootV5.layers[0].tracks.find(track=>track.boneId===id)!.keyframes[i].transform;
+    Object.assign(oldFrame(`shoulder_${side}`), {rotation:oldShoulder,scaleX:oldReach,scaleY:oldReach});
+    oldFrame(`elbow_${side}`).rotation=oldElbow;
+    Object.assign(oldFrame(`hand_${side}`), {rotation:-oldShoulder-oldElbow+release,scaleX:1/oldReach,scaleY:1/oldReach});
+  }
+}
+
+const previousBowShootV6 = structuredClone(bowShoot);
+// Recover by lowering the joint angles, not pulling both wrists through the torso.
+for (const track of bowShoot.layers[0].tracks.filter(track => /^(shoulder|elbow|hand)_[lr]$/.test(track.boneId))) {
+  const start = { ...track.keyframes[82].transform };
+  for (let i = 83; i <= 100; i++) {
+    const u = (i-82)/18;
+    const w = u*u*(3-2*u);
+    const frame = track.keyframes[i].transform;
+    frame.rotation = start.rotation*(1-w);
+    frame.scaleX = start.scaleX+(1-start.scaleX)*w;
+    frame.scaleY = start.scaleY+(1-start.scaleY)*w;
+  }
+}
+
+const previousBowShootV7 = structuredClone(bowShoot);
+bowShoot.drawOrder = [
+  {timeMs:0,boneOrder:[],slotOrder:[]},
+  {timeMs:400,boneOrder:["hip_r","knee_r","foot_r","shoulder_r","hip_l","knee_l","foot_l","pelvis","spine","chest","neck","shoulder_l","elbow_l","hand_l","head","elbow_r","hand_r"],slotOrder:[]},
+  {timeMs:1800,boneOrder:[],slotOrder:[]},
+];
+
+const previousBowShootV8 = structuredClone(bowShoot);
+// IK stretch lengthens each arm segment along its own axis. Elbow and wrist do not
+// inherit the parent's scale (Spine Inherit.noScale), so sleeves, hands and the bow
+// keep their authored width instead of being corrected per clip in the renderer.
+for (const side of ["l", "r"] as const) {
+  const track = (id: string) => bowShoot.layers[0].tracks.find(candidate => candidate.boneId === id)!.keyframes;
+  const [shoulder, elbow, hand] = [track(`shoulder_${side}`), track(`elbow_${side}`), track(`hand_${side}`)];
+  shoulder.forEach((key, i) => {
+    const reach = key.transform.scaleY;
+    key.transform.scaleX = 1;
+    Object.assign(elbow[i].transform, { scaleX: 1, scaleY: reach });
+    Object.assign(hand[i].transform, { scaleX: 1, scaleY: 1 });
+  });
+}
+bowShoot.inherit = { elbow_l: "noScale", hand_l: "noScale", elbow_r: "noScale", hand_r: "noScale" };
+// Closed grip while the bow is raised and while the right hand holds the string.
+bowShoot.attachments = [
+  { boneId: "hand_l", keyframes: [{ timeMs: 0, name: null }, { timeMs: 220, name: "grip" }, { timeMs: 1820, name: null }] },
+  { boneId: "hand_r", keyframes: [{ timeMs: 0, name: null }, { timeMs: 400, name: "grip" }, { timeMs: 1360, name: null }] },
+];
+
+const previousBowShootV9 = structuredClone(bowShoot);
+// Anatomical side-view draw, solved by runtime IK (Spine IkConstraint) so the hands
+// land on the same targets in either facing, whatever the shoulder placement or body
+// morph. The bow hand stays at shoulder height just past the chin; the string hand
+// anchors under the chin. FK keys underneath raise and lower the arms; IK mix blends in
+// while aiming and out during recovery. Stretch only engages when a target is beyond
+// natural reach, and only along the bones (elbow and wrist use Inherit.noScale).
+function anatomicalBowArms(clip: AnimationClip, lift: number, forward = 26, anchor = 7) {
+  const stops = [0, .2, .32, .57, .68, .71, .82, 1];
+  // Targets are wrist positions; `lift` raises them so the palm (grip point) holds the bow at shoulder height.
+  const targets = [[-6,-7,4,-7], [forward,-37,forward-10,-37], [forward,-37,forward-10,-37], [forward,-37,anchor,-37], [forward,-37,anchor,-37], [forward,-37,anchor-3,-40], [forward,-37,anchor-3,-40], [-6,-7,4,-7]]
+    .map((row, i) => i === 0 || i === 7 ? row : row.map((v, j) => j % 2 ? v - lift : v));
+  const track = (id: string) => clip.layers[0].tracks.find(candidate => candidate.boneId === id)!.keyframes;
+  const ikKeys: Record<"l" | "r", NonNullable<AnimationClip["ik"]>[number]["keyframes"]> = { l: [], r: [] };
+  for (let i = 0; i <= 100; i++) {
+    const t = i/100;
+    const p = t < .2 ? t/.2 : t > .82 ? (1-t)/.18 : 1;
+    const w = p*p*(3-2*p);
+    let k = 0;
+    while (k < stops.length-2 && t > stops[k+1]) k++;
+    const u = (t-stops[k])/(stops[k+1]-stops[k]);
+    const ease = u*u*(3-2*u);
+    const target = targets[k].map((v,j) => v+(targets[k+1][j]-v)*ease);
+    for (const [side, offset, sx, bend] of [["l",0,-6,1],["r",2,4,-1]] as const) {
+      const [shoulder, elbow] = bowArm(target[offset]-sx, target[offset+1]+35, bend);
+      const release = side === "r" && t > .68 ? 75*Math.min(1, (1-t)/.18) : 0;
+      Object.assign(track(`shoulder_${side}`)[i].transform, { rotation: shoulder, scaleX: 1, scaleY: 1 });
+      Object.assign(track(`elbow_${side}`)[i].transform, { rotation: elbow, scaleX: 1, scaleY: 1 });
+      Object.assign(track(`hand_${side}`)[i].transform, { rotation: -shoulder-elbow+release, scaleX: 1, scaleY: 1 });
+      ikKeys[side].push({ timeMs: t*clip.durationMs, x: target[offset], y: target[offset+1], rotation: release, mix: w });
+    }
+  }
+  // Recover by lowering the joint angles, not by pulling the wrists through the torso.
+  for (const id of ["shoulder_l", "elbow_l", "hand_l", "shoulder_r", "elbow_r", "hand_r"]) {
+    const keys = track(id);
+    const start = { ...keys[82].transform };
+    for (let i = 83; i <= 100; i++) {
+      const u = (i-82)/18;
+      keys[i].transform.rotation = start.rotation*(1-u*u*(3-2*u));
+    }
+  }
+  clip.ik = [
+    { bones: ["shoulder_l", "elbow_l", "hand_l"], bend: 1, stretch: true, keyframes: ikKeys.l },
+    { bones: ["shoulder_r", "elbow_r", "hand_r"], bend: -1, stretch: true, keyframes: ikKeys.r },
+  ];
+  // Whichever arm faces the viewer passes in front of the face: lift only that arm
+  // (sleeves and held items follow). The far arm stays behind the head and torso.
+  const nearArmAboveHead = ["shoulder", "elbow", "hand"].flatMap(joint => ["l", "r"].map(side => ({ boneId: `${joint}_${side}`, above: "head", onlyNear: true })));
+  clip.drawOrder = [
+    { timeMs: 0, boneOrder: [], slotOrder: [] },
+    { timeMs: 160, boneOrder: [], slotOrder: [], raise: nearArmAboveHead },
+    { timeMs: 1880, boneOrder: [], slotOrder: [] },
+  ];
+}
+anatomicalBowArms(bowShoot, 0);
+
+const previousBowShootV10 = structuredClone(bowShoot);
+// Rebuilt from the V9 keys: the palm sits ~5 units below the wrist on the generated body.
+anatomicalBowArms(bowShoot, 5);
+
+const previousBowShootV11 = structuredClone(bowShoot);
+// Clear the oversized chibi head with the whole bow, not just its grip.
+anatomicalBowArms(bowShoot, 5, 38, 10);
+// The drawing forearm emerges in front of the torso/head in both facings.
+// Its upper arm remains behind the torso, preserving the shoulder connection.
+for (const key of bowShoot.drawOrder ?? []) {
+  if (key.raise) key.raise = key.raise.map(rule => ({
+    ...rule, onlyNear: rule.boneId.startsWith("shoulder_") ? true : false,
+  }));
+}
+
+const upgradedBowClips = new WeakMap<AnimationClip, AnimationClip>();
+export function upgradeBowClip(clip: AnimationClip): AnimationClip {
+  const cached = upgradedBowClips.get(clip);
+  if (cached) return cached;
+  // Schema parsing changes property order, so compare values, not raw JSON objects.
+  const fingerprint = (c: AnimationClip) => JSON.stringify([c.id,c.durationMs,c.loops,c.layers.map(l => [l.mask,l.tracks.map(t => [t.boneId,t.keyframes.map(k => [k.timeMs,k.easing,k.transform.tx,k.transform.ty,k.transform.rotation,k.transform.scaleX,k.transform.scaleY])])])]);
+  const revisions = [previousBowShoot, previousBowShootV2, previousBowShootV3, previousBowShootV4, previousBowShootV5, previousBowShootV6, previousBowShootV7, previousBowShootV8, previousBowShootV9, previousBowShootV10, previousBowShootV11];
+  const known = revisions.some(old => fingerprint(old) === fingerprint(clip));
+  let result = clip;
+  if (known) {
+    // Keys are canonical; keep user-authored deform and draw-order timelines.
+    result = structuredClone(bowShoot);
+    if (clip.deform) result.deform = structuredClone(clip.deform);
+    const authored = (field: "drawOrder" | "ik" | "inherit" | "attachments") => clip[field] !== undefined && !revisions.some(old => JSON.stringify(clip[field]) === JSON.stringify(old[field]));
+    if (authored("drawOrder")) result.drawOrder = structuredClone(clip.drawOrder);
+    if (authored("ik")) result.ik = structuredClone(clip.ik);
+    if (authored("inherit")) result.inherit = structuredClone(clip.inherit);
+    if (authored("attachments")) result.attachments = structuredClone(clip.attachments);
+  }
+  upgradedBowClips.set(clip, result);
+  return result;
+}
+
+const fistStrike = action("fist_strike", "Удары руками", 1250, false, {
+  root: [{}, { ty: -1 }, { ty: 0 }, { ty: -1 }, { ty: 1 }, { ty: 0 }, { ty: -1 }, { ty: .5 }, {}],
+  chest: [{}, { rotation: -4 }, { rotation: -7 }, { rotation: 5 }, { rotation: 2 }, { rotation: -5 }, { rotation: 7 }, { rotation: 2 }, {}],
+  head: [{}, { rotation: 3 }, { rotation: 5 }, { rotation: -3 }, { rotation: -1 }, { rotation: 4 }, { rotation: -5 }, { rotation: -2 }, {}],
+  shoulder_l: [{}, { rotation: 4 }, { rotation: 8 }, { rotation: -16 }, { rotation: -8 }, { rotation: -22 }, { rotation: -34 }, { rotation: -10 }, {}],
+  elbow_l: [{}, { rotation: -8 }, { rotation: -14 }, { rotation: -28 }, { rotation: -14 }, { rotation: 8 }, { rotation: 18 }, { rotation: 8 }, {}],
+  hand_l: [{}, { rotation: 4 }, { rotation: 8 }, { rotation: 35 }, { rotation: 18 }, { rotation: -12 }, { rotation: -28 }, { rotation: -8 }, {}],
+  shoulder_r: [{}, { rotation: -18 }, { rotation: -30 }, { rotation: -8 }, { rotation: 8 }, { rotation: 16 }, { rotation: 30 }, { rotation: 8 }, {}],
+  elbow_r: [{}, { rotation: 8 }, { rotation: 18 }, { rotation: 8 }, { rotation: -8 }, { rotation: -12 }, { rotation: -22 }, { rotation: -8 }, {}],
+  hand_r: [{}, { rotation: -12 }, { rotation: -28 }, { rotation: -8 }, { rotation: 4 }, { rotation: 8 }, { rotation: 28 }, { rotation: 8 }, {}],
+}, [0, .12, .24, .36, .48, .62, .74, .88, 1]);
+const dance = action("dance", "Танец", 1800, true, {
+  root: [{}, { ty: -2, rotation: -2 }, { ty: 0, rotation: 2 }, { ty: -2, rotation: -2 }, {}, { ty: -2, rotation: 2 }, { ty: 0, rotation: -2 }, { ty: -2, rotation: 2 }, {}],
+  chest: [{}, { rotation: -8 }, { rotation: 7 }, { rotation: -6 }, {}, { rotation: 8 }, { rotation: -7 }, { rotation: 6 }, {}],
+  head: [{}, { rotation: 9 }, { rotation: -8 }, { rotation: 7 }, {}, { rotation: -10 }, { rotation: 8 }, { rotation: -7 }, {}],
+  shoulder_l: [{ rotation: -18 }, { rotation: -48 }, { rotation: -12 }, { rotation: 30 }, { rotation: 18 }, { rotation: 48 }, { rotation: 12 }, { rotation: -30 }, { rotation: -18 }],
+  elbow_l: [{ rotation: -32 }, { rotation: -62 }, { rotation: -36 }, { rotation: 4 }, { rotation: -32 }, { rotation: -62 }, { rotation: -36 }, { rotation: 4 }, { rotation: -32 }],
+  shoulder_r: [{ rotation: 30 }, { rotation: 8 }, { rotation: -34 }, { rotation: -8 }, { rotation: 30 }, { rotation: 8 }, { rotation: -34 }, { rotation: -8 }, { rotation: 30 }],
+  elbow_r: [{ rotation: 42 }, { rotation: 22 }, { rotation: -8 }, { rotation: -40 }, { rotation: 42 }, { rotation: 22 }, { rotation: -8 }, { rotation: -40 }, { rotation: 42 }],
+  hip_l: [{ rotation: -8 }, { rotation: -20 }, { rotation: 8 }, { rotation: 20 }, { rotation: -8 }, { rotation: -20 }, { rotation: 8 }, { rotation: 20 }, { rotation: -8 }],
+  hip_r: [{ rotation: 8 }, { rotation: 20 }, { rotation: -8 }, { rotation: -20 }, { rotation: 8 }, { rotation: 20 }, { rotation: -8 }, { rotation: -20 }, { rotation: 8 }],
+  knee_l: [{}, { rotation: 12 }, { rotation: 5 }, { rotation: -8 }, {}, { rotation: 12 }, { rotation: 5 }, { rotation: -8 }, {}],
+  knee_r: [{ rotation: 5 }, { rotation: -8 }, {}, { rotation: 12 }, { rotation: 5 }, { rotation: -8 }, {}, { rotation: 12 }, { rotation: 5 }],
+}, [0, .12, .24, .36, .5, .62, .74, .86, 1]);
+const drink = action("drink", "Пить", 1350, false, {
+  root: [{}, { ty: 1 }, { ty: 2 }, { ty: 1 }, {}, { ty: -1 }, {}],
+  chest: [{}, { rotation: 4 }, { rotation: 8 }, { rotation: 10 }, { rotation: 4 }, { rotation: -2 }, {}],
+  head: [{}, { rotation: -4 }, { rotation: -12 }, { rotation: -18 }, { rotation: -10 }, { rotation: 3 }, {}],
+  shoulder_r: [{}, { rotation: -20 }, { rotation: -42 }, { rotation: -58 }, { rotation: -45 }, { rotation: -18 }, {}],
+  elbow_r: [{}, { rotation: -20 }, { rotation: -45 }, { rotation: -70 }, { rotation: -55 }, { rotation: -22 }, {}],
+  hand_r: [{}, { rotation: 8 }, { rotation: 18 }, { rotation: 26 }, { rotation: 18 }, { rotation: 8 }, {}],
+  shoulder_l: [{}, { rotation: 8 }, { rotation: 16 }, { rotation: 20 }, { rotation: 12 }, { rotation: 5 }, {}],
+}, [0, .14, .3, .48, .64, .84, 1]);
+const eat = action("eat", "Есть", 1250, false, {
+  root: [{}, { ty: 1 }, { ty: 0 }, { ty: 1 }, { ty: -1 }, { ty: 0 }, {}],
+  chest: [{}, { rotation: 5 }, { rotation: 8 }, { rotation: 6 }, { rotation: -4 }, { rotation: -2 }, {}],
+  head: [{}, { rotation: -3 }, { rotation: -10 }, { rotation: -16 }, { rotation: 8 }, { rotation: 3 }, {}],
+  shoulder_r: [{}, { rotation: -18 }, { rotation: -44 }, { rotation: -58 }, { rotation: 26 }, { rotation: 8 }, {}],
+  elbow_r: [{}, { rotation: -12 }, { rotation: -40 }, { rotation: -66 }, { rotation: 42 }, { rotation: 12 }, {}],
+  hand_r: [{}, { rotation: 6 }, { rotation: 17 }, { rotation: 24 }, { rotation: -18 }, { rotation: -8 }, {}],
+  shoulder_l: [{}, { rotation: 8 }, { rotation: 14 }, { rotation: 18 }, { rotation: 24 }, { rotation: 8 }, {}],
+  elbow_l: [{}, { rotation: 4 }, { rotation: 8 }, { rotation: 12 }, { rotation: 32 }, { rotation: 12 }, {}],
+}, [0, .12, .28, .44, .62, .82, 1]);
+const trade = action("trade", "Торговаться", 1600, true, {
+  root: [{}, { ty: -1 }, { ty: 0 }, { ty: 1 }, { ty: 0 }, { ty: -1 }, {}],
+  chest: [{}, { rotation: -4 }, { rotation: 5 }, { rotation: 8 }, { rotation: -6 }, { rotation: -3 }, {}],
+  head: [{}, { rotation: 8 }, { rotation: -6 }, { rotation: -9 }, { rotation: 6 }, { rotation: 3 }, {}],
+  shoulder_l: [{}, { rotation: -20 }, { rotation: -38 }, { rotation: -18 }, { rotation: 14 }, { rotation: 5 }, {}],
+  elbow_l: [{}, { rotation: -22 }, { rotation: -42 }, { rotation: -30 }, { rotation: 12 }, { rotation: 5 }, {}],
+  hand_l: [{}, { rotation: -8 }, { rotation: -18 }, { rotation: -10 }, { rotation: 22 }, { rotation: 8 }, {}],
+  shoulder_r: [{}, { rotation: 24 }, { rotation: 42 }, { rotation: 22 }, { rotation: -16 }, { rotation: -5 }, {}],
+  elbow_r: [{}, { rotation: 24 }, { rotation: 42 }, { rotation: 30 }, { rotation: -12 }, { rotation: -5 }, {}],
+  hand_r: [{}, { rotation: 8 }, { rotation: 18 }, { rotation: 10 }, { rotation: -22 }, { rotation: -8 }, {}],
+}, [0, .16, .32, .5, .68, .84, 1]);
+export const CHIBI_ANIMATIONS = [idle, gait("walk", 900, 1), gait("run", 550, 2), death, axeStrike, swordStrike, bowShoot, fistStrike, laugh, dance, drink, eat, trade, pickup, carry];
 
 // Refresh only exact earlier built-ins; authored keyframes must survive loading.
 export function upgradeChibiActionClip(clip: AnimationClip): AnimationClip {

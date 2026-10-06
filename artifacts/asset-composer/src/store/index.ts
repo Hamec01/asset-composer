@@ -23,7 +23,8 @@ import { STYLE_SETS, DEFAULT_STYLE_SET_ID, getStyleSetById } from "@/data/styleS
 import { DEFAULT_EXPORT_PROFILES } from "@/data/exportProfiles";
 import { getPresetById } from "@/data/skinPresets";
 import { PRESET_ANIMATIONS, getClipById } from "@/data/presetAnimations";
-import { CHIBI_ANIMATIONS, upgradeChibiActionClip } from "@/data/chibiAnimations";
+import { CHIBI_ANIMATIONS, upgradeChibiActionClip, upgradeBowClip } from "@/data/chibiAnimations";
+import { appearanceItemAllowed, appearancePresetAllowed } from "@/lib/appearanceCompatibility";
 import { PRESET_STATE_MACHINES } from "@/data/presetStateMachines";
 import { animController } from "@/core-v2/AnimationController";
 import { resetItemFitProfilePartToItemDefault, upsertItemFitProfilePartTransform } from "@/lib/itemFitProfileMutations";
@@ -1145,8 +1146,24 @@ export const useStore = create<AppStore>()(
           appearance.freckleIntensity = Math.max(0, Math.min(1, appearance.freckleIntensity));
         }
         if (JSON.stringify(appearance) === JSON.stringify(entity.appearance)) return;
+        const faceCustomization = structuredClone(entity.faceCustomization);
+        if (faceCustomization && appearance.sex !== entity.appearance?.sex) {
+          for (const key of ["hair", "beard"] as const) {
+            if (!appearancePresetAllowed(key, faceCustomization[key].presetId, appearance.sex)) {
+              faceCustomization[key].presetId = "none";
+              faceCustomization[key].visible = false;
+            }
+          }
+        }
+        const slots = entity.slots.map(slot => {
+          const item = get().project.items.find(candidate => candidate.id === slot.itemId);
+          if (!item || appearanceItemAllowed(item, appearance.sex)) return slot;
+          const counterpart = appearance.sex === "female" ? item.id.replace("_25d", "_female_25d") : item.id.replace("_female_25d", "_25d");
+          return { ...slot, itemId: get().project.items.some(candidate => candidate.id === counterpart && appearanceItemAllowed(candidate, appearance.sex)) ? counterpart : null };
+        });
         get().pushCommand({ type: "SET_APPEARANCE", entityId,
-          before: { appearance: entity.appearance }, after: { appearance }, label: "Change appearance" });
+          before: { appearance: entity.appearance, faceCustomization: entity.faceCustomization, slots: entity.slots },
+          after: { appearance, faceCustomization, slots }, label: "Change appearance" });
     },
     setEntityFaceFeature: (entityId, feature, patch) => {
         const e = get().project.entities.find(entity => entity.id === entityId);
@@ -1411,7 +1428,9 @@ export const useStore = create<AppStore>()(
         for (const clip of CHIBI_ANIMATIONS) {
           const index = migrated.animationClips.findIndex(candidate => candidate.id === clip.id);
           if (index < 0) migrated.animationClips.push(clip);
-          else if (clip.id === "chibi_front__axe_strike" || clip.id === "chibi_front__pickup") {
+          else if (clip.id === "chibi_front__bow_shoot") {
+            migrated.animationClips[index] = upgradeBowClip(migrated.animationClips[index]);
+          } else if (clip.id === "chibi_front__axe_strike" || clip.id === "chibi_front__pickup") {
             migrated.animationClips[index] = upgradeChibiActionClip(migrated.animationClips[index]);
           } else if (clip.id === "chibi_front__death") {
             const previous = migrated.animationClips[index];

@@ -60,6 +60,7 @@ function makeEngineHarness() {
   engine.mode = "select";
   engine.fabricImages = new Map();
   engine.svgCache = new Map();
+  engine.pendingAnimatedVisuals = new Set();
   engine.slotZones = new Map();
   engine.anchorGizmos = new Map();
   engine.slotLabels = new Map();
@@ -99,6 +100,48 @@ function makeEngineHarness() {
 }
 
 describe("CanvasEngine persistent reconcile", () => {
+  it("drains the final paused frame after an earlier dynamic SVG finishes decoding", async () => {
+    const { engine, loadVisual, fakeCanvas } = makeEngineHarness();
+    await engine.reconcileSceneStructure(makeScene(), engine.currentTemplate, null, []);
+    let finish!: () => void;
+    engine._loadVisual = async (visual: any) => {
+      if (visual.svgData === "<svg id='drawing'/>") {
+        await new Promise<void>(resolve => { finish = resolve; });
+      }
+      await loadVisual(visual);
+    };
+    engine.updateSceneTransforms(makeScene("<svg id='drawing'/>", 10));
+    engine.updateSceneTransforms(makeScene("<svg id='released'/>", 30));
+    finish();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(engine.svgCache.get("visual-1")).toBe("<svg id='released'/>");
+    expect(fakeCanvas.getObjects()).toHaveLength(1);
+    expect(engine.fabricImages.get("visual-1").set).toHaveBeenLastCalledWith(expect.objectContaining({left: 30}));
+    expect(engine.pendingAnimatedVisuals.size).toBe(0);
+  });
+  it("keeps the latest pose when artwork finishes loading after a seek", async () => {
+    const { engine, loadVisual } = makeEngineHarness();
+    let finish!: () => void;
+    engine._loadVisual = async (visual: any) => {
+      await new Promise<void>(resolve => { finish = resolve; });
+      await loadVisual(visual);
+    };
+    const pending = engine.reconcileSceneStructure(makeScene(), engine.currentTemplate, null, []);
+    engine.updateSceneTransforms(makeScene("<svg/>", 42));
+    finish();
+    await pending;
+    const image = engine.fabricImages.get("visual-1");
+    expect(image.set).toHaveBeenLastCalledWith(expect.objectContaining({left: 42}));
+  });
+  it("refreshes deformed artwork on playback ticks without leaving duplicate images", async () => {
+    const {engine,fakeCanvas,loadVisual}=makeEngineHarness();
+    await engine.reconcileSceneStructure(makeScene(),engine.currentTemplate,null,[]);
+    engine.updateSceneTransforms(makeScene('<svg><path d="M0 0 L5 2 L0 9"/></svg>'));
+    await new Promise(resolve=>setTimeout(resolve,0));
+    expect(loadVisual).toHaveBeenCalledTimes(2);
+    expect(fakeCanvas.getObjects()).toHaveLength(1);
+    expect(engine.svgCache.get("visual-1")).toContain("L5 2");
+  });
   it("sorts asynchronous artwork and updates cached depth when changing view", async () => {
     const { engine, fakeCanvas, loadVisual } = makeEngineHarness();
     engine._sortCanvasObjects = (CanvasEngine.prototype as any)._sortCanvasObjects;

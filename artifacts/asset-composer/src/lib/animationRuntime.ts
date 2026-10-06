@@ -1,4 +1,5 @@
 import type { AnimationClip, AnimationLayer, KeyframeTrack, Keyframe, BoneTransform, LayerMask } from "@/domain/types";
+import { getAnimationContext, setAnimationContext } from "./animationContext";
 
 export type BoneTransformMap = Map<string, BoneTransform>;
 
@@ -98,6 +99,7 @@ export function resolveClipPose(clip: AnimationClip, timeMs: number): BoneTransf
       }
     }
   }
+  setAnimationContext(result,clip,timeMs);
   return result;
 }
 
@@ -107,6 +109,8 @@ export function blendPoses(
   spineBlend = 1.0,
 ): BoneTransformMap {
   const out: BoneTransformMap = new Map(lower);
+  const context = getAnimationContext(upper) ?? getAnimationContext(lower);
+  if (context) setAnimationContext(out, context.clip, context.timeMs);
   for (const [boneId, upperT] of upper) {
     const lowerT = lower.get(boneId);
     if (!lowerT) {

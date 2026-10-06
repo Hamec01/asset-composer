@@ -221,6 +221,7 @@ export class CanvasEngine {
   // Persistent registries
   private fabricImages: Map<string, TaggedFabricImage> = new Map();
   private svgCache:     Map<string, string>            = new Map();
+  private pendingAnimatedVisuals = new Set<string>();
   private slotZones:    Map<string, TaggedRect>        = new Map();
   private anchorGizmos: Map<string, Circle>            = new Map();
   private slotLabels:   Map<string, TaggedText>        = new Map();
@@ -467,7 +468,7 @@ export class CanvasEngine {
     this._applyModeSelectability();
 
     // ── 7. Apply current transforms ───────────────────────────────────────────
-    this.updateSceneTransforms(scene);
+    this.updateSceneTransforms(this.currentScene?.entityId === scene.entityId ? this.currentScene : scene);
     this._restoreActiveSelection(activeSelection);
 
     const DEBUG_CANVAS_INVARIANTS = false;
@@ -589,6 +590,22 @@ export class CanvasEngine {
     for (const visual of scene.visuals) {
       const img = this.fabricImages.get(visual.id);
       if (!img) continue;
+      if (this.svgCache.get(visual.id) !== visual.svgData && !this.pendingAnimatedVisuals.has(visual.id)) {
+        this.pendingAnimatedVisuals.add(visual.id);
+        const generation = this.reconcileGeneration;
+        void this._loadVisual(visual, generation).then(() => {
+          this.pendingAnimatedVisuals.delete(visual.id);
+          if (generation !== this.reconcileGeneration) return;
+          if (this.fabricImages.get(visual.id) !== img) this.canvas.remove(img);
+          // A seek/pause can arrive while the SVG is decoding. Drain the latest
+          // pose and artwork even when no further animation tick will arrive.
+          if (this.svgCache.get(visual.id) === visual.svgData && this.currentScene) {
+            this.updateSceneTransforms(this.currentScene);
+          }
+          this._sortCanvasObjects();
+          this.canvas.requestRenderAll();
+        }).catch(() => this.pendingAnimatedVisuals.delete(visual.id));
+      }
       if (img.__zIndex !== visual.zIndex) {
         img.__zIndex = visual.zIndex;
         depthChanged = true;

@@ -6,16 +6,15 @@ import { Button }   from "@/components/ui/button";
 import { useStore } from "@/store";
 import { resolveTemplate } from "@/data/templates";
 import { renderFrameToCanvas } from "@/lib/frameRenderer";
-import { renderSvgToBlob } from "@/lib/svgUtils";
 import { DEFAULT_EXPORT_PROFILES } from "@/data/exportProfiles";
-import { formatFrameName } from "@/lib/exportTypes";
+import { exportSlug, formatFrameName } from "@/lib/exportTypes";
 import { triggerDownload } from "@/lib/download";
 import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
 import { templateSupportsAnimationClip } from "@/lib/animationCompatibility";
-import type { ExportProfile, Item, Template, Entity, AnimationClip } from "@/domain/types";
+import type { ExportProfile, Item, ItemFitProfile, Template, Entity, AnimationClip } from "@/domain/types";
 import type { ExportWorkerJob, WorkerOutputMessage } from "@/lib/exportTypes";
 import ExportWorker from "@/workers/export.worker?worker";
-import { evaluateRestSkeleton, evaluateScene } from "@/lib/evaluationPipeline";
+import { composeFrameSvg, evaluateExportScene, exportCamera, exportFramePlan, rasterizeFrame } from "@/lib/exportFrames";
 import { buildSvgPartExportFiles } from "@/lib/svgPartExport";
 import {
   Download, Package, FileImage, Code, FileJson,
@@ -67,30 +66,39 @@ function detectLicenseConflicts(entities: Entity[], items: Item[]): { itemName: 
   return conflicts.filter(c => { if (seen.has(c.itemName)) return false; seen.add(c.itemName); return true; });
 }
 
-async function prerasterizeAll(
+async function renderAllExportFrames(
   entities:     Entity[],
   items:        Item[],
+  clips:        AnimationClip[],
+  fitProfiles:  ItemFitProfile[],
+  profile:      ExportProfile,
+  selectedClipIds: string[] | undefined,
   findTemplate: (id: string) => Template | undefined,
-  onStep:       (msg: string) => void,
-): Promise<Record<string, ArrayBuffer>> {
-  const cache: Record<string, ArrayBuffer> = {};
-
-  for (const entity of entities) {
+  isCancelled:  () => boolean,
+  onStep:       (done: number, total: number, msg: string) => void,
+): Promise<Record<string, ImageBitmap>> {
+  const frames: Record<string, ImageBitmap> = {};
+  const needsFrames = profile.formats.some(f => ["png_sheet", "webp_sheet", "frame_sequence", "jpeg_preview"].includes(f));
+  if (!needsFrames) return frames;
+  const frameSz = parseInt(profile.frameSizeKey, 10);
+  const work = entities.flatMap(entity => {
     const template = findTemplate(entity.templateId);
-    if (!template) continue;
-    const scene = evaluateScene(entity, template, evaluateRestSkeleton(template.bones, entity.bodyMorphs, entity.poseOverrides, entity.appearance), items, useStore.getState().project.itemFitProfiles);
-    for (const visual of scene.visuals) {
-      const key = `visual:${entity.id}:${visual.id}`;
-      if (cache[key]) continue;
-      onStep(`Preparing textures: ${entity.name} · ${visual.id}…`);
-      const width = Math.max(1, Math.ceil(visual.localBounds.maxX - visual.localBounds.minX));
-      const height = Math.max(1, Math.ceil(visual.localBounds.maxY - visual.localBounds.minY));
-      const blob = await renderSvgToBlob(visual.svgData, width, height, visual.svgFitMode ?? "legacy_full_frame");
-      if (blob) cache[key] = await blob.arrayBuffer();
-    }
+    if (!template) return [];
+    const scenes = exportFramePlan(entity, template, clips, selectedClipIds)
+      .map(spec => ({ entity, spec, scene: evaluateExportScene(entity, template, clips, items, fitProfiles, spec) }));
+    const camera = exportCamera(scenes.map(entry => entry.scene));
+    return scenes.map(entry => ({ ...entry, camera }));
+  });
+  // Image decoding is asynchronous; keep a few frames in flight.
+  const batch = 8;
+  for (let start = 0; start < work.length && !isCancelled(); start += batch) {
+    const { entity, spec } = work[start];
+    onStep(start, work.length, `Rendering ${entity.name} · ${spec.clip?.name ?? "idle"} ${spec.frame + 1}`);
+    await Promise.all(work.slice(start, start + batch).map(async ({ spec, scene, camera }) => {
+      frames[spec.key] = await rasterizeFrame(composeFrameSvg(scene, camera, frameSz), frameSz);
+    }));
   }
-
-  return cache;
+  return frames;
 }
 
 function previewNamingTemplate(tmpl: string, entityName: string): string {
@@ -153,6 +161,7 @@ export function ExportDialog() {
   const [downloadedFilename, setDownloadedFilename]   = useState<string | null>(null);
 
   const workerRef    = useRef<InstanceType<typeof ExportWorker> | null>(null);
+  const cancelledRef = useRef(false);
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -306,9 +315,17 @@ export function ExportDialog() {
 
     try {
       const effectiveItems = refreshCanonicalBuiltInTypedItems(project.items);
-      const rasterizedImages = await prerasterizeAll(entities, effectiveItems, findTemplate, msg => {
-        setProgress({ pct: 0.05, msg });
-      });
+      cancelledRef.current = false;
+      const clipSelection = effectiveClipIds.length < availableClips.length ? effectiveClipIds : undefined;
+      const frames = await renderAllExportFrames(
+        entities, effectiveItems, project.animationClips, project.itemFitProfiles, profile, clipSelection, findTemplate,
+        () => cancelledRef.current,
+        (done, total, msg) => setProgress({ pct: 0.6 * done / Math.max(1, total), msg }),
+      );
+      if (cancelledRef.current) {
+        for (const bitmap of Object.values(frames)) bitmap.close();
+        return;
+      }
 
       const svgPartFiles = await buildSvgPartExportFiles(
         entities,
@@ -325,12 +342,12 @@ export function ExportDialog() {
         itemFitProfiles: project.itemFitProfiles,
         animationClips:  project.animationClips,
         profile,
-        rasterizedImages,
-        selectedClipIds: effectiveClipIds.length < availableClips.length ? effectiveClipIds : undefined,
+        frames,
+        selectedClipIds: clipSelection,
         svgPartFiles: Object.keys(svgPartFiles).length > 0 ? svgPartFiles : undefined,
       };
 
-      setProgress({ pct: 0.1, msg: "Starting export worker…" });
+      setProgress({ pct: 0.6, msg: "Packing frames…" });
 
       const worker = new ExportWorker();
       workerRef.current = worker;
@@ -338,9 +355,9 @@ export function ExportDialog() {
       worker.onmessage = (e: MessageEvent<WorkerOutputMessage>) => {
         const msg = e.data;
         if (msg.type === "progress") {
-          setProgress({ pct: 0.1 + msg.pct * 0.9, msg: msg.msg });
+          setProgress({ pct: 0.6 + msg.pct * 0.4, msg: msg.msg });
         } else if (msg.type === "done") {
-          const slug = entities[0].name.toLowerCase().replace(/[^a-z0-9]/g, "_");
+          const slug = exportSlug(entities[0].name);
           if (msg.singleFile) {
             const { filename, mimeType, buffer } = msg.singleFile;
             triggerDownload(new Blob([buffer], { type: mimeType }), filename);
@@ -372,7 +389,7 @@ export function ExportDialog() {
         workerRef.current = null;
       };
 
-      worker.postMessage({ type: "start", job });
+      worker.postMessage({ type: "start", job }, Object.values(frames));
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setExportState("error");
@@ -381,6 +398,7 @@ export function ExportDialog() {
   }
 
   function handleCancel() {
+    cancelledRef.current = true;
     if (workerRef.current) { workerRef.current.terminate(); workerRef.current = null; }
     setExportState("idle");
     setProgress(null);

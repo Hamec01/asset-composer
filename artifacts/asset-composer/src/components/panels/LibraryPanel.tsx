@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useStore } from "@/store";
 import { resolveTemplate } from "@/data/templates";
 import { sanitizeSvg } from "@/lib/sanitize";
+import { appearanceItemAllowed } from "@/lib/appearanceCompatibility";
 import { getVisibleTemplateSlots } from "@/lib/slotVisibility";
 import { getTemplatePresentationSummary } from "@/lib/templatePresentation";
 import { itemSupportsTemplate } from "@/lib/templateCompatibility";
@@ -141,9 +142,9 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
       const query = search.toLowerCase();
       const matchSearch = !search || item.name.toLowerCase().includes(query) || item.tags.some(tag => tag.includes(query));
       const matchCategory = group.categories.length === 0 || group.categories.includes(item.category);
-      return matchSearch && matchCategory;
+      return matchSearch && matchCategory && appearanceItemAllowed(item, activeEntity?.appearance?.sex);
     });
-  }, [project.items, search, categoryGroup]);
+  }, [project.items, search, categoryGroup, activeEntity?.appearance?.sex]);
 
   const gridItems = useMemo(() => {
     if (!selectedSlot) return displayedItems;

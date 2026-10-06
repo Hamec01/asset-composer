@@ -685,7 +685,7 @@ export function CanvasPanel() {
         store.animPlayback.upperClipId,
         store.animPlayback.lowerClipId,
         store.animPlayback.upperBlendWeight,
-        store.animPlayback.timeMs,
+        animController.currentTimeMs,
         liveEntity,
         effectiveItems,
       );
@@ -737,10 +737,10 @@ export function CanvasPanel() {
     editor.selectedSlotId,
   ]);
 
-  // ── Animation tick (≈12fps) — fast transforms only, no SVG loading ────────
+  // Render at the controller clock, independently of throttled store/UI sync.
   useEffect(() => {
     if (!initialized) return;
-    const remove = animController.addSyncListener(() => {
+    const remove = animController.addTickListener((timeMs) => {
       if (!engineRef.current) return;
       const store = useStore.getState();
       const eid   = store.project.activeEntityId;
@@ -755,7 +755,7 @@ export function CanvasPanel() {
         store.animPlayback.upperClipId,
         store.animPlayback.lowerClipId,
         store.animPlayback.upperBlendWeight,
-        store.animPlayback.timeMs,
+        timeMs,
         ent,
         effectiveItems,
       );
