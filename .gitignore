@@ -44,3 +44,6 @@ temp/
 # Old Git repository backup
 .git_old/
 .git_old/
+
+output/
+output*.json

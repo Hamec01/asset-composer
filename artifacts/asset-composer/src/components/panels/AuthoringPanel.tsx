@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MousePointer2, Pencil, Spline, PaintBucket, Eraser, Undo2, Redo2, Square, Circle, X } from "lucide-react";
+import {
+  MousePointer2, Pencil, Spline, PaintBucket, Eraser, Undo2, Redo2, Square, Circle, X,
+  Layers, Eye, EyeOff, Lock, Unlock, Plus, Trash2, Copy, Crop, Crosshair, Anchor, User,
+  Image as ImageIcon, ChevronUp, ChevronDown, MoveUp, MoveDown, Maximize2, Sliders,
+  Sparkles, Shield, Sword, Shirt, Trees, Building, Box,
+} from "lucide-react";
 import { useStore } from "@/store";
 import { HISTORY_LIMIT } from "@/lib/history";
 import { getHistoryShortcut } from "@/hooks/useEditorShortcuts";
@@ -22,6 +27,11 @@ import { getCharacterBodyParts } from "@/data/chibiBody";
 import { createEditableBodyPart } from "@/lib/bodyPartAuthoring";
 import { getAuthoredDocumentMetrics } from "@/lib/referenceChibi";
 import {
+  createNewArtAsset,
+  CANVAS_PRESETS,
+  type AssetTemplateType,
+} from "@/lib/itemAuthoring";
+import {
   buildPathDataFromPoints,
   computeShapeBounds,
   computeDocumentContentBounds,
@@ -43,6 +53,7 @@ import type {
   BodyMorphRegionId,
   BodyMorphValues,
   BoneTransform,
+  DualGripConfig,
   FaceCanvasFocusMode,
   FaceCustomization,
   FaceFeatureKey,
@@ -52,6 +63,7 @@ import type {
   FaceOverlay,
   SpriteEditorSymmetryMode,
   SpriteEditorDocument,
+  SpriteEditorLayer,
   SpriteEditorPaintTarget,
   SpriteEditorShape,
 } from "@/domain/types";
@@ -692,6 +704,13 @@ type PreviewInteraction =
       moved: boolean;
     }
   | {
+      kind: "grip-drag";
+      gripType: "mainGrip" | "offHandGrip" | "groundPivot";
+      startPoint: PreviewPoint;
+      beforeDoc: SpriteEditorDocument;
+      moved: boolean;
+    }
+  | {
       kind: "erase-sweep";
       erasedShapeIds: string[];
       beforeDoc: SpriteEditorDocument;
@@ -721,6 +740,9 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
   const setAnimBottomTab = useStore(s => s.setAnimBottomTab);
   const upsertSpriteEditorDocument = useStore(s => s.upsertSpriteEditorDocument);
   const setActiveSpriteDocument = useStore(s => s.setActiveSpriteDocument);
+  const closeSpriteDocument = useStore(s => s.closeSpriteDocument);
+  const createEquipmentItem = useStore(s => s.createEquipmentItem);
+  const createWorldObject = useStore(s => s.createWorldObject);
   const setActiveAuthoringMode = useStore(s => s.setActiveAuthoringMode);
   const setActiveFaceCanvasOverlay = useStore(s => s.setActiveFaceCanvasOverlay);
   const setActiveFaceCanvasTool = useStore(s => s.setActiveFaceCanvasTool);
@@ -797,6 +819,14 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
   const [newPartBone, setNewPartBone] = useState("head");
   const [tracingError, setTracingError] = useState("");
   const [creatingReference, setCreatingReference] = useState(false);
+  const [isNewAssetModalOpen, setIsNewAssetModalOpen] = useState(false);
+  const [newAssetType, setNewAssetType] = useState<AssetTemplateType>("weapon_1h");
+  const [newAssetName, setNewAssetName] = useState("Новый предмет");
+  const [newAssetPresetKey, setNewAssetPresetKey] = useState("128");
+  const [newAssetCustomW, setNewAssetCustomW] = useState(128);
+  const [newAssetCustomH, setNewAssetCustomH] = useState(128);
+  const [newAssetTracingUri, setNewAssetTracingUri] = useState<string | undefined>(undefined);
+  const [newAssetTracingName, setNewAssetTracingName] = useState<string | undefined>(undefined);
   const bodyPieces = activeEntity && activeTemplate ? getCharacterBodyParts(activeTemplate, activeEntity) : [];
 
   const itemPartSelection = editor.selection.kind === "item-part" ? editor.selection : null;
@@ -1081,6 +1111,16 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
         if (!redoDocumentEdit()) return;
         event.preventDefault();
         event.stopPropagation();
+        return;
+      }
+
+      if (event.key.toLowerCase() === "h" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (activeDoc?.tracingAsset) {
+          event.preventDefault();
+          event.stopPropagation();
+          patchDocument(doc => ({ ...doc, tracingVisible: !(doc.tracingVisible !== false) }));
+          return;
+        }
       }
     };
 
@@ -2219,6 +2259,105 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
     }));
   }
 
+  function beginGripDrag(event: React.MouseEvent, gripType: "mainGrip" | "offHandGrip" | "groundPivot") {
+    event.stopPropagation();
+    if (!activeDoc) return;
+    const point = getPreviewPoint(event);
+    if (!point) return;
+    previewInteractionRef.current = {
+      kind: "grip-drag",
+      gripType,
+      startPoint: point,
+      beforeDoc: cloneSpriteEditorDocument(activeDoc),
+      moved: false,
+    };
+  }
+
+  function handleDuplicateLayer(layerId: string) {
+    if (!activeDoc) return;
+    const targetLayer = activeDoc.layers.find(l => l.id === layerId);
+    if (!targetLayer) return;
+    const duplicate: SpriteEditorLayer = {
+      ...targetLayer,
+      id: crypto.randomUUID(),
+      name: `${targetLayer.name} (копия)`,
+      shapes: targetLayer.shapes.map(s => ({ ...s, id: crypto.randomUUID() })),
+      zIndex: activeDoc.layers.length,
+    };
+    patchDocument(doc => ({
+      ...doc,
+      layers: [...doc.layers, duplicate],
+    }));
+    setSelectedLayerId(duplicate.id);
+  }
+
+  function handleFitToArtBounds() {
+    if (!activeDoc) return;
+    const bounds = computeDocumentContentBounds(activeDoc);
+    if (!bounds || bounds.width <= 0 || bounds.height <= 0) return;
+    const pad = 4;
+    const newW = Math.max(16, Math.ceil(bounds.width + pad * 2));
+    const newH = Math.max(16, Math.ceil(bounds.height + pad * 2));
+    const deltaX = Math.round(pad - bounds.minX);
+    const deltaY = Math.round(pad - bounds.minY);
+    patchDocument(doc => ({
+      ...doc,
+      width: newW,
+      height: newH,
+      pivot: {
+        ...doc.pivot,
+        x: Math.max(0, Math.min(newW, doc.pivot.x + deltaX)),
+        y: Math.max(0, Math.min(newH, doc.pivot.y + deltaY)),
+      },
+      dualGrip: doc.dualGrip ? {
+        ...doc.dualGrip,
+        mainGrip: { x: doc.dualGrip.mainGrip.x + deltaX, y: doc.dualGrip.mainGrip.y + deltaY },
+        offHandGrip: doc.dualGrip.offHandGrip ? { x: doc.dualGrip.offHandGrip.x + deltaX, y: doc.dualGrip.offHandGrip.y + deltaY } : undefined,
+      } : undefined,
+      authoringHint: doc.authoringHint?.groundPivot ? {
+        ...doc.authoringHint,
+        groundPivot: {
+          x: Math.max(0, Math.min(newW, doc.authoringHint.groundPivot.x + deltaX)),
+          y: Math.max(0, Math.min(newH, doc.authoringHint.groundPivot.y + deltaY)),
+        },
+      } : doc.authoringHint,
+      layers: doc.layers.map(layer => ({
+        ...layer,
+        shapes: layer.shapes.map(shape => translateSpriteShape(shape, deltaX, deltaY)),
+      })),
+    }));
+  }
+
+  function handleCreateAssetSubmit() {
+    const preset = CANVAS_PRESETS.find(p => p.key === newAssetPresetKey);
+    const width = newAssetPresetKey === "custom" ? newAssetCustomW : (preset?.width ?? 128);
+    const height = newAssetPresetKey === "custom" ? newAssetCustomH : (preset?.height ?? 128);
+    
+    if (newAssetType.startsWith("world_")) {
+      createWorldObject({
+        name: newAssetName,
+        type: newAssetType,
+        width,
+        height,
+        initialTracingAssetUri: newAssetTracingUri,
+        initialTracingName: newAssetTracingName,
+      });
+    } else {
+      createEquipmentItem({
+        name: newAssetName,
+        type: newAssetType,
+        width,
+        height,
+        initialTracingAssetUri: newAssetTracingUri,
+        initialTracingName: newAssetTracingName,
+      });
+    }
+    
+    setIsNewAssetModalOpen(false);
+    setActiveAuthoringMode("sprite-editor");
+    setAnimBottomTab("authoring");
+  }
+
   function beginResizeSelectedShape(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
     if (!activeDoc || !currentLayer || !selectedShape || !selectedShapeBounds) return;
@@ -2429,6 +2568,40 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
     const interaction = previewInteractionRef.current;
     if (!interaction) return;
     if (!point) return;
+
+    if (interaction.kind === "grip-drag") {
+      if (interaction.gripType === "groundPivot") {
+        patchDocument(doc => ({
+          ...doc,
+          authoringHint: {
+            ...doc.authoringHint,
+            groundPivot: { x: point.x, y: point.y },
+          },
+          pivot: { ...doc.pivot, x: point.x, y: point.y },
+        }), { recordHistory: false });
+      } else if (interaction.gripType === "mainGrip") {
+        patchDocument(doc => ({
+          ...doc,
+          dualGrip: {
+            enabled: doc.dualGrip?.enabled ?? false,
+            mainGrip: { x: point.x, y: point.y },
+            offHandGrip: doc.dualGrip?.offHandGrip,
+          },
+          pivot: { ...doc.pivot, x: point.x, y: point.y },
+        }), { recordHistory: false });
+      } else if (interaction.gripType === "offHandGrip") {
+        patchDocument(doc => ({
+          ...doc,
+          dualGrip: {
+            enabled: true,
+            mainGrip: doc.dualGrip?.mainGrip ?? { x: doc.width / 2, y: doc.height / 2 },
+            offHandGrip: { x: point.x, y: point.y },
+          },
+        }), { recordHistory: false });
+      }
+      previewInteractionRef.current = { ...interaction, moved: true };
+      return;
+    }
 
     if (interaction.kind === "shape-drag") {
       const deltaX = Number((point.x - interaction.startPoint.x).toFixed(2));
@@ -2656,7 +2829,12 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
       }
       return;
     }
-    if (interaction?.kind === "shape-drag" || interaction?.kind === "shape-resize" || interaction?.kind === "shape-rotate") {
+    if (
+      interaction?.kind === "grip-drag" ||
+      interaction?.kind === "shape-drag" ||
+      interaction?.kind === "shape-resize" ||
+      interaction?.kind === "shape-rotate"
+    ) {
       const latestDoc = getLatestDocumentSnapshot(interaction.beforeDoc.id);
       if (latestDoc) {
         recordDocumentHistory(interaction.beforeDoc, latestDoc);
@@ -2680,6 +2858,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
       interaction.kind === "pencil-draw" ||
       interaction.kind === "erase-sweep" ||
       interaction.kind === "fill-sweep" ||
+      interaction.kind === "grip-drag" ||
       interaction.kind === "shape-drag" ||
       interaction.kind === "shape-resize" ||
       interaction.kind === "shape-rotate"
@@ -2689,6 +2868,115 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
         recordDocumentHistory(interaction.beforeDoc, latestDoc);
       }
     }
+  }
+
+  function getDocumentIcon(doc: SpriteEditorDocument): string {
+    const cat = doc.authoringHint?.assetCategory;
+    if (cat === "weapon_1h") return "🗡️";
+    if (cat === "weapon_2h") return "⚔️";
+    if (cat === "shield") return "🛡️";
+    if (cat === "head_cover") return "🪖";
+    if (cat === "torso") return "🥋";
+    if (cat === "legs") return "👖";
+    if (cat === "feet") return "🥾";
+    if (cat === "world_flora") return "🌲";
+    if (cat === "world_building") return "🏰";
+    if (cat === "world_prop") return "📦";
+    if (doc.target.kind === "face-overlay") return "🎭";
+    if (doc.target.kind === "entity-visual") return "👤";
+    return "🎨";
+  }
+
+  function renderGhostMannequinSvg(doc: SpriteEditorDocument, scale: number) {
+    const overlay = doc.authoringHint?.mannequinOverlay ?? "none";
+    if (overlay === "none") return null;
+
+    const cx = (doc.width / 2) * scale;
+    const cy = (doc.height / 2) * scale;
+    const mainGrip = {
+      x: (doc.dualGrip?.mainGrip.x ?? doc.pivot.x) * scale,
+      y: (doc.dualGrip?.mainGrip.y ?? doc.pivot.y) * scale,
+    };
+    const offHandGrip = doc.dualGrip?.offHandGrip ? {
+      x: doc.dualGrip.offHandGrip.x * scale,
+      y: doc.dualGrip.offHandGrip.y * scale,
+    } : { x: cx, y: cy - 20 * scale };
+
+    return (
+      <svg className="absolute inset-0 pointer-events-none" width={doc.width * scale} height={doc.height * scale}>
+        {/* 1H Hand Guide */}
+        {overlay === "hand_1h" && (
+          <g stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 3" fill="#38bdf8" fillOpacity="0.15">
+            <ellipse cx={mainGrip.x} cy={mainGrip.y} rx={10 * scale} ry={8 * scale} transform={`rotate(-15, ${mainGrip.x}, ${mainGrip.y})`} />
+            <path d={`M ${mainGrip.x - 8 * scale} ${mainGrip.y + 4 * scale} L ${mainGrip.x - 16 * scale} ${mainGrip.y + 24 * scale}`} strokeWidth="2" />
+          </g>
+        )}
+
+        {/* 2H Hands Guide (Battle Stance) */}
+        {overlay === "hand_2h" && (
+          <g stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 3" fill="#38bdf8" fillOpacity="0.15">
+            <ellipse cx={mainGrip.x} cy={mainGrip.y} rx={10 * scale} ry={8 * scale} transform={`rotate(-15, ${mainGrip.x}, ${mainGrip.y})`} />
+            <ellipse cx={offHandGrip.x} cy={offHandGrip.y} rx={9 * scale} ry={7 * scale} transform={`rotate(20, ${offHandGrip.x}, ${offHandGrip.y})`} fill="#22d3ee" fillOpacity="0.2" stroke="#22d3ee" />
+            <line x1={mainGrip.x} y1={mainGrip.y} x2={mainGrip.x + 20 * scale} y2={mainGrip.y + 35 * scale} strokeWidth="2" />
+            <line x1={offHandGrip.x} y1={offHandGrip.y} x2={offHandGrip.x - 20 * scale} y2={offHandGrip.y + 30 * scale} strokeWidth="2" stroke="#22d3ee" />
+          </g>
+        )}
+
+        {/* Head / Helmet Guide */}
+        {overlay === "head" && (
+          <g stroke="#a78bfa" strokeWidth="1.5" strokeDasharray="4 3" fill="#a78bfa" fillOpacity="0.12">
+            <ellipse cx={cx} cy={cy} rx={28 * scale} ry={32 * scale} />
+            <line x1={cx - 22 * scale} y1={cy + 4 * scale} x2={cx + 22 * scale} y2={cy + 4 * scale} />
+            <line x1={cx - 10 * scale} y1={cy + 18 * scale} x2={cx + 10 * scale} y2={cy + 18 * scale} />
+            <line x1={cx} y1={cy - 30 * scale} x2={cx} y2={cy + 30 * scale} strokeDasharray="2 2" />
+          </g>
+        )}
+
+        {/* Torso & Body Guide */}
+        {overlay === "body" && (
+          <g stroke="#34d399" strokeWidth="1.5" strokeDasharray="4 3" fill="#34d399" fillOpacity="0.12">
+            <ellipse cx={cx} cy={cy - 8 * scale} rx={26 * scale} ry={20 * scale} />
+            <ellipse cx={cx} cy={cy + 22 * scale} rx={22 * scale} ry={14 * scale} />
+            <circle cx={cx - 28 * scale} cy={cy - 14 * scale} r={7 * scale} />
+            <circle cx={cx + 28 * scale} cy={cy - 14 * scale} r={7 * scale} />
+          </g>
+        )}
+
+        {/* Legs & Boots Guide */}
+        {overlay === "legs" && (
+          <g stroke="#fbbf24" strokeWidth="1.5" strokeDasharray="4 3" fill="#fbbf24" fillOpacity="0.12">
+            <ellipse cx={cx} cy={cy - 24 * scale} rx={24 * scale} ry={12 * scale} />
+            <rect x={cx - 22 * scale} y={cy - 12 * scale} width={14 * scale} height={28 * scale} rx={4 * scale} />
+            <ellipse cx={cx - 15 * scale} y={cy + 24 * scale} rx={9 * scale} ry={6 * scale} />
+            <rect x={cx + 8 * scale} y={cy - 12 * scale} width={14 * scale} height={28 * scale} rx={4 * scale} />
+            <ellipse cx={cx + 15 * scale} y={cy + 24 * scale} rx={9 * scale} ry={6 * scale} />
+          </g>
+        )}
+
+        {/* Full Chibi Rig Ghost */}
+        {overlay === "full_rig" && (
+          <g stroke="#94a3b8" strokeWidth="1.2" strokeDasharray="3 3" fill="#94a3b8" fillOpacity="0.08">
+            <ellipse cx={cx} cy={cy - 28 * scale} rx={22 * scale} ry={24 * scale} />
+            <ellipse cx={cx} cy={cy + 8 * scale} rx={18 * scale} ry={16 * scale} />
+            <rect x={cx - 16 * scale} y={cy + 24 * scale} width={10 * scale} height={20 * scale} rx={3 * scale} />
+            <rect x={cx + 6 * scale} y={cy + 24 * scale} width={10 * scale} height={20 * scale} rx={3 * scale} />
+            <line x1={cx - 20 * scale} y1={cy + 2 * scale} x2={cx - 30 * scale} y2={cy + 18 * scale} strokeWidth="3" />
+            <line x1={cx + 20 * scale} y1={cy + 2 * scale} x2={cx + 30 * scale} y2={cy + 18 * scale} strokeWidth="3" />
+          </g>
+        )}
+
+        {/* Human Scale Guide in bottom corner */}
+        {overlay === "scale_human" && (
+          <g stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="2 2" fill="#94a3b8" fillOpacity="0.15" transform={`translate(${16 * scale}, ${Math.max(0, (doc.height - 72)) * scale})`}>
+            <circle cx={14 * scale} cy={10 * scale} r={7 * scale} />
+            <rect x={7 * scale} y={18 * scale} width={14 * scale} height={26 * scale} rx={3 * scale} />
+            <line x1={10 * scale} y1={44 * scale} x2={8 * scale} y2={68 * scale} strokeWidth="3" />
+            <line x1={18 * scale} y1={44 * scale} x2={20 * scale} y2={68 * scale} strokeWidth="3" />
+            <text x={28 * scale} y={36 * scale} fill="#94a3b8" fontSize={9 * scale} fontFamily="sans-serif">1.8m Scale</text>
+          </g>
+        )}
+      </svg>
+    );
   }
 
   return (

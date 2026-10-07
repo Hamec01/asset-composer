@@ -3,6 +3,8 @@ import { HISTORY_LIMIT } from "@/lib/history";
 import { PEASANT_EQUIPMENT } from "@/data/peasantEquipment";
 import { DEFAULT_APPEARANCE } from "@/data/characterAppearance";
 import { createReferenceChibiTemplate, createReferenceChibiDocuments, getAuthoredDocumentMetrics, normalizeReferenceSvg } from "@/lib/referenceChibi";
+import { createNewArtAsset, type CreateAssetOptions } from "@/lib/itemAuthoring";
+import { createDocumentFromItemPart } from "@/lib/spriteEditor";
 import { immer } from "zustand/middleware/immer";
 import type {
   Entity, Project, EntityType, PaletteTokens, SlotAssignment,
@@ -121,10 +123,16 @@ interface AppStore {
       patch: Partial<FaceAuthoringState>,
     ) => void;
   addProjectItem: (item: Item) => void;
+  createEquipmentItem: (options: CreateAssetOptions) => Item;
+  createWorldObject: (options: CreateAssetOptions) => Item;
+  openItemForEditing: (itemId: string, partId?: string) => void;
+  deleteProjectItem: (itemId: string) => void;
+  duplicateProjectItem: (itemId: string) => Item | null;
   updateProjectItemPart: (itemId: string, partId: string, patch: Partial<ItemPart>) => void;
   updateEntityVisual: (entityId: string, visualId: string, patch: Partial<EntityVisual>) => void;
   upsertSpriteEditorDocument: (doc: SpriteEditorDocument) => void;
   setActiveSpriteDocument: (documentId: string | null) => void;
+  closeSpriteDocument: (documentId: string) => void;
     setActiveAuthoringMode: (mode: AuthoringMode) => void;
     setActiveFaceCanvasOverlay: (overlayId: string | null) => void;
     setActiveFaceCanvasTool: (tool: FaceAuthoringTool | null) => void;
@@ -1299,6 +1307,102 @@ export const useStore = create<AppStore>()(
         state.project.updatedAt = Date.now();
       });
     },
+    createEquipmentItem: (options) => {
+      const { item, document } = createNewArtAsset(options);
+      set(state => {
+        state.project.items.push(item);
+        const existingDocIdx = state.project.editorMeta.spriteEditorDocuments.findIndex(d => d.id === document.id);
+        if (existingDocIdx >= 0) {
+          state.project.editorMeta.spriteEditorDocuments[existingDocIdx] = document;
+        } else {
+          state.project.editorMeta.spriteEditorDocuments.push(document);
+        }
+        state.project.editorMeta.activeSpriteDocumentId = document.id;
+        state.project.editorMeta.activeAuthoringMode = "sprite-editor";
+        state.animPlayback.activeTab = "authoring";
+        state.project.updatedAt = Date.now();
+      });
+      return item;
+    },
+    createWorldObject: (options) => {
+      const { item, document } = createNewArtAsset(options);
+      set(state => {
+        state.project.items.push(item);
+        const existingDocIdx = state.project.editorMeta.spriteEditorDocuments.findIndex(d => d.id === document.id);
+        if (existingDocIdx >= 0) {
+          state.project.editorMeta.spriteEditorDocuments[existingDocIdx] = document;
+        } else {
+          state.project.editorMeta.spriteEditorDocuments.push(document);
+        }
+        state.project.editorMeta.activeSpriteDocumentId = document.id;
+        state.project.editorMeta.activeAuthoringMode = "sprite-editor";
+        state.animPlayback.activeTab = "authoring";
+        state.project.updatedAt = Date.now();
+      });
+      return item;
+    },
+    openItemForEditing: (itemId, partId) => {
+      const store = get();
+      const item = store.project.items.find(i => i.id === itemId);
+      if (!item) return;
+      const part = (partId && item.parts?.find(p => p.id === partId)) || item.parts?.[0];
+      if (!part) return;
+      const existingDoc = store.project.editorMeta.spriteEditorDocuments.find(d =>
+        (d.target.kind === "item-part" || d.target.kind === "world-object") && d.target.itemId === itemId && (d.target.partId === part.id || !partId)
+      );
+      const doc = existingDoc ?? createDocumentFromItemPart(store.project.activeEntityId ?? undefined, item, part);
+      set(state => {
+        const docIdx = state.project.editorMeta.spriteEditorDocuments.findIndex(d => d.id === doc.id);
+        if (docIdx >= 0) {
+          state.project.editorMeta.spriteEditorDocuments[docIdx] = doc;
+        } else {
+          state.project.editorMeta.spriteEditorDocuments.push(doc);
+        }
+        state.project.editorMeta.activeSpriteDocumentId = doc.id;
+        state.project.editorMeta.activeAuthoringMode = "sprite-editor";
+        state.animPlayback.activeTab = "authoring";
+        state.project.updatedAt = Date.now();
+      });
+    },
+    deleteProjectItem: (itemId) => {
+      set(state => {
+        state.project.items = state.project.items.filter(i => i.id !== itemId);
+        // Remove item from any equipped slots
+        for (const entity of state.project.entities) {
+          entity.slots = entity.slots.map(s => s.itemId === itemId ? { ...s, itemId: null } : s);
+        }
+        // Remove associated documents
+        state.project.editorMeta.spriteEditorDocuments = state.project.editorMeta.spriteEditorDocuments.filter(
+          d => d.target.itemId !== itemId && d.target.propId !== itemId
+        );
+        if (state.project.editorMeta.activeSpriteDocumentId?.includes(itemId)) {
+          state.project.editorMeta.activeSpriteDocumentId = state.project.editorMeta.spriteEditorDocuments[0]?.id ?? null;
+        }
+        state.project.updatedAt = Date.now();
+      });
+    },
+    duplicateProjectItem: (itemId) => {
+      const store = get();
+      const item = store.project.items.find(i => i.id === itemId);
+      if (!item) return null;
+      const newId = `custom_${item.category}_${Date.now().toString(36)}`;
+      const duplicatedItem: Item = {
+        ...structuredClone(item),
+        id: newId,
+        name: `${item.name} (Копия)`,
+        parts: (item.parts ?? []).map(p => ({
+          ...structuredClone(p),
+          id: `${newId}_${p.id.replace(`${item.id}_`, "")}`,
+          editorDocumentId: null,
+        })),
+        svgLayers: item.svgLayers.map(l => ({ ...structuredClone(l), id: `${newId}_layer` })),
+      };
+      set(state => {
+        state.project.items.push(duplicatedItem);
+        state.project.updatedAt = Date.now();
+      });
+      return duplicatedItem;
+    },
     updateProjectItemPart: (itemId, partId, patch) => {
       set(state => {
         const item = state.project.items.find(existing => existing.id === itemId);
@@ -1331,6 +1435,15 @@ export const useStore = create<AppStore>()(
         }
         state.project.editorMeta.activeSpriteDocumentId = doc.id;
         state.project.editorMeta.activeAuthoringMode = "sprite-editor";
+        state.project.updatedAt = Date.now();
+      });
+    },
+    closeSpriteDocument: (docId) => {
+      set(state => {
+        state.project.editorMeta.spriteEditorDocuments = state.project.editorMeta.spriteEditorDocuments.filter(d => d.id !== docId);
+        if (state.project.editorMeta.activeSpriteDocumentId === docId) {
+          state.project.editorMeta.activeSpriteDocumentId = state.project.editorMeta.spriteEditorDocuments[0]?.id ?? null;
+        }
         state.project.updatedAt = Date.now();
       });
     },

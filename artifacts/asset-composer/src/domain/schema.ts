@@ -561,6 +561,11 @@ const ProjectEditorMetaSchema = z.object({
     width: z.number(),
     height: z.number(),
     pivot: PivotSchema,
+    dualGrip: z.object({
+      enabled: z.boolean(),
+      mainGrip: z.object({ x: z.number(), y: z.number() }),
+      offHandGrip: z.object({ x: z.number(), y: z.number() }).optional(),
+    }).optional(),
     referenceAsset: z.object({
       format: z.enum(["svg", "png"]),
       name: z.string(),
@@ -578,12 +583,14 @@ const ProjectEditorMetaSchema = z.object({
     tracingOpacity: z.number().min(0).max(1).optional(),
     tracingVisible: z.boolean().optional(),
     tracingTransform: z.object({
-      x: z.number(), y: z.number(), scale: z.number().min(0.1).max(20),
+      x: z.number(), y: z.number(), scale: z.number().min(0.1).max(20), rotation: z.number().optional(),
     }).optional(),
     layers: z.array(z.object({
       id: z.string(),
       name: z.string(),
       visible: z.boolean(),
+      locked: z.boolean().optional(),
+      opacity: z.number().min(0).max(1).optional(),
       zIndex: z.number(),
       shapes: z.array(z.object({
         id: z.string(),
@@ -607,14 +614,18 @@ const ProjectEditorMetaSchema = z.object({
           paintTarget: SpriteEditorPaintTargetSchema.optional(),
           paintToolPreset: z.enum(["vector_brush", "shape_stamp"]).optional(),
           bodyMorphPresetId: z.string().nullable().optional(),
+          mannequinOverlay: z.enum(["none", "hand_1h", "hand_2h", "head", "body", "legs", "full_rig", "scale_human"]).optional(),
+          groundPivot: z.object({ x: z.number(), y: z.number() }).optional(),
+          gridMode: z.enum(["none", "pixel", "ortho", "iso"]).optional(),
         }).optional(),
     target: z.object({
-      kind: z.enum(["item-part", "face-overlay", "entity-visual"]),
+      kind: z.enum(["item-part", "face-overlay", "entity-visual", "static-prop", "world-object"]),
       entityId: z.string().optional(),
       itemId: z.string().optional(),
       partId: z.string().optional(),
       overlayId: z.string().optional(),
       visualId: z.string().optional(),
+      propId: z.string().optional(),
     }),
     updatedAt: z.number(),
   })).default([]),

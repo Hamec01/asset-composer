@@ -143,6 +143,9 @@ export function createChibiSideBody(palette: PaletteTokens, build: number, a: Ch
       + line(`M${f2(-3.6 * hs)} ${f2(2 * hs)} L${f2(-3.6 * hs)} ${f2(8 * hs)}`, s.shade, 2.2, .45));
     hand.attachments = { grip: grip.svgData };
     hand.attachmentGrips={};
+    // Centre the invisible handle socket so body morphs cannot change grip spacing.
+    hand.attachments.two_hand_grip = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${6-7*hs} ${-7*hs} ${14*hs} ${14*hs}"><g transform="translate(${6-5*hs} 0)">${archeryHandSvg("bow_grip", palette.skin, palette.outline, hs).replace(/<svg[^>]*>|<\/svg>/g, "")}</g></svg>`;
+    hand.attachmentGrips.two_hand_grip = { x: 6, y: 0 };
     for (const pose of ["bow_grip", "string_hook", "string_release"] as const) {
       hand.attachments[pose] = archeryHandSvg(pose, palette.skin, palette.outline, hs);
       hand.attachmentGrips[pose]={x:f2(5*hs),y:0};

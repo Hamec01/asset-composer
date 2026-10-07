@@ -1,5 +1,6 @@
 import type { AnimationClip, BoneTransform } from "@/domain/types";
 import { getTrackTransformAt } from "@/lib/animationRuntime";
+import { twoHandedSwordStrike } from "./twoHandedSwordAnimation";
 
 function gait(name: "walk" | "run", durationMs: number, lift: number): AnimationClip {
   const times = [0, durationMs / 4, durationMs / 2, durationMs * 3 / 4, durationMs];
@@ -662,7 +663,7 @@ const trade = action("trade", "Торговаться", 1600, true, {
   elbow_r: [{}, { rotation: 24 }, { rotation: 42 }, { rotation: 30 }, { rotation: -12 }, { rotation: -5 }, {}],
   hand_r: [{}, { rotation: 8 }, { rotation: 18 }, { rotation: 10 }, { rotation: -22 }, { rotation: -8 }, {}],
 }, [0, .16, .32, .5, .68, .84, 1]);
-export const CHIBI_ANIMATIONS = [idle, gait("walk", 900, 1), gait("run", 550, 2), death, axeStrike, swordStrike, bowShoot, fistStrike, laugh, dance, drink, eat, trade, pickup, carry];
+export const CHIBI_ANIMATIONS = [idle, gait("walk", 900, 1), gait("run", 550, 2), death, axeStrike, swordStrike, twoHandedSwordStrike, bowShoot, fistStrike, laugh, dance, drink, eat, trade, pickup, carry];
 
 // Refresh only exact earlier built-ins; authored keyframes must survive loading.
 export function upgradeChibiActionClip(clip: AnimationClip): AnimationClip {

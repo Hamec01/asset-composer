@@ -539,7 +539,8 @@ export function spriteEditorDocumentToSvg(document: SpriteEditorDocument, option
     .map(layer => {
       if (!layer.visible) return "";
       const shapesMarkup = layer.shapes.map(renderShape).join("");
-      return `<g data-layer-id="${layer.id}" data-layer-name="${layer.name}">${shapesMarkup}</g>`;
+      const opacityAttr = typeof layer.opacity === "number" && layer.opacity < 1 ? ` opacity="${Math.max(0, Math.min(1, layer.opacity))}"` : "";
+      return `<g data-layer-id="${layer.id}" data-layer-name="${layer.name}"${opacityAttr}>${shapesMarkup}</g>`;
     })
     .join("");
 
@@ -573,12 +574,13 @@ export function createDocumentFromEntityVisual(entityId: string, visual: EntityV
   };
 }
 
-export function createDocumentFromItemPart(entityId: string, item: Item, part: ItemPart): SpriteEditorDocument {
+export function createDocumentFromItemPart(entityId: string | undefined, item: Item, part: ItemPart): SpriteEditorDocument {
   const layers = createDocumentLayersFromSvg(part.svgData);
   const canEditDirectly = layers.some(layer => layer.shapes.length > 0);
+  const isWorldProp = item.category === "static_part" || item.tags.includes("world_prop") || item.tags.includes("world_flora") || item.tags.includes("world_building");
   return {
     id: part.editorDocumentId ?? crypto.randomUUID(),
-    name: `${item.name} / ${part.id}`,
+    name: `${item.name}${part.id !== `${item.id}_part` ? ` / ${part.id}` : ""}`,
     width: part.metrics.viewBoxWidth,
     height: part.metrics.viewBoxHeight,
     pivot: { ...part.pivot },
@@ -588,11 +590,17 @@ export function createDocumentFromItemPart(entityId: string, item: Item, part: I
         ? part.source
         : createReferenceSourceFromSvg(`${item.name} ${part.id}`, `${part.id}.svg`, part.svgData)),
     layers,
+    authoringHint: {
+      preserveFrame: true,
+      assetCategory: item.tags[0],
+      mannequinOverlay: item.category === "weapon_main" ? "hand_1h" : item.category === "head_cover" ? "head" : item.category === "torso" || item.category === "legs" ? "body" : "none",
+    },
     target: {
-      kind: "item-part",
+      kind: isWorldProp ? "world-object" : "item-part",
       entityId,
       itemId: item.id,
       partId: part.id,
+      propId: item.id,
     },
     updatedAt: Date.now(),
   };

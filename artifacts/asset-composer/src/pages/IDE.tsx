@@ -128,7 +128,7 @@ export function IDE() {
             { id: "animate", label: "Анимация", icon: Clapperboard },
           ].map(({ id, label, icon: Icon }) => {
             const active = authoringMode === "sprite-editor" ? id === "draw" : workspace === id;
-            return <button key={id} data-testid={`workspace-${id}`} disabled={!activeEntityId} aria-pressed={active}
+            return <button key={id} data-testid={`workspace-${id}`} disabled={id !== "draw" && !activeEntityId} aria-pressed={active}
               className={`flex items-center gap-2 px-3 h-8 text-xs border-b-2 whitespace-nowrap transition-colors disabled:opacity-40 ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
               onClick={() => {
                 const store = useStore.getState();
@@ -139,7 +139,15 @@ export function IDE() {
                 store.setActiveAuthoringMode(id === "draw" ? "sprite-editor" : null);
                 store.setCanvasMode(id === "equipment" ? "edit-attachment" : "select");
                 setTimelineCollapsed(id === "character" || id === "equipment");
-                if (id === "draw") store.setAnimBottomTab("authoring");
+                if (id === "draw") {
+                  store.setAnimBottomTab("authoring");
+                  if (!store.project.editorMeta.activeSpriteDocumentId) {
+                    const firstDoc = store.project.editorMeta.spriteEditorDocuments[0];
+                    if (firstDoc) {
+                      store.setActiveSpriteDocument(firstDoc.id);
+                    }
+                  }
+                }
                 if (id === "character" || id === "equipment") store.setAnimBottomTab("timeline");
                 if (id === "animate") { store.setAnimBottomTab("timeline"); setTimelineHeight(220); }
               }}><Icon size={15} />{label}</button>;

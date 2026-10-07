@@ -9,12 +9,19 @@ import { itemSupportsTemplate } from "@/lib/templateCompatibility";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, ChevronRight, X, AlertTriangle, Eye, EyeOff, Lock, Unlock, RotateCcw, Shirt } from "lucide-react";
+import { Plus, Search, ChevronRight, X, AlertTriangle, Eye, EyeOff, Lock, Unlock, RotateCcw, Shirt, Pencil, Copy, Trash2, Trees, Sword, Shield, Box, Sparkles } from "lucide-react";
 import type { Item, ItemCategory, SlotDef } from "@/domain/types";
+import type { AssetTemplateType } from "@/lib/itemAuthoring";
 import { CharacterPartsPanel } from "./CharacterPartsPanel";
 import { AppearancePanel } from "./AppearancePanel";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-export type LibraryTabId = "appearance" | "entities" | "body" | "slots" | "items";
+export type LibraryTabId = "appearance" | "entities" | "body" | "slots" | "items" | "world";
 
 const CATEGORY_LABELS: Record<ItemCategory, string> = {
   head_cover: "Helmets",
@@ -60,47 +67,89 @@ function ItemCard({
   isIncompat,
   onClick,
   disabled,
+  onEdit,
+  onDuplicate,
+  onDelete,
 }: {
   item: Item;
   isEquipped: boolean;
   isIncompat: boolean;
   onClick: () => void;
   disabled: boolean;
+  onEdit?: () => void;
+  onDuplicate?: () => void;
+  onDelete?: () => void;
 }) {
+  const isCustom = item.licenseMeta.source === "User Authored" || item.tags.includes("user_drawn") || item.tags.includes("art_studio");
+
   return (
-    <button
+    <div
       data-testid={`item-card-${item.id}`}
-      onClick={onClick}
-      disabled={disabled}
-      aria-pressed={isEquipped}
-      title={`${item.name}: ${item.description}`}
       className={[
-        "flex flex-col items-center gap-1 rounded border p-2 text-center text-xs transition-colors min-w-0",
+        "group relative flex flex-col items-center gap-1 rounded border p-2 text-center text-xs transition-colors min-w-0 bg-background/50",
         isEquipped
           ? "border-primary/60 bg-primary/10 text-primary"
           : isIncompat
             ? "border-border bg-accent/10 text-muted-foreground opacity-60"
-            : "border-border bg-accent/30 hover:border-primary/40 hover:bg-accent text-muted-foreground",
-        disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer",
+            : "border-border hover:border-primary/40 hover:bg-accent/40 text-muted-foreground",
       ].join(" ")}
     >
-      <div className="relative w-10 h-10 bg-background rounded border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
-        {item.svgLayers[0]
-          ? <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: sanitizeSvg(item.svgLayers[0].svgData) }} />
-          : <span className="text-muted-foreground text-[10px]">?</span>}
-        {isIncompat && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/60">
-            <AlertTriangle className="w-3 h-3 text-yellow-500" />
-          </div>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-pressed={isEquipped}
+        title={`${item.name}: ${item.description}`}
+        className="w-full flex flex-col items-center gap-1 min-w-0"
+      >
+        <div className="relative w-10 h-10 bg-background rounded border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+          {item.svgLayers[0]
+            ? <div className="w-full h-full p-0.5" dangerouslySetInnerHTML={{ __html: sanitizeSvg(item.svgLayers[0].svgData) }} />
+            : <span className="text-muted-foreground text-[10px]">?</span>}
+          {isIncompat && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+              <AlertTriangle className="w-3 h-3 text-yellow-500" />
+            </div>
+          )}
+        </div>
+        <span className="w-full text-xs leading-snug break-words line-clamp-2">{item.name}</span>
+      </button>
+
+      {/* Quick Actions overlay on card */}
+      <div className="flex items-center gap-1 mt-1 pt-1 border-t border-border/40 w-full justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+          className="p-1 rounded hover:bg-primary/20 hover:text-primary text-muted-foreground transition-colors"
+          title="Редактировать в студии рисования"
+          aria-label={`Редактировать ${item.name}`}
+        >
+          <Pencil className="w-3 h-3" />
+        </button>
+        {isCustom && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onDuplicate?.(); }}
+              className="p-1 rounded hover:bg-accent hover:text-foreground text-muted-foreground transition-colors"
+              title="Дублировать предмет"
+              aria-label={`Дублировать ${item.name}`}
+            >
+              <Copy className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+              className="p-1 rounded hover:bg-destructive/20 hover:text-destructive text-muted-foreground transition-colors"
+              title="Удалить предмет"
+              aria-label={`Удалить ${item.name}`}
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </>
         )}
       </div>
-      <span className="w-full text-xs leading-snug break-words">{item.name}</span>
-      {item.compatibility.skeletonFamilies.length > 0 && (
-        <span className="text-[8px] text-muted-foreground/70 truncate w-full">
-          {item.compatibility.skeletonFamilies[0].split("_")[0]}
-        </span>
-      )}
-    </button>
+    </div>
   );
 }
 
@@ -121,8 +170,20 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
   const getActiveEntity = useStore(s => s.getActiveEntity);
   const getActiveTemplate = useStore(s => s.getActiveTemplate);
 
+  const openItemForEditing = useStore(s => s.openItemForEditing);
+  const createEquipmentItem = useStore(s => s.createEquipmentItem);
+  const createWorldObject = useStore(s => s.createWorldObject);
+  const duplicateProjectItem = useStore(s => s.duplicateProjectItem);
+  const deleteProjectItem = useStore(s => s.deleteProjectItem);
+
   const [search, setSearch] = useState("");
   const [categoryGroup, setCategoryGroup] = useState(0);
+  const [worldCategory, setWorldCategory] = useState<"all" | "flora" | "building" | "prop">("all");
+  const [isCreateItemOpen, setIsCreateItemOpen] = useState(false);
+  const [newItemType, setNewItemType] = useState<AssetTemplateType>("weapon_1h");
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemWidth, setNewItemWidth] = useState(128);
+  const [newItemHeight, setNewItemHeight] = useState(128);
 
   const activeEntity = getActiveEntity();
   const template = getActiveTemplate();
@@ -139,12 +200,28 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
   const displayedItems = useMemo(() => {
     const group = CATEGORY_GROUPS[categoryGroup];
     return project.items.filter(item => {
+      if (item.category === "static_part" && !item.tags.includes("weapon_1h") && !item.tags.includes("weapon_2h")) return false;
       const query = search.toLowerCase();
       const matchSearch = !search || item.name.toLowerCase().includes(query) || item.tags.some(tag => tag.includes(query));
       const matchCategory = group.categories.length === 0 || group.categories.includes(item.category);
       return matchSearch && matchCategory && appearanceItemAllowed(item, activeEntity?.appearance?.sex);
     });
   }, [project.items, search, categoryGroup, activeEntity?.appearance?.sex]);
+
+  const worldItems = useMemo(() => {
+    return project.items.filter(item => {
+      const isWorld = item.category === "static_part" || item.tags.includes("world_prop") || item.tags.includes("world_flora") || item.tags.includes("world_building");
+      if (!isWorld) return false;
+      const query = search.toLowerCase();
+      const matchSearch = !search || item.name.toLowerCase().includes(query) || item.tags.some(tag => tag.includes(query));
+      const matchCategory =
+        worldCategory === "all" ||
+        (worldCategory === "flora" && item.tags.includes("world_flora")) ||
+        (worldCategory === "building" && item.tags.includes("world_building")) ||
+        (worldCategory === "prop" && item.tags.includes("world_prop"));
+      return matchSearch && matchCategory;
+    });
+  }, [project.items, search, worldCategory]);
 
   const gridItems = useMemo(() => {
     if (!selectedSlot) return displayedItems;
@@ -167,6 +244,28 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
     return acc;
   }, {} as Record<ItemCategory, SlotDef[]>);
 
+  function handleCreateAsset() {
+    if (!newItemName.trim()) return;
+    const isWorld = ["world_flora", "world_building", "world_prop"].includes(newItemType);
+    if (isWorld) {
+      createWorldObject({
+        name: newItemName.trim(),
+        type: newItemType,
+        width: newItemWidth,
+        height: newItemHeight,
+      });
+    } else {
+      createEquipmentItem({
+        name: newItemName.trim(),
+        type: newItemType,
+        width: newItemWidth,
+        height: newItemHeight,
+        entityId: activeEntity?.id,
+      });
+    }
+    setIsCreateItemOpen(false);
+    setNewItemName("");
+  }
 
   return (
     <aside
@@ -174,21 +273,21 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
       className="flex flex-col h-full bg-sidebar border-r border-sidebar-border select-none"
     >
       <div className="px-2 pt-2 pb-0 flex-shrink-0">
-        <div className="grid grid-cols-2 gap-1 w-full bg-background/50 p-1">
-          {(["appearance", "body", "entities", "items", "slots"] as LibraryTabId[]).map(tabId => (
+        <div className="grid grid-cols-3 gap-1 w-full bg-background/50 p-1">
+          {(["appearance", "body", "entities", "items", "world", "slots"] as LibraryTabId[]).map(tabId => (
             <button
               key={tabId}
               type="button"
               onClick={() => setActiveTab(tabId)}
               aria-pressed={activeTab === tabId}
               className={[
-                "h-8 rounded-sm text-xs transition-colors",
+                "h-7 rounded-sm text-[11px] font-medium transition-colors truncate px-1",
                 activeTab === tabId
-                  ? "bg-primary/15 text-primary ring-1 ring-primary/40"
+                  ? "bg-primary/15 text-primary ring-1 ring-primary/40 font-semibold"
                   : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
               ].join(" ")}
             >
-              {tabId === "appearance" ? "Внешность" : tabId === "entities" ? "Персонажи" : tabId === "body" ? "Части тела" : tabId === "slots" ? "Крепления" : "Экипировка"}
+              {tabId === "appearance" ? "Внешность" : tabId === "entities" ? "Персонажи" : tabId === "body" ? "Части тела" : tabId === "items" ? "Экипировка" : tabId === "world" ? "Мир и пропы" : "Крепления"}
             </button>
           ))}
         </div>
@@ -395,14 +494,29 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
             useStore.getState().pushCommand({ type: "SET_SLOT", entityId: activeEntity.id, before: { slots },
               after: { slots: slots.map(slot => outfit[slot.slotId] ? { ...slot, itemId: equipped ? null : outfit[slot.slotId] } : slot) }, label: "Peasant outfit" });
           }}><Shirt size={14} className="mr-2" />Крестьянский комплект</Button>}
-          <div className="px-2 pt-2 pb-1">
+          <div className="px-2 pt-2 pb-1 space-y-1 flex-shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full h-7 text-xs border-dashed border-primary/50 text-primary hover:bg-primary/10"
+              onClick={() => {
+                setNewItemType("weapon_1h");
+                setNewItemName("Новое оружие");
+                setNewItemWidth(128);
+                setNewItemHeight(128);
+                setIsCreateItemOpen(true);
+              }}
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Создать предмет / оружие
+            </Button>
             <select aria-label="Место крепления" value={editor.selectedSlotId ?? ""} onChange={event => setSelectedSlot(event.target.value || null)}
-              className="w-full min-w-0 h-9 rounded border border-border bg-background px-2 text-xs">
-              <option value="">Место крепления</option>
+              className="w-full min-w-0 h-8 rounded border border-border bg-background px-2 text-xs">
+              <option value="">Все крепления (слоты)</option>
               {slots.map(slot => <option key={slot.id} value={slot.id}>{slot.name}</option>)}
             </select>
           </div>
-          <div className="px-2 pt-1.5 flex-shrink-0">
+          <div className="px-2 pt-0.5 flex-shrink-0">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
               <Input
@@ -486,6 +600,9 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
                           setEntitySlot(activeEntity.id, targetSlot, newItemId);
                         }
                       }}
+                      onEdit={() => openItemForEditing(item.id)}
+                      onDuplicate={() => duplicateProjectItem(item.id)}
+                      onDelete={() => deleteProjectItem(item.id)}
                     />
                   );
                 })}
@@ -495,6 +612,188 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
         </div>
       )}
 
+      {activeTab === "world" && (
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="px-2 pt-2 pb-1 space-y-1 flex-shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full h-7 text-xs border-dashed border-primary/50 text-primary hover:bg-primary/10"
+              onClick={() => {
+                setNewItemType("world_flora");
+                setNewItemName("Новое дерево");
+                setNewItemWidth(256);
+                setNewItemHeight(256);
+                setIsCreateItemOpen(true);
+              }}
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Создать объект / проп
+            </Button>
+          </div>
+          <div className="px-2 pt-0.5 flex-shrink-0">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={event => setSearch(event.target.value)}
+                placeholder="Поиск объектов"
+                className="h-7 text-xs pl-6 bg-background border-border"
+              />
+            </div>
+          </div>
+          <div className="px-2 py-1 flex-shrink-0 flex gap-1">
+            {[
+              { id: "all", label: "Все" },
+              { id: "flora", label: "Природа" },
+              { id: "building", label: "Постройки" },
+              { id: "prop", label: "Пропы" },
+            ].map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setWorldCategory(cat.id as any)}
+                aria-pressed={worldCategory === cat.id}
+                className={[
+                  "px-2 py-0.5 rounded text-[10px] transition-colors",
+                  worldCategory === cat.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground",
+                ].join(" ")}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1 overflow-auto ide-scroll px-2 pb-2">
+            {worldItems.length === 0 && (
+              <div className="py-8 text-center text-xs text-muted-foreground space-y-2">
+                <Trees className="w-8 h-8 mx-auto text-muted-foreground/40" />
+                <p>Нет объектов окружения</p>
+                <Button size="sm" variant="ghost" className="text-xs text-primary" onClick={() => {
+                  setNewItemType("world_flora");
+                  setNewItemName("Дерево");
+                  setNewItemWidth(256);
+                  setNewItemHeight(256);
+                  setIsCreateItemOpen(true);
+                }}>
+                  Создать первое дерево или здание
+                </Button>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {worldItems.map(item => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  isEquipped={false}
+                  isIncompat={false}
+                  disabled={false}
+                  onClick={() => openItemForEditing(item.id)}
+                  onEdit={() => openItemForEditing(item.id)}
+                  onDuplicate={() => duplicateProjectItem(item.id)}
+                  onDelete={() => deleteProjectItem(item.id)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Dialog: Create New Art Asset ──────────────────────────────────── */}
+      <Dialog open={isCreateItemOpen} onOpenChange={setIsCreateItemOpen}>
+        <DialogContent className="max-w-md bg-card border-border text-foreground">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">Создать новый арт / предмет</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-1 text-xs">
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground block mb-1">Название ассета</label>
+              <Input
+                value={newItemName}
+                onChange={e => setNewItemName(e.target.value)}
+                placeholder="Например: Меч пламени, Дуб осенний"
+                className="h-8 text-xs bg-background"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground block mb-1">Тип ассета</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { id: "weapon_1h", label: "Одноручное оружие", icon: Sword, desc: "Меч, кинжал, топор (1 хват)" },
+                  { id: "weapon_2h", label: "Двуручное оружие", icon: Sword, desc: "Копье, двуручник, лук (2 хвата)" },
+                  { id: "shield", label: "Щит", icon: Shield, desc: "Щит или баклер" },
+                  { id: "head_cover", label: "Шлем / Головной убор", icon: Sparkles, desc: "Шлем, шляпа, корона" },
+                  { id: "torso", label: "Броня / Одежда", icon: Shirt, desc: "Кираса, туника, наплечники" },
+                  { id: "world_flora", label: "Природа / Дерево", icon: Trees, desc: "Деревья, кусты, цветы" },
+                  { id: "world_building", label: "Постройка / Здание", icon: Box, desc: "Дома, башни, стены" },
+                  { id: "world_prop", label: "Проп / Предмет мира", icon: Box, desc: "Сундуки, бочки, камни" },
+                ].map(opt => {
+                  const Icon = opt.icon;
+                  const isSelected = newItemType === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        setNewItemType(opt.id as AssetTemplateType);
+                        if (opt.id === "world_building") { setNewItemWidth(512); setNewItemHeight(512); }
+                        else if (opt.id === "world_flora" || opt.id === "weapon_2h") { setNewItemWidth(256); setNewItemHeight(256); }
+                        else { setNewItemWidth(128); setNewItemHeight(128); }
+                      }}
+                      className={[
+                        "flex items-start gap-2 p-2 rounded border text-left transition-colors",
+                        isSelected ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-accent/40 text-muted-foreground",
+                      ].join(" ")}
+                    >
+                      <Icon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium text-xs text-foreground">{opt.label}</div>
+                        <div className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground block mb-1">Размер холста (px)</label>
+              <div className="flex gap-1.5">
+                {[
+                  { w: 64, h: 64, l: "64×64" },
+                  { w: 128, h: 128, l: "128×128" },
+                  { w: 256, h: 256, l: "256×256" },
+                  { w: 512, h: 512, l: "512×512" },
+                ].map(sz => (
+                  <button
+                    key={sz.l}
+                    type="button"
+                    onClick={() => { setNewItemWidth(sz.w); setNewItemHeight(sz.h); }}
+                    className={[
+                      "flex-1 py-1 rounded border text-xs font-mono transition-colors",
+                      newItemWidth === sz.w && newItemHeight === sz.h
+                        ? "border-primary bg-primary/10 text-primary font-bold"
+                        : "border-border hover:bg-accent text-muted-foreground",
+                    ].join(" ")}
+                  >
+                    {sz.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-border">
+              <Button variant="ghost" size="sm" onClick={() => setIsCreateItemOpen(false)}>Отмена</Button>
+              <Button size="sm" onClick={handleCreateAsset} disabled={!newItemName.trim()}>
+                Создать и открыть
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {selectedSlotAssignment && <div className="hidden" data-testid="library-selected-slot-assignment" />}
     </aside>

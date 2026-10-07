@@ -334,6 +334,12 @@ export interface FaceAuthoringState {
   focusMode?: FaceCanvasFocusMode;
 }
 
+export interface DualGripConfig {
+  enabled: boolean;
+  mainGrip: { x: number; y: number };
+  offHandGrip?: { x: number; y: number };
+}
+
 export type SpriteEditorShapeType = "rect" | "ellipse" | "path";
 
 export interface SpriteEditorShape {
@@ -354,6 +360,8 @@ export interface SpriteEditorLayer {
   id: string;
   name: string;
   visible: boolean;
+  locked?: boolean;
+  opacity?: number;
   zIndex: number;
   shapes: SpriteEditorShape[];
 }
@@ -364,11 +372,12 @@ export interface SpriteEditorDocument {
   width: number;
   height: number;
   pivot: Pivot;
+  dualGrip?: DualGripConfig;
   referenceAsset?: ImportedAssetSource | null;
   tracingAsset?: ImportedAssetSource | null;
   tracingOpacity?: number;
   tracingVisible?: boolean;
-  tracingTransform?: { x: number; y: number; scale: number };
+  tracingTransform?: { x: number; y: number; scale: number; rotation?: number };
   layers: SpriteEditorLayer[];
   authoringHint?: {
     preserveFrame?: boolean;
@@ -378,14 +387,19 @@ export interface SpriteEditorDocument {
     paintTarget?: SpriteEditorPaintTarget;
     paintToolPreset?: "vector_brush" | "shape_stamp";
     bodyMorphPresetId?: string | null;
+    assetCategory?: string;
+    mannequinOverlay?: "none" | "hand_1h" | "hand_2h" | "head" | "body" | "legs" | "full_rig" | "scale_human";
+    groundPivot?: { x: number; y: number };
+    gridMode?: "none" | "pixel" | "ortho" | "iso";
   };
   target: {
-    kind: "item-part" | "face-overlay" | "entity-visual";
+    kind: "item-part" | "face-overlay" | "entity-visual" | "static-prop" | "world-object";
     entityId?: string;
     itemId?: string;
     partId?: string;
     overlayId?: string;
     visualId?: string;
+    propId?: string;
   };
   updatedAt: number;
 }

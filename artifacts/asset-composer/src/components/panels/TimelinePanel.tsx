@@ -30,7 +30,7 @@ const GROUP_NAMES: Record<string, string[]> = {
     "idle_13_tap_foot","idle_14_cross_arms","idle_15_lean",
   ],
   "Locomotion": ["idle_full","walk","run"],
-  "Combat": ["melee_attack","ranged_attack","cast","block","axe_strike","sword_strike","bow_shoot","fist_strike"],
+  "Combat": ["melee_attack","ranged_attack","cast","block","axe_strike","sword_strike","two_handed_sword_strike","bow_shoot","fist_strike"],
   "Reactions": ["hurt","stagger","death","laugh"],
   "Actions": ["sit","interact","farm_work","carry","pickup","drink","eat","trade"],
   "Social & Fun": ["dance"],
