@@ -1,5 +1,6 @@
 import type { AnimationClip, AnimationLayer, KeyframeTrack, Keyframe, BoneTransform, LayerMask } from "@/domain/types";
 import { getAnimationContext, setAnimationContext } from "./animationContext";
+import { shortestAngleLerp } from "./angles";
 
 export type BoneTransformMap = Map<string, BoneTransform>;
 
@@ -9,11 +10,11 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-function lerpTransform(a: BoneTransform, b: BoneTransform, t: number): BoneTransform {
+function lerpTransform(a: BoneTransform, b: BoneTransform, t: number, unwrapped = false): BoneTransform {
   return {
     tx: lerp(a.tx, b.tx, t),
     ty: lerp(a.ty, b.ty, t),
-    rotation: lerp(a.rotation, b.rotation, t),
+    rotation: unwrapped ? lerp(a.rotation, b.rotation, t) : shortestAngleLerp(a.rotation, b.rotation, t),
     scaleX: lerp(a.scaleX, b.scaleX, t),
     scaleY: lerp(a.scaleY, b.scaleY, t),
   };
@@ -31,7 +32,9 @@ export function getTrackTransformAt(track: KeyframeTrack, timeMs: number): BoneT
     if (timeMs >= kfA.timeMs && timeMs <= kfB.timeMs) {
       const span = kfB.timeMs - kfA.timeMs;
       const alpha = span === 0 ? 0 : (timeMs - kfA.timeMs) / span;
-      return lerpTransform(kfA.transform, kfB.transform, alpha);
+      const unwrapped = track.rotationMode === "unwrapped" ||
+        (track.rotationMode === undefined && Math.abs(kfB.transform.rotation-kfA.transform.rotation)>=360);
+      return lerpTransform(kfA.transform, kfB.transform, alpha, unwrapped);
     }
   }
   return { ...ZERO_TRANSFORM };

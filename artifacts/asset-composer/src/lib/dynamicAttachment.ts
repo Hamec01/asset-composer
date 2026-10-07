@@ -15,7 +15,9 @@ export function deformAttachmentLine(svg:string,part:ItemPart,world:Matrix2D,tar
     x=(line.start.x+line.end.x)/2+Math.sin(t*Math.PI*6)*2.5*(1-t);
     y=(line.start.y+line.end.y)/2;
   }
-  const d = `M${line.start.x} ${line.start.y} L${x} ${y} L${line.end.x} ${line.end.y}`;
+  const d = line.kind === "arrow"
+    ? `M${x} ${y} L${line.start.x} ${line.start.y} M${line.start.x-5} ${line.start.y-2.5} L${line.start.x+1} ${line.start.y} L${line.start.x-5} ${line.start.y+2.5} M${x+2} ${y} L${x+6} ${y-2} M${x+2} ${y} L${x+6} ${y+2}`
+    : `M${line.start.x} ${line.start.y} L${x} ${y} L${line.end.x} ${line.end.y}`;
   // Attribute order and single/double quotes are not significant in SVG.
   return svg.replace(/<path\b[^>]*>/g, tag => {
     const id = tag.match(/\bid\s*=\s*(["'])(.*?)\1/)?.[2];

@@ -14,8 +14,14 @@ function part(id: string, boneId: string, w: number, h: number, y: number, body:
   if (id === "shirt_hem") {
     body = body.replace(/(<path[^>]*fill="[^"]+")\/>/, '$1 stroke="none"/>');
   }
-  if (id.startsWith("sleeve_upper_")) body = body.replace("L10 22 H3Z", "L10 18 Q10 22 6.5 22 Q3 22 3 18Z");
-  if (id.startsWith("sleeve_lower_")) body = body.replace("M2 0 H10 L9 16 Q6 18 3 16Z", "M2 3 Q2 0 6 0 Q10 0 10 3 L9 15 Q6 17 3 15Z");
+  // Keep the shoulder/elbow pivots and cuffs on their actual joint centres.
+  // An open proximal forearm edge avoids a second rounded cap on folded elbows.
+  if (id.startsWith("sleeve_upper_")) {
+    body=body.replace(/<path d="[^"]*" fill="([^"]*)"\/>/, '<path d="M1.9 4.5 C1.9 -1.5 11.1 -1.5 11.1 4.5 L9.8 19.5 Q9.8 22.8 6.5 22.8 Q3.2 22.8 3.2 19.5Z" fill="$1"/>');
+  }
+  if (id.startsWith("sleeve_lower_")) {
+    body=body.replace(/<path d="[^"]*" fill="([^"]*)"\/>/, '<path d="M2.8 4 Q2.8 .8 6 .8 Q9.2 .8 9.2 4 L8.8 17 H3.2Z" fill="$1" stroke="none"/><path d="M2.8 4 L3.2 17 M9.2 4 L8.8 17" fill="none"/>');
+  }
   const svgData = art(w, h, body, origin);
   const metrics = parseMetrics(svgData);
   // The authored frame is a bone attachment, not a content-centred thumbnail.
@@ -130,12 +136,16 @@ const lumberjackTorso = outfitTorso("#8B3E32", "#642D2B", "#D4B37A");
 const lumberjackLegs = outfitLegs("#584638", "#7A6049");
 const lumberjackBoots = outfitBoots("#68472F", "#39271F");
 
-const bow = part("bow", "hand_l", 30, 48, 0,
-  `<path d="M15 2 Q3 11 5 24 Q3 37 15 46" fill="none" stroke="#70452D" stroke-width="3"/><path d="M15 2 Q5 14 5 24 Q5 35 15 46" fill="none" stroke="#C8A16C" stroke-width=".8"/><path d="M15 2 L15 46" fill="none" stroke="#E7D6B4" stroke-width=".65"/><path d="M3 21 H7 V27 H3Z" fill="#70452D"/><path d="M3 22 H7 M3 26 H7" stroke="#D9B57A"/>`, 0, { x: 5, y: 24 });
+const bow = part("bow", "hand_l", 38, 90, 0,
+  `<path d="M17 13 Q8 24 5 38 Q3 45 5 52 Q8 66 17 77" fill="none" stroke="#593923" stroke-width="3.2"/><path d="M17 13 Q9 25 6 38 Q4 45 6 52 Q9 65 17 77" fill="none" stroke="#CEA875" stroke-width="1.1"/><path d="M15 13 L19 13 M15 77 L19 77" stroke="#D9B57A" stroke-width="1.2"/><path d="M3 40 H8 V50 H3Z" fill="#654B35"/><path d="M3 41 L8 43 M3 44 L8 46 M3 47 L8 49" stroke="#D9B57A"/>`, 0, { x: 5, y: 45 });
 bow.zOffset = -.5;
 bow.localTransform.rotation = 180;
-bow.svgData = bow.svgData.replace('d="M15 2 L15 46"', 'id="bow-string" d="M15 2 L15 46"');
-bow.dynamicLine = {pathId:"bow-string",targetBoneId:"hand_r",clipId:"chibi_front__bow_shoot",start:{x:15,y:2},end:{x:15,y:46},attachMs:400,releaseMs:1360,settleMs:160};
+const bowString = part("bow_string", "hand_l", 38, 90, 0,
+  `<path id="bow-string" d="M17 13 L17 77" fill="none" stroke="#E7D6B4" stroke-width=".7"/>`, 0, { x: 5, y: 45 });
+bowString.zOffset = -.8;
+bowString.depthBinding = {boneId:"hand_r",nearSlot:"CROSS_BODY",farSlot:"BODY_BACK"};
+bowString.localTransform.rotation = 180;
+bowString.dynamicLine = {kind:"string",pathId:"bow-string",targetBoneId:"hand_r",clipId:"chibi_front__bow_shoot",start:{x:17,y:13},end:{x:17,y:77},attachMs:640,releaseMs:1360,settleMs:160};
 
 export const PEASANT_EQUIPMENT = [
   item("peasant_shirt_25d", "Льняная рубаха", "torso", "slot_torso", shirt),
@@ -143,7 +153,7 @@ export const PEASANT_EQUIPMENT = [
   item("peasant_boots_25d", "Кожаные сапоги", "feet", "slot_foot_l", boots),
   item("peasant_axe_25d", "Рабочий топор", "weapon_main", "slot_weapon_main", [axe]),
   item("iron_sword_25d", "Железный меч", "weapon_main", "slot_weapon_main", [sword]),
-  item("bow_25d", "Охотничий лук", "weapon_main", "slot_weapon_main", [bow], ["weapon", "bow", "лук", "охотник", "2.5d", "rig-depth"]),
+  item("bow_25d", "Охотничий лук", "weapon_main", "slot_weapon_main", [bow, bowString], ["weapon", "bow", "лук", "охотник", "2.5d", "rig-depth"]),
   item("trader_tunic_25d", "Камзол торговца", "torso", "slot_torso", traderTorso, ["outfit", "trader", "торговец", "2.5d", "rig-depth"]),
   item("trader_breeches_25d", "Бриджи торговца", "legs", "slot_legs", traderLegs, ["outfit", "trader", "торговец", "2.5d", "rig-depth"]),
   item("trader_boots_25d", "Сапоги торговца", "feet", "slot_foot_l", traderBoots, ["outfit", "trader", "торговец", "2.5d", "rig-depth"]),

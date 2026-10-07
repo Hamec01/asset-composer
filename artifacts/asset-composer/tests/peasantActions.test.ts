@@ -111,7 +111,9 @@ describe("2.5D peasant actions", () => {
     const near = scene.visuals.find(visual => visual.partId === "sleeve_upper_l")!;
     const far = scene.visuals.find(visual => visual.partId === "sleeve_upper_r")!;
     expect(near.zIndex).toBeGreaterThan(far.zIndex);
-    expect(scene.visuals.filter(visual => visual.sourceKind === "item-part")).toHaveLength(15);
+    expect(scene.visuals.filter(visual => visual.sourceKind === "item-part")).toHaveLength(16);
+    expect(scene.visuals.some(visual => visual.partId === "bow_string")).toBe(true);
+    expect(scene.visuals.some(visual => visual.partId === "nocked_arrow")).toBe(false);
   });
 
   it("keeps an axe grip inside its hand and swaps weapon / shield depth when turning", () => {

@@ -119,9 +119,12 @@ const SkinMeshSchema = z.object({
   if(invalid)ctx.addIssue({code:z.ZodIssueCode.custom,message:"Invalid mesh topology, weights or bind matrices"});
 });
 
+const DepthSlotSchema = z.enum(["FAR_BACK","FAR_LIMB","BODY_BACK","BODY","CROSS_BODY","BODY_FRONT","NEAR_LIMB","HAND_FRONT","EQUIPMENT_FRONT"]);
+
 const ItemPartSchema = z.object({
+  depthBinding: z.object({boneId:z.string(),nearSlot:DepthSlotSchema,farSlot:DepthSlotSchema}).optional(),
   mesh: SkinMeshSchema.optional(),
-  dynamicLine:z.object({pathId:z.string(),targetBoneId:z.string(),clipId:z.string(),start:z.object({x:z.number().finite(),y:z.number().finite()}),end:z.object({x:z.number().finite(),y:z.number().finite()}),attachMs:z.number().finite().nonnegative(),releaseMs:z.number().finite().nonnegative(),settleMs:z.number().finite().positive()}).optional(),
+  dynamicLine:z.object({kind:z.enum(["string","arrow"]).optional(),pathId:z.string(),targetBoneId:z.string(),clipId:z.string(),start:z.object({x:z.number().finite(),y:z.number().finite()}),end:z.object({x:z.number().finite(),y:z.number().finite()}),attachMs:z.number().finite().nonnegative(),releaseMs:z.number().finite().nonnegative(),settleMs:z.number().finite().positive()}).optional(),
   id:             z.string(),
   boneId:         z.string(),
   svgData:        z.string(),
@@ -281,7 +284,9 @@ const BonePartSchema = z.object({
   localY:        z.number(),
   zOffset:       z.number(),
   attachments:   z.record(z.string(), z.string()).optional(),
+  attachmentGrips: z.record(z.string(), z.object({x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional()})).optional(),
   grip:          z.object({ x: z.number().finite(), y: z.number().finite() }).optional(),
+  gripSocket: z.object({x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional()}).optional(),
 });
 
 // ── Core schemas ──────────────────────────────────────────────────────────────
@@ -459,6 +464,7 @@ const KeyframeSchema = z.object({
 
 const KeyframeTrackSchema = z.object({
   boneId: z.string(),
+  rotationMode: z.enum(["shortest", "unwrapped"]).optional(),
   keyframes: z.array(KeyframeSchema),
 });
 
@@ -468,12 +474,20 @@ const AnimationLayerSchema = z.object({
 });
 
 const AnimationClipSchema = z.object({
+  limbDepth:z.array(z.object({timeMs:z.number().finite().nonnegative(),facing:z.enum(["left","right"]).optional(),state:z.object({
+    nearUpperArm:DepthSlotSchema.optional(),nearForearm:DepthSlotSchema.optional(),nearHand:DepthSlotSchema.optional(),
+    farUpperArm:DepthSlotSchema.optional(),farForearm:DepthSlotSchema.optional(),farHand:DepthSlotSchema.optional(),
+  })})).optional(),
   drawOrder:z.array(z.object({timeMs:z.number().finite().nonnegative(),boneOrder:z.array(z.string()),slotOrder:z.array(z.string()),raise:z.array(z.object({boneId:z.string(),above:z.string(),onlyNear:z.boolean().optional()})).optional()})).optional(),
   deform:z.array(z.object({partId:z.string(),keyframes:z.array(z.object({timeMs:z.number().finite().nonnegative(),offsets:z.array(z.object({x:z.number().finite(),y:z.number().finite()}))}))})).optional(),
   attachments:z.array(z.object({boneId:z.string(),keyframes:z.array(z.object({timeMs:z.number().finite().nonnegative(),name:z.string().nullable()}))})).optional(),
   inherit:z.record(z.string(),z.enum(["normal","noScale"])).optional(),
-  ik:z.array(z.object({bones:z.tuple([z.string(),z.string(),z.string()]),bend:z.union([z.literal(1),z.literal(-1)]),stretch:z.boolean().optional(),
-    keyframes:z.array(z.object({timeMs:z.number().finite().nonnegative(),x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional(),mix:z.number().finite().min(0).max(1)}))})).optional(),
+  ik:z.array(z.object({bones:z.tuple([z.string(),z.string(),z.string()]),bend:z.union([z.literal(1),z.literal(-1)]),stretch:z.boolean().optional(),profileRootX:z.number().finite().optional(),
+    fixedLength:z.boolean().optional(),pole:z.object({x:z.number().finite(),y:z.number().finite()}).optional(),
+    gripSocket:z.object({x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional()}).optional(),
+    target:z.object({objectId:z.string(),socketId:z.string()}).optional(),
+    keyframes:z.array(z.object({timeMs:z.number().finite().nonnegative(),x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional(),mix:z.number().finite().min(0).max(1),bend:z.union([z.literal(1),z.literal(-1)]).optional(),easing:z.enum(["linear","smooth"]).optional()}))})).optional(),
+  gripObjects:z.array(z.object({id:z.string(),sockets:z.record(z.string(),z.object({x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional()})),keyframes:z.array(z.object({timeMs:z.number().finite().nonnegative(),x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite()}))})).optional(),
   id: z.string(),
   name: z.string(),
   label: z.string(),

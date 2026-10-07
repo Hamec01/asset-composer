@@ -445,7 +445,10 @@ export class CanvasEngine {
         this.fabricImages.delete(visual.id);
         this.svgCache.delete(visual.id);
       }
-      loads.push(this._loadVisual(visual, generation));
+      this.pendingAnimatedVisuals.add(visual.id);
+      loads.push(this._loadVisual(visual, generation).finally(() => {
+        if (generation === this.reconcileGeneration) this.pendingAnimatedVisuals.delete(visual.id);
+      }));
     }
     await Promise.all(loads);
     if (generation !== this.reconcileGeneration) return;
@@ -586,17 +589,21 @@ export class CanvasEngine {
   updateSceneTransforms(scene: EvaluatedScene): void {
     if (this.isTransforming) return;
 
+    this.currentScene = scene;
+    const visibleIds = new Set(scene.visuals.map(visual => visual.id));
+    for (const [id, image] of this.fabricImages) {
+      if (!visibleIds.has(id)) image.set({ visible: false });
+    }
     let depthChanged = false;
     for (const visual of scene.visuals) {
       const img = this.fabricImages.get(visual.id);
-      if (!img) continue;
-      if (this.svgCache.get(visual.id) !== visual.svgData && !this.pendingAnimatedVisuals.has(visual.id)) {
+      if ((!img || this.svgCache.get(visual.id) !== visual.svgData) && !this.pendingAnimatedVisuals.has(visual.id)) {
         this.pendingAnimatedVisuals.add(visual.id);
         const generation = this.reconcileGeneration;
         void this._loadVisual(visual, generation).then(() => {
           this.pendingAnimatedVisuals.delete(visual.id);
           if (generation !== this.reconcileGeneration) return;
-          if (this.fabricImages.get(visual.id) !== img) this.canvas.remove(img);
+          if (img && this.fabricImages.get(visual.id) !== img) this.canvas.remove(img);
           // A seek/pause can arrive while the SVG is decoding. Drain the latest
           // pose and artwork even when no further animation tick will arrive.
           if (this.svgCache.get(visual.id) === visual.svgData && this.currentScene) {
@@ -606,6 +613,7 @@ export class CanvasEngine {
           this.canvas.requestRenderAll();
         }).catch(() => this.pendingAnimatedVisuals.delete(visual.id));
       }
+      if (!img) continue;
       if (img.__zIndex !== visual.zIndex) {
         img.__zIndex = visual.zIndex;
         depthChanged = true;
@@ -616,6 +624,7 @@ export class CanvasEngine {
       img.__centerX = localCenterX;
       img.__centerY = localCenterY;
       img.set({
+        visible: true,
         left: placement.translateX,
         top: placement.translateY,
         angle: placement.angle,

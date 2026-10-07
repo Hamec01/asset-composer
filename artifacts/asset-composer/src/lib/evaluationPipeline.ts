@@ -28,11 +28,13 @@ import type { BoneTransformMap } from "./animationRuntime";
 import { applyPaletteToSvg } from "./svgUtils";
 import { parseMetrics } from "./svgMetrics";
 import { appearanceItemAllowed, appearancePresetAllowed } from "./appearanceCompatibility";
-import { getAnimationContext, setAnimationContext, meshDeformAt, attachmentAt } from "./animationContext";
+import { getAnimationContext, setAnimationContext, meshDeformAt, boneAttachmentAt } from "./animationContext";
 import { skinVertices, renderSkinMesh } from "./skinning";
 import { createGarmentMesh } from "./garmentMesh";
 import { applyDrawOrder } from "./drawOrder";
-import { ikContext, solveIkPose } from "./ikConstraint";
+import { applyLimbDepth } from "./limbDepth";
+import { armChains, fixedArmPose } from "./armRig";
+import { ikContext, solveIkPose, profileIkRootX } from "./ikConstraint";
 import { deformAttachmentLine } from "./dynamicAttachment";
 import { refreshCanonicalBuiltInTypedItems } from "./canonicalItems";
 import { resolveItemFitAnchorOverride, resolveItemFitPartTransform } from "./itemFitProfiles";
@@ -166,10 +168,11 @@ export function evaluateSkeleton(
   bodyMorphs?: BodyMorphValues,
   appearance?: CharacterAppearance,
 ): EvaluatedSkeleton {
-  const ik = ikContext(localPose);
+  const armPose = fixedArmPose(bones, localPose);
+  const ik = ikContext(armPose);
   const pose = ik
-    ? solveIkPose(localPose, ik, candidate => evaluateWorldBones(bones, candidate, bodyMorphs, appearance), id => bones.find(bone => bone.id === id)?.parentId ?? null)
-    : localPose;
+    ? solveIkPose(armPose, ik, candidate => evaluateWorldBones(bones, candidate, bodyMorphs, appearance), id => bones.find(bone => bone.id === id)?.parentId ?? null, armChains(bones,armPose))
+    : armPose;
   const world = evaluateWorldBones(bones, pose, bodyMorphs, appearance);
 
   if (appearance?.view === "left") {
@@ -195,6 +198,7 @@ function evaluateWorldBones(
 ): Map<string, WorldBone> {
   const world = new Map<string, WorldBone>();
   const inherit = getAnimationContext(localPose)?.clip.inherit;
+  const fixedArms = new Set(armChains(bones,localPose).flat());
 
   for (const bone of bones) {
     const restPose = { ...applyBodyMorphToRestPose(bone, bodyMorphs) };
@@ -203,6 +207,7 @@ function evaluateWorldBones(
       const far = near === "l" ? "r" : "l";
       if (bone.id === `shoulder_${near}`) restPose.tx = -6;
       if (bone.id === `shoulder_${far}`) restPose.tx = 4;
+      restPose.tx = profileIkRootX(getAnimationContext(localPose), bone.id, restPose.tx);
       if (bone.id === `hip_${near}`) restPose.tx = -2.5;
       if (bone.id === `hip_${far}`) restPose.tx = 2.5;
       if (/^(elbow|hand|knee|foot)_[lr]$/.test(bone.id)) restPose.rotation = 0;
@@ -244,7 +249,7 @@ function evaluateWorldBones(
     const evaluated = world.get(bone.id)!;
     const parentBone = bone.parentId ? world.get(bone.parentId) : undefined;
     let parentMatrix = parentBone ? worldBoneToMatrix(parentBone) : identity();
-    if (parentBone && inherit?.[bone.id] === "noScale") {
+    if (parentBone && (inherit?.[bone.id] === "noScale" || fixedArms.has(bone.id))) {
       // Spine Inherit.noScale: keep the parent's position and orientation, drop its scale and shear.
       const origin = transformPoint(parentMatrix, lx, ly);
       const angle = Math.atan2(parentMatrix[1], parentMatrix[0]);
@@ -755,7 +760,7 @@ export function evaluateScene(
 
   const fw = template.previewWidth;
   const fh = template.previewHeight;
-  const bodyParts = getCharacterBodyParts(template, entity);
+  const bodyParts = getCharacterBodyParts(template, entity).map(part=>boneAttachmentAt(part,getAnimationContext(skeleton)));
   const neutralParts = entity.appearance ? getCharacterBodyParts(template, { ...entity, appearance: { ...entity.appearance, sex: "male", slimness: 0, muscle: 0, fat: 0 } }) : bodyParts;
 
   // ── 1. Entity visuals (full-vector body, v2.0) ─────────────────────────────
@@ -808,9 +813,7 @@ export function evaluateScene(
       if (entity.visuals?.some(visual => visual.bodyPartId === part.id && (visual.bodyView ?? "front") === (entity.appearance?.view && entity.appearance.view !== "front" ? "side" : "front"))) continue;
       if (coveredBodyBoneIds.has(part.boneId)) continue;
       // Spine-style slot: an attachment key swaps the drawing, not the bone binding.
-      const attachment = attachmentAt(getAnimationContext(skeleton), part.boneId);
-      const source = attachment ? part.attachments?.[attachment] ?? part.svgData : part.svgData;
-      const svgData = applyPaletteToSvg(source, template.paletteTokens, entity.palette);
+      const svgData = applyPaletteToSvg(part.svgData, template.paletteTokens, entity.palette);
 
       const wb = skeleton.bones.get(part.boneId);
       const boneM: Matrix2D = wb ? worldBoneToMatrix(wb) : identity();
@@ -903,6 +906,9 @@ export function evaluateScene(
           layers.push({id,svgData,zIndex,opacity:1,boneId:null,localX:0,localY:0,rotation:0,scaleX:1,scaleY:1,naturalWidth:bounds.maxX-bounds.minX,naturalHeight:bounds.maxY-bounds.minY});
           continue;
         }
+        const attachmentContext = getAnimationContext(skeleton);
+        if (part.dynamicLine?.kind === "arrow" && (!attachmentContext || attachmentContext.clip.id !== part.dynamicLine.clipId
+          || attachmentContext.timeMs < part.dynamicLine.attachMs || attachmentContext.timeMs >= part.dynamicLine.releaseMs)) continue;
         let svgData = applyPaletteToSvg(part.svgData, ITEM_SOURCE_PALETTE, effectivePalette);
         const binding = part.coordinateMode === "bone_local"
           ? resolveItemPartBinding(entity, template, skeleton, item, slotAssign, slotDef, part, fitProfiles) : null;
@@ -953,7 +959,8 @@ export function evaluateScene(
             piv.y,
           );
           const partBinding = binding ?? resolveItemPartBinding(entity, template, skeleton, item, slotAssign, slotDef, part, fitProfiles);
-          const palm = heldItem ? bodyParts.find(body => body.boneId === partBinding.boneId)?.grip : undefined;
+          const handPart = heldItem ? bodyParts.find(body => body.boneId === partBinding.boneId) : undefined;
+          const palm = handPart?.gripSocket ?? handPart?.grip;
           const worldM = multiply(
             palm ? multiply(partBinding.parentMatrix, translation(palm.x, palm.y)) : partBinding.parentMatrix,
             multiply(
@@ -976,7 +983,8 @@ export function evaluateScene(
           // Convert the drawing hand into the bow's authored SVG frame.
           // Both canvas and export receive the same deformed string.
           const stringBone = part.dynamicLine ? skeleton.bones.get(part.dynamicLine.targetBoneId) : undefined;
-          const stringPalm = part.dynamicLine ? bodyParts.find(body => body.boneId === part.dynamicLine!.targetBoneId)?.grip : undefined;
+          const stringHand = part.dynamicLine ? bodyParts.find(body => body.boneId === part.dynamicLine!.targetBoneId) : undefined;
+          const stringPalm = stringHand?.gripSocket ?? stringHand?.grip;
           const stringTarget = stringBone ? transformPoint(worldBoneToMatrix(stringBone), stringPalm?.x ?? 0, stringPalm?.y ?? 0) : undefined;
           svgData = deformAttachmentLine(svgData,part,worldM,stringTarget,getAnimationContext(skeleton));
           const localBounds = makeMetricBounds(part.metrics, piv.x, piv.y);
@@ -1035,6 +1043,10 @@ export function evaluateScene(
   }
 
   applyDrawOrder(visuals,effectiveItems,getAnimationContext(skeleton),entity.appearance?.view === "left" ? "r" : "l");
+  if(entity.entityType === "character" && (entity.appearance?.view === "left" || entity.appearance?.view === "right" || template.id.startsWith("biped_profile_"))) {
+    const context=getAnimationContext(skeleton);
+    applyLimbDepth(visuals,effectiveItems,entity.appearance?.view === "left" ? "left" : "right",context?.clip,context?.timeMs);
+  }
   for(const layer of layers) { const visual=visuals.find(v=>v.id===layer.id); if(visual)layer.zIndex=visual.zIndex; }
   visuals.sort((a, b) => a.zIndex - b.zIndex);
   layers.sort((a, b)  => a.zIndex - b.zIndex);

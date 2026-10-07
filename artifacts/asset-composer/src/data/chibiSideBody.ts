@@ -1,4 +1,5 @@
 import type { BonePart, CharacterAppearance, PaletteTokens } from "@/domain/types";
+import { archeryHandSvg } from "./archeryArt";
 
 /**
  * Side-view chibi body, drawn in each bone's own coordinates (+y along the bone,
@@ -111,14 +112,22 @@ export function createChibiSideBody(palette: PaletteTokens, build: number, a: Ch
     const upper = limb(15, 5.3 * sk + m * 1.2, 4 * sk,
       t => bump(t, .5, .28, (.4 + 1.5 * m) * sk) + bump(t, .45, .4, fat * .9),
       t => bump(t, .38, .3, (.3 + .9 * m) * sk) + bump(t, .5, .45, fat * 1.2));
-    parts.push(render(`hero_arm_${side}_upper`, `shoulder_${side}`, -870, { fill: upper.fill }, style,
-      s => backShade(15, 4.3 * sk, s.shade) + (m > .3 ? line(`M${f2(1.2 * sk)} ${f2(9.5)} Q${f2(3.4 * sk + m)} ${f2(10.5)} ${f2(3.9 * sk + m)} 8`, s.shade, .6, m) : "")));
+    const upperPart = render(`hero_arm_${side}_upper`, `shoulder_${side}`, -870, upper, style,
+      s => backShade(15, 4.3 * sk, s.shade) + (m > .3 ? line(`M${f2(1.2 * sk)} ${f2(9.5)} Q${f2(3.4 * sk + m)} ${f2(10.5)} ${f2(3.9 * sk + m)} 8`, s.shade, .6, m) : ""));
+    const shootingUpper = render(upperPart.id, upperPart.boneId, upperPart.zOffset,
+      limb(15, 4.2*sk, 3.4*sk, t => bump(t,.45,.3,.5*sk), () => 0), style);
+    upperPart.attachments = { archery_arm: shootingUpper.svgData.replace(/viewBox="[^"]+"/, upperPart.svgData.match(/viewBox="[^"]+"/)![0]) };
+    parts.push(upperPart);
 
     // Forearm: proximal cap smaller than the elbow cap; muscle mass near the elbow.
     const fore = limb(13, 3.5 * sk, 2.95 * sk,
       t => bump(t, .25, .25, (.8 + 1.2 * m) * sk) + bump(t, .3, .4, fat * .6),
       t => bump(t, .3, .35, (.3 + .6 * m) * sk) + bump(t, .3, .4, fat * .8));
-    parts.push(render(`hero_arm_${side}_lower`, `elbow_${side}`, -860, fore, style, s => backShade(13, 3.6 * sk, s.shade)));
+    const forePart = render(`hero_arm_${side}_lower`, `elbow_${side}`, -860, fore, style, s => backShade(13, 3.6 * sk, s.shade));
+    const shootingFore = render(forePart.id, forePart.boneId, forePart.zOffset,
+      limb(13, 3.1*sk, 2.7*sk, t => bump(t,.25,.3,.3*sk), () => 0), style);
+    forePart.attachments = { archery_forearm: shootingFore.svgData.replace(/viewBox="[^"]+"/, forePart.svgData.match(/viewBox="[^"]+"/)![0]) };
+    parts.push(forePart);
 
     // Fist: knuckles forward, thumb over the top, finger creases on the front.
     const hs = 1.2 * (female ? .88 : 1) * (1 + m * .14 + fat * .08 - slim * .08) * build;
@@ -133,6 +142,11 @@ export function createChibiSideBody(palette: PaletteTokens, build: number, a: Ch
       + line(`M${f2(-1.2 * hs)} ${f2(1.4 * hs)} Q${f2(2.8 * hs)} ${f2(.4 * hs)} ${f2(5.2 * hs)} ${f2(2.2 * hs)}`, s.outline, .6)
       + line(`M${f2(-3.6 * hs)} ${f2(2 * hs)} L${f2(-3.6 * hs)} ${f2(8 * hs)}`, s.shade, 2.2, .45));
     hand.attachments = { grip: grip.svgData };
+    hand.attachmentGrips={};
+    for (const pose of ["bow_grip", "string_hook", "string_release"] as const) {
+      hand.attachments[pose] = archeryHandSvg(pose, palette.skin, palette.outline, hs);
+      hand.attachmentGrips[pose]={x:f2(5*hs),y:0};
+    }
     // Held items sit in the palm, not at the wrist pivot (Spine PointAttachment).
     hand.grip = { x: f2(.8 * hs), y: f2(4.4 * hs) };
     parts.push(hand);

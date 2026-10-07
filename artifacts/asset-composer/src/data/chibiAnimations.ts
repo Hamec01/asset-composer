@@ -166,9 +166,9 @@ const previousBowShootV2 = action("bow_shoot", "Стрельба из лука",
 }, [0, .2, .35, .62, .68, .85, 1]);
 
 // Solve a two-segment arm from a wrist target (screen Y points down).
-function bowArm(x: number, y: number, bend: number) {
-  const elbow = bend * Math.acos(Math.max(-1, Math.min(1, (x*x + y*y - 15*15 - 13*13) / (2*15*13))));
-  const shoulder = Math.atan2(-x, y) - Math.atan2(13*Math.sin(elbow), 15+13*Math.cos(elbow));
+function bowArm(x: number, y: number, bend: number, upper = 15, lower = 13) {
+  const elbow = bend * Math.acos(Math.max(-1, Math.min(1, (x*x + y*y - upper*upper - lower*lower) / (2*upper*lower))));
+  const shoulder = Math.atan2(-x, y) - Math.atan2(lower*Math.sin(elbow), upper+lower*Math.cos(elbow));
   return [shoulder * 180/Math.PI, elbow * 180/Math.PI];
 }
 const bowShoot: AnimationClip = (() => {
@@ -301,11 +301,36 @@ const previousBowShootV9 = structuredClone(bowShoot);
 // anchors under the chin. FK keys underneath raise and lower the arms; IK mix blends in
 // while aiming and out during recovery. Stretch only engages when a target is beyond
 // natural reach, and only along the bones (elbow and wrist use Inherit.noScale).
-function anatomicalBowArms(clip: AnimationClip, lift: number, forward = 26, anchor = 7) {
-  const stops = [0, .2, .32, .57, .68, .71, .82, 1];
+function anatomicalBowArms(clip: AnimationClip, lift: number, forward = 26, anchor = 7, drawBend: 1 | -1 = -1, projectedDraw = false, referenceSequence = false, artPass = false, compact = false) {
+  const stops = projectedDraw ? [0, .2, .32, .57, .68, .71, referenceSequence ? .76 : .82, .86, .92, .97, 1] : [0, .2, .32, .57, .68, .71, .82, 1];
   // Targets are wrist positions; `lift` raises them so the palm (grip point) holds the bow at shoulder height.
-  const targets = [[-6,-7,4,-7], [forward,-37,forward-10,-37], [forward,-37,forward-10,-37], [forward,-37,anchor,-37], [forward,-37,anchor,-37], [forward,-37,anchor-3,-40], [forward,-37,anchor-3,-40], [-6,-7,4,-7]]
-    .map((row, i) => i === 0 || i === 7 ? row : row.map((v, j) => j % 2 ? v - lift : v));
+  const targets = [[-6,-7,4,-7], [forward,-37-lift,forward-10,-37-lift], [forward,-37-lift,forward-10,-37-lift], [forward,-37-lift,anchor,-37-lift], [forward,-37-lift,anchor,-37-lift], [forward,-37-lift,anchor-3,-40-lift], [forward,-37-lift,anchor-3,-40-lift],
+    ...(projectedDraw ? [[38,-37-lift,26,-37-lift], [28,-25,26,-25], [8,-12,14,-12]] : []), [-6,-7,4,-7]];
+  if (referenceSequence) {
+    // Raise the bow first, then nock, draw along the aiming line and release
+    // backwards along the cheek. The string arm does not rise with the bow.
+    targets[1] = [forward,-45,4,-7];
+    targets[2] = [forward,-45,forward-10,-46];
+    targets[3] = targets[4] = [forward,-45,anchor,-46];
+    targets[5] = targets[6] = [forward,-45,anchor-5,-46];
+    targets[7] = [forward,-45,26,-46];
+  }
+  if (artPass) {
+    targets[1] = [forward,-43,4,-7];
+    targets[2] = [forward,-43,24,-46];
+    targets[3] = targets[4] = [forward,-43,anchor,-46];
+    targets[5] = targets[6] = [forward,-43,anchor-5,-46];
+    targets[7] = [forward,-43,26,-46];
+  }
+  if (compact) {
+    targets[1] = [27,-37,-4,-7];
+    targets[2] = [27,-37,15,-37];
+    targets[3] = targets[4] = [27,-37,-8,-42];
+    targets[5] = targets[6] = [27,-37,-11,-42];
+    targets[7] = [27,-37,15,-37];
+    targets[8] = [16,-23,16,-23];
+    targets[9] = [3,-12,8,-12];
+  }
   const track = (id: string) => clip.layers[0].tracks.find(candidate => candidate.boneId === id)!.keyframes;
   const ikKeys: Record<"l" | "r", NonNullable<AnimationClip["ik"]>[number]["keyframes"]> = { l: [], r: [] };
   for (let i = 0; i <= 100; i++) {
@@ -317,27 +342,37 @@ function anatomicalBowArms(clip: AnimationClip, lift: number, forward = 26, anch
     const u = (t-stops[k])/(stops[k+1]-stops[k]);
     const ease = u*u*(3-2*u);
     const target = targets[k].map((v,j) => v+(targets[k+1][j]-v)*ease);
-    for (const [side, offset, sx, bend] of [["l",0,-6,1],["r",2,4,-1]] as const) {
-      const [shoulder, elbow] = bowArm(target[offset]-sx, target[offset+1]+35, bend);
-      const release = side === "r" && t > .68 ? 75*Math.min(1, (1-t)/.18) : 0;
-      Object.assign(track(`shoulder_${side}`)[i].transform, { rotation: shoulder, scaleX: 1, scaleY: 1 });
-      Object.assign(track(`elbow_${side}`)[i].transform, { rotation: elbow, scaleX: 1, scaleY: 1 });
-      Object.assign(track(`hand_${side}`)[i].transform, { rotation: -shoulder-elbow+release, scaleX: 1, scaleY: 1 });
-      ikKeys[side].push({ timeMs: t*clip.durationMs, x: target[offset], y: target[offset+1], rotation: release, mix: w });
+    for (const [side, offset, sx, bend] of [["l",0,-6,artPass ? -1 : 1],["r",2,4,drawBend]] as const) {
+      // A 2.5D draw exposes the forearm previously foreshortened in the resting
+      // side silhouette. Change axial reach only; no widening or wrist scaling.
+      const drawPhase = referenceSequence ? Math.max(0, Math.min(1, (t-.2)/.37)) : 1;
+      const drawWeight = w*drawPhase*drawPhase*(3-2*drawPhase);
+      const upper = compact ? 1 : side === "l" && artPass ? 1+.85*w : side === "r" && projectedDraw ? 1 + (referenceSequence ? .45 : .25)*drawWeight : 1;
+      const lower = compact ? 1 : side === "l" && artPass ? 1+.85*w : side === "r" && projectedDraw ? 1 + (referenceSequence ? .7 : .5)*drawWeight : 1;
+      const rootX = compact ? sx + (side === "l" ? 6 : -8)*w : sx;
+      const [shoulder, elbow] = bowArm(target[offset]-rootX, target[offset+1]+35, bend, 15*upper, 13*lower);
+      const release = side === "r" && t > .68 ? (referenceSequence ? 4 : projectedDraw ? 12 : 75)*Math.min(1, (1-t)/.18) : 0;
+      const wristAngle = release + (artPass && side === "l" ? 30*(1-w) : 0);
+      const shoulderRotation = projectedDraw ? ((shoulder + 180) % 360 + 360) % 360 - 180 : shoulder;
+      Object.assign(track(`shoulder_${side}`)[i].transform, { rotation: shoulderRotation, scaleX: 1, scaleY: upper });
+      Object.assign(track(`elbow_${side}`)[i].transform, { rotation: elbow, scaleX: 1, scaleY: lower });
+      Object.assign(track(`hand_${side}`)[i].transform, { rotation: -shoulderRotation-elbow+wristAngle, scaleX: 1, scaleY: 1 });
+      const ikMix = projectedDraw && t > .82 ? (t <= .96 ? 1 : Math.max(0, (1-t)/.04)) : w;
+      ikKeys[side].push({ timeMs: t*clip.durationMs, x: target[offset], y: target[offset+1], rotation: wristAngle, mix: ikMix });
     }
   }
   // Recover by lowering the joint angles, not by pulling the wrists through the torso.
   for (const id of ["shoulder_l", "elbow_l", "hand_l", "shoulder_r", "elbow_r", "hand_r"]) {
     const keys = track(id);
     const start = { ...keys[82].transform };
-    for (let i = 83; i <= 100; i++) {
+    for (let i = 83; !projectedDraw && i <= 100; i++) {
       const u = (i-82)/18;
       keys[i].transform.rotation = start.rotation*(1-u*u*(3-2*u));
     }
   }
   clip.ik = [
-    { bones: ["shoulder_l", "elbow_l", "hand_l"], bend: 1, stretch: true, keyframes: ikKeys.l },
-    { bones: ["shoulder_r", "elbow_r", "hand_r"], bend: -1, stretch: true, keyframes: ikKeys.r },
+    { bones: ["shoulder_l", "elbow_l", "hand_l"], bend: artPass ? -1 : 1, stretch: !compact, keyframes: ikKeys.l, ...(referenceSequence ? { profileRootX: compact ? 0 : -6 } : {}) },
+    { bones: ["shoulder_r", "elbow_r", "hand_r"], bend: drawBend, stretch: !compact, keyframes: ikKeys.r, ...(referenceSequence ? { profileRootX: compact ? -4 : 4 } : {}) },
   ];
   // Whichever arm faces the viewer passes in front of the face: lift only that arm
   // (sleeves and held items follow). The far arm stays behind the head and torso.
@@ -365,24 +400,209 @@ for (const key of bowShoot.drawOrder ?? []) {
   }));
 }
 
+const previousBowShootV12 = structuredClone(bowShoot);
+// Anchor at the cheek with the drawing elbow behind the shoulder, not between
+// the two wrists. Upper arms cross the torso but remain below the head.
+anatomicalBowArms(bowShoot, 12, 38, 8, 1, true);
+for (const key of bowShoot.drawOrder ?? []) {
+  if (key.raise) key.raise = [
+    { boneId: "shoulder_l", above: "chest" },
+    { boneId: "shoulder_r", above: "chest" },
+    { boneId: "elbow_l", above: "head" },
+    { boneId: "hand_l", above: "head" },
+    { boneId: "elbow_r", above: "head" },
+    { boneId: "hand_r", above: "head" },
+  ];
+}
+const aimingOrder = structuredClone(bowShoot.drawOrder![1]);
+aimingOrder.timeMs = 900;
+bowShoot.drawOrder![1].raise!.find(rule => rule.boneId === "elbow_r")!.above = "chest";
+bowShoot.drawOrder!.splice(2, 0, aimingOrder);
+const recoveryOrder = structuredClone(bowShoot.drawOrder![1]);
+recoveryOrder.timeMs = 1680;
+bowShoot.drawOrder!.splice(3, 0, recoveryOrder);
+
+const previousBowShootV13 = structuredClone(bowShoot);
+anatomicalBowArms(bowShoot, 8, 38, 10, 1, true, true);
+// Depth is authored by anatomical role, not by whichever arm happens to be near.
+// The bow arm remains below the drawing forearm; the two shoulders stay below the face.
+const bowArmOrder = [
+  { boneId: "shoulder_l", above: "chest" },
+  { boneId: "shoulder_r", above: "chest" },
+  { boneId: "elbow_l", above: "head" },
+  { boneId: "hand_l", above: "head" },
+  { boneId: "elbow_r", above: "chest" },
+  { boneId: "hand_r", above: "head" },
+];
+const fullDrawOrder = bowArmOrder.map(rule => rule.boneId === "elbow_r" ? { ...rule, above: "head" } : { ...rule });
+bowShoot.drawOrder = [
+  { timeMs: 0, boneOrder: [], slotOrder: [] },
+  { timeMs: 160, boneOrder: [], slotOrder: [], raise: bowArmOrder },
+  { timeMs: 980, boneOrder: [], slotOrder: [], raise: fullDrawOrder },
+  { timeMs: 1680, boneOrder: [], slotOrder: [], raise: bowArmOrder },
+  { timeMs: 1880, boneOrder: [], slotOrder: [] },
+];
+
+const previousBowShootV14 = structuredClone(bowShoot);
+anatomicalBowArms(bowShoot, 8, 44, 10, 1, true, true, true);
+bowShoot.drawOrder = structuredClone(previousBowShootV14.drawOrder);
+bowShoot.attachments = [
+  ...["l", "r"].flatMap(side => [
+    { boneId: `shoulder_${side}`, keyframes: [{ timeMs: 0, name: null }, { timeMs: 160, name: "archery_arm" }, { timeMs: 1880, name: null }] },
+    { boneId: `elbow_${side}`, keyframes: [{ timeMs: 0, name: null }, { timeMs: 160, name: "archery_forearm" }, { timeMs: 1880, name: null }] },
+  ]),
+  { boneId: "hand_l", keyframes: [{ timeMs: 0, name: "bow_grip" }] },
+  { boneId: "hand_r", keyframes: [{ timeMs: 0, name: null }, { timeMs: 640, name: "string_hook" }, { timeMs: 1360, name: "string_release" }, { timeMs: 1680, name: null }] },
+];
+
+const previousBowShootV15 = structuredClone(bowShoot);
+anatomicalBowArms(bowShoot, 8, 21, 8, 1, true, true, true, true);
+// The drawing forearm passes behind the jaw; only its fingers sit over the chin.
+bowShoot.drawOrder = previousBowShootV14.drawOrder!.filter(key => key.timeMs !== 980).map(key => ({
+  ...structuredClone(key),
+  raise: key.raise?.map(rule => rule.boneId === "elbow_l" || rule.boneId === "hand_l" ? { ...rule, above: "chest" } : { ...rule }),
+}));
+bowShoot.attachments = structuredClone(previousBowShootV15.attachments);
+
+const previousBowShootV16 = structuredClone(bowShoot);
+// Sparse target states; elbows are derived by the shared solver at evaluation time.
+const bowStates = [0,20,32,57,68,71,76,82,86,92,96,97,100];
+for (const constraint of bowShoot.ik!) {
+  constraint.fixedLength = true;
+  constraint.keyframes = bowStates.map(index => ({...constraint.keyframes[index],easing:"smooth" as const}));
+  if (constraint.bones[0] === "shoulder_r") {
+    // Route above the shoulder's inner reach circle instead of crossing its singularity.
+    Object.assign(constraint.keyframes.find(key => key.timeMs === bowShoot.durationMs*.82)!,{x:-4,y:-47});
+    Object.assign(constraint.keyframes.find(key => key.timeMs === bowShoot.durationMs*.86)!,{x:8,y:-43});
+  }
+}
+for (const track of bowShoot.layers[0].tracks) {
+  if (/^(shoulder|elbow|hand)_[lr]$/.test(track.boneId)) {
+    track.keyframes = bowStates.map(index => structuredClone(track.keyframes[index]));
+  }
+}
+
+const previousBowShootV17 = structuredClone(bowShoot);
 const upgradedBowClips = new WeakMap<AnimationClip, AnimationClip>();
+bowShoot.limbDepth = [
+  {timeMs:0,state:{}},
+  {timeMs:160,facing:"left",state:{farForearm:"CROSS_BODY",farHand:"HAND_FRONT"}},
+  {timeMs:600,facing:"right",state:{farForearm:"CROSS_BODY",farHand:"HAND_FRONT"}},
+  {timeMs:1880,state:{}},
+];
+// Limb depth is now semantic. Legacy arm raises remain only in migration snapshots.
+bowShoot.drawOrder = [];
+const previousBowShootV18 = structuredClone(bowShoot);
+const drawingArm = bowShoot.ik!.find(constraint => constraint.bones[0] === "shoulder_r")!;
+// Reach with the elbow below the wrist, then change the pole only at full extension.
+for (const key of drawingArm.keyframes) key.bend = key.timeMs < 560 ? -1 : 1;
+drawingArm.keyframes.push({timeMs:560,x:24,y:-35,rotation:0,mix:1,bend:1,easing:"smooth"});
+drawingArm.keyframes.sort((a,b) => a.timeMs-b.timeMs);
+const previousBowShootV19 = structuredClone(bowShoot);
+// Lift behind the bow arm; a forward reach folds the elbow under the profile head.
+for (const key of drawingArm.keyframes) {
+  key.bend = 1;
+  if (key.timeMs === 560) Object.assign(key,{x:-14,y:-21});
+  if (key.timeMs === 640) Object.assign(key,{x:-14,y:-29});
+  if (key.timeMs === 1140 || key.timeMs === 1360) Object.assign(key,{x:-8,y:-38});
+  if (key.timeMs === 1420 || key.timeMs === 1520) Object.assign(key,{x:-11,y:-38});
+}
+const previousBowShootV20 = structuredClone(bowShoot);
+const previousBowShootBrowser=structuredClone(previousBowShootV20);
+for(const key of previousBowShootBrowser.ik!.find(constraint=>constraint.bones[0] === "shoulder_r")!.keyframes) {
+  if([1140,1360,1420,1520].includes(key.timeMs)) key.y+=1;
+}
+// Keep the two projected segments almost horizontal at full draw, clear of the jaw.
+// A shoulder lift of one unit is pose translation, never arm stretching.
+for (const track of bowShoot.layers[0].tracks.filter(track=>/^shoulder_[lr]$/.test(track.boneId))) {
+  for (const key of track.keyframes) {
+    const phase=key.timeMs/bowShoot.durationMs;
+    const weight=phase<.2 ? phase/.2 : phase>.82 ? (1-phase)/.18 : 1;
+    key.transform.ty=Math.max(0,weight);
+  }
+}
+const bowArmConstraint=bowShoot.ik!.find(constraint=>constraint.bones[0]==="shoulder_l")!;
+for (const key of bowArmConstraint.keyframes) {
+  if(key.timeMs>=400 && key.timeMs<=1640) key.y=-35;
+}
+const drawTargets: Record<number,[number,number]> = {
+  560:[-14,-21],640:[-12,-29],1140:[-6,-35],1360:[-6,-35],
+  1420:[-6.3,-35.5],1520:[-6.3,-35.5],1640:[-12,-28],1720:[-14,-20],
+  1840:[-8,-10],1920:[-4,-7],1940:[2,-7],
+};
+for (const key of drawingArm.keyframes) {
+  const target=drawTargets[key.timeMs];
+  if(target) Object.assign(key,{x:target[0],y:target[1]});
+}
+const previousBowShootV21=structuredClone(bowShoot);
+bowShoot.limbDepth=[
+  {timeMs:0,state:{}},
+  {timeMs:160,facing:"left",state:{farForearm:"CROSS_BODY",farHand:"HAND_FRONT"}},
+  {timeMs:600,facing:"right",state:{farHand:"HAND_FRONT"}},
+  {timeMs:1140,facing:"right",state:{farForearm:"CROSS_BODY",farHand:"HAND_FRONT"}},
+  {timeMs:1520,facing:"right",state:{farHand:"HAND_FRONT"}},
+  {timeMs:1880,state:{}},
+];
+const previousBowShootV22=structuredClone(bowShoot);
+// Lift the elbow backwards while the forearm turns towards the string. The two
+// IK branches coincide only at the fully folded pose; switch there, not mid-reach.
+const rearArcTargets: Record<number,[number,number]> = {
+  560:[1.5,-21.00961894323342],
+  640:[-3.990381056766578,-26.5],
+  900:[-5.772116295183121,-31.395277334996044],
+  1060:[-6,-34],
+  1520:[-6,-34],1640:[-5.772116295183121,-31.395277334996044],
+  1720:[-3.990381056766578,-26.5],1840:[1.5,-21.00961894323342],
+};
+for(const timeMs of [900,1060]) drawingArm.keyframes.push({timeMs,x:0,y:0,rotation:0,mix:1,easing:"smooth"});
+drawingArm.keyframes.sort((a,b)=>a.timeMs-b.timeMs);
+for(const key of drawingArm.keyframes) {
+  const target=rearArcTargets[key.timeMs];
+  if(target) Object.assign(key,{x:target[0],y:target[1]});
+  key.bend=key.timeMs<1060 || key.timeMs>=1520 ? -1 : 1;
+}
+const drawingHandAttachments=bowShoot.attachments!.find(track=>track.boneId === "hand_r")!;
+drawingHandAttachments.keyframes.find(key=>key.name === "string_hook")!.timeMs=400;
+drawingHandAttachments.keyframes.at(-1)!.timeMs=1840;
+const previousBowShootV23=structuredClone(bowShoot);
+bowShoot.limbDepth=[
+  {timeMs:0,state:{}},
+  {timeMs:160,facing:"left",state:{farForearm:"CROSS_BODY",farHand:"HAND_FRONT"}},
+  {timeMs:1140,facing:"right",state:{farForearm:"CROSS_BODY",farHand:"HAND_FRONT"}},
+  {timeMs:1520,facing:"right",state:{}},
+  {timeMs:1880,state:{}},
+];
+
 export function upgradeBowClip(clip: AnimationClip): AnimationClip {
   const cached = upgradedBowClips.get(clip);
   if (cached) return cached;
-  // Schema parsing changes property order, so compare values, not raw JSON objects.
-  const fingerprint = (c: AnimationClip) => JSON.stringify([c.id,c.durationMs,c.loops,c.layers.map(l => [l.mask,l.tracks.map(t => [t.boneId,t.keyframes.map(k => [k.timeMs,k.easing,k.transform.tx,k.transform.ty,k.transform.rotation,k.transform.scaleX,k.transform.scaleY])])])]);
-  const revisions = [previousBowShoot, previousBowShootV2, previousBowShootV3, previousBowShootV4, previousBowShootV5, previousBowShootV6, previousBowShootV7, previousBowShootV8, previousBowShootV9, previousBowShootV10, previousBowShootV11];
+  // Browser/Node math and JSON roundtrips can differ below meaningful pose precision.
+  const normalizeNumber=(value:unknown)=>typeof value === "number" ? Math.round(value*1e8)/1e8 : value;
+  const fingerprint = (c: AnimationClip) => JSON.stringify([c.id,c.durationMs,c.loops,c.layers.map(l => [l.mask,l.tracks.map(t => [t.boneId,t.keyframes.map(k => [k.timeMs,k.easing,k.transform.tx,k.transform.ty,k.transform.rotation,k.transform.scaleX,k.transform.scaleY])])])],(_key,value)=>normalizeNumber(value));
+  const revisions = [previousBowShoot, previousBowShootV2, previousBowShootV3, previousBowShootV4, previousBowShootV5, previousBowShootV6, previousBowShootV7, previousBowShootV8, previousBowShootV9, previousBowShootV10, previousBowShootV11, previousBowShootV12, previousBowShootV13, previousBowShootV14, previousBowShootV15, previousBowShootV16,previousBowShootV17,previousBowShootV18];
+  revisions.push(previousBowShootV19);
+  revisions.push(previousBowShootV20);
+  revisions.push(previousBowShootBrowser);
+  revisions.push(previousBowShootV21);
+  revisions.push(previousBowShootV22);
+  revisions.push(previousBowShootV23);
+  revisions.push(bowShoot);
   const known = revisions.some(old => fingerprint(old) === fingerprint(clip));
   let result = clip;
   if (known) {
     // Keys are canonical; keep user-authored deform and draw-order timelines.
     result = structuredClone(bowShoot);
     if (clip.deform) result.deform = structuredClone(clip.deform);
-    const authored = (field: "drawOrder" | "ik" | "inherit" | "attachments") => clip[field] !== undefined && !revisions.some(old => JSON.stringify(clip[field]) === JSON.stringify(old[field]));
+    const stableJson = (value: unknown): string => JSON.stringify(value, (_key, item) =>
+      item && typeof item === "object" && !Array.isArray(item)
+        ? Object.fromEntries(Object.entries(item).sort(([a],[b]) => a.localeCompare(b))) : normalizeNumber(item));
+    const authored = (field: "drawOrder" | "ik" | "inherit" | "attachments" | "limbDepth") => clip[field] !== undefined && !revisions.some(old => stableJson(clip[field]) === stableJson(old[field]));
     if (authored("drawOrder")) result.drawOrder = structuredClone(clip.drawOrder);
     if (authored("ik")) result.ik = structuredClone(clip.ik);
     if (authored("inherit")) result.inherit = structuredClone(clip.inherit);
     if (authored("attachments")) result.attachments = structuredClone(clip.attachments);
+    if (clip.gripObjects) result.gripObjects = structuredClone(clip.gripObjects);
+    if (authored("limbDepth")) result.limbDepth = structuredClone(clip.limbDepth);
   }
   upgradedBowClips.set(clip, result);
   return result;

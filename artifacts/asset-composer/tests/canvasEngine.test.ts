@@ -100,6 +100,36 @@ function makeEngineHarness() {
 }
 
 describe("CanvasEngine persistent reconcile", () => {
+  it("shows and hides animated parts even when playback starts without them", async () => {
+    const { engine, fakeCanvas } = makeEngineHarness();
+    const absent = { ...makeScene(), visuals: [] };
+    await engine.reconcileSceneStructure(absent, engine.currentTemplate, null, []);
+    engine.updateSceneTransforms(makeScene());
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const image = engine.fabricImages.get("visual-1");
+    expect(image.set).toHaveBeenLastCalledWith(expect.objectContaining({ visible: true }));
+    engine.updateSceneTransforms(absent);
+    expect(image.set).toHaveBeenLastCalledWith({ visible: false });
+    engine.updateSceneTransforms(makeScene());
+    expect(image.set).toHaveBeenLastCalledWith(expect.objectContaining({ visible: true }));
+    expect(fakeCanvas.getObjects()).toHaveLength(1);
+  });
+  it("does not resurrect a projectile decoded after its release frame", async () => {
+    const { engine, loadVisual } = makeEngineHarness();
+    const absent = { ...makeScene(), visuals: [] };
+    await engine.reconcileSceneStructure(absent, engine.currentTemplate, null, []);
+    let finish!: () => void;
+    engine._loadVisual = async (visual: any) => {
+      await new Promise<void>(resolve => { finish = resolve; });
+      await loadVisual(visual);
+    };
+    engine.updateSceneTransforms(makeScene());
+    engine.updateSceneTransforms(absent);
+    finish();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(engine.fabricImages.get("visual-1").set).toHaveBeenLastCalledWith({ visible: false });
+    expect(engine.pendingAnimatedVisuals.size).toBe(0);
+  });
   it("drains the final paused frame after an earlier dynamic SVG finishes decoding", async () => {
     const { engine, loadVisual, fakeCanvas } = makeEngineHarness();
     await engine.reconcileSceneStructure(makeScene(), engine.currentTemplate, null, []);

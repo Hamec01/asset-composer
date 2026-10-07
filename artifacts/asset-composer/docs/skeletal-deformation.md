@@ -95,7 +95,46 @@ transfer, parent shear, deform interpolation, ordering, string constraints,
 bow wrist/foot geometry and asynchronous canvas reconciliation. Browser playback
 is checked separately because static scene tests cannot detect renderer races.
 
-## Side-view chibi body
+## Archery pose review
+
+The bow clip uses a backward drawing-elbow bend and a cheek-height wrist anchor.
+Both arms retain their 15-unit upper-arm and 13-unit forearm lengths throughout
+the clip. Axial scaling and IK stretching are disabled. This is a 2D pose, not a
+3D anatomical solver. The bow shoulder projects to x=0 and drawing shoulder to
+x=-4. Upper arms and forearms stay below the head; only drawing fingers come
+in front of the chin at full draw. Lift and recovery follow a rear elbow arc;
+the far hand and forearm remain behind the torso during those transitions.
+IK branches switch only at a fully folded pose where both solutions coincide.
+Tests cover elbow placement, left/right mirroring and per-frame recovery continuity.
+Known built-in revisions upgrade; authored animation timelines remain preserved.
+
+The generated body now has dedicated narrow archery arm/forearm attachments.
+Arm widths, lengths and hand scale stay unchanged. `archeryArt.ts` supplies separate bow-grip, string-hook and release
+contours sharing one wrist frame and palm contact. Custom authored SVGs are not
+overwritten by these generated attachments.
+
+Equipment uses independent bow and string parts. The bow's frame is
+90 units tall, with a 64-unit tip span. The string follows the drawing palm from
+640ms until release at 1360ms. The built-in bow contains no arrow artwork;
+projectile rendering belongs to the game. String depth follows the drawing hand
+independently of its transform binding to the bow hand.
+`bowVisualReview.test.ts` can export a six-phase, two-facing contact sheet,
+bare-body sheet, joint-only rig, grip sketches and a roughly 64px sprite review
+using the `BOW_REVIEW`, `BOW_BARE`, `BOW_RIG`, `BOW_HANDS` and `BOW_SMALL` variables.
+Playback also loads newly appearing visuals and hides absent ones on every
+tick. Late SVG decoding drains the latest visibility state, so an obsolete
+attachment cannot remain visible or reappear while playback is paused.
+
+The reference sequence raises the bow before reaching for the string, follows
+with a cheek-height draw and a small backwards release, then lowers both arms.
+Optional IK `profileRootX` blends a generated profile shoulder to a stable pose
+position with the IK mix. Turning swaps visual depth without changing elbow
+geometry; authored rigs and clips without this field keep their original layout.
+
+Pose reference: the [World Archery Level 1 coaching manual](https://extranet.worldarchery.sport/documents/index.php/Coaches/Accreditation/Coaching_Levels/MANUAL_COACHING_LEVEL_1.pdf) describes
+the grip, drawing fingers and string elbow alignment at full draw.
+
+## Side-view geometry
 
 `data/chibiSideBody.ts` draws the generated profile body. Each part is authored
 in its bone's coordinates and its viewBox is its exact bounding box, so sex,

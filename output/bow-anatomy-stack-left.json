@@ -1,0 +1,1832 @@
+[
+  {
+    "timeMs": 0,
+    "visuals": [
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_l",
+        "zIndex": 0,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "upperArm",
+        "boneId": "shoulder_l",
+        "depthBoneId": "shoulder_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_l",
+        "zIndex": 1,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "forearm",
+        "boneId": "elbow_l",
+        "depthBoneId": "elbow_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow",
+        "zIndex": 2,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_hand_l",
+        "zIndex": 3,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_calf_l",
+        "zIndex": 4,
+        "slot": "BODY",
+        "boneId": "knee_l",
+        "depthBoneId": "knee_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_l",
+        "zIndex": 5,
+        "slot": "BODY",
+        "boneId": "hip_l",
+        "depthBoneId": "hip_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_l",
+        "zIndex": 6,
+        "slot": "BODY",
+        "boneId": "foot_l",
+        "depthBoneId": "foot_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_calf_r",
+        "zIndex": 7,
+        "slot": "BODY",
+        "boneId": "knee_r",
+        "depthBoneId": "knee_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_r",
+        "zIndex": 8,
+        "slot": "BODY",
+        "boneId": "hip_r",
+        "depthBoneId": "hip_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_r",
+        "zIndex": 9,
+        "slot": "BODY",
+        "boneId": "foot_r",
+        "depthBoneId": "foot_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_pelvis",
+        "zIndex": 10,
+        "slot": "BODY",
+        "boneId": "pelvis",
+        "depthBoneId": "pelvis",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__shirt_chest",
+        "zIndex": 11,
+        "slot": "BODY",
+        "boneId": "chest",
+        "depthBoneId": "chest",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow_string",
+        "zIndex": 12,
+        "slot": "CROSS_BODY",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_r",
+        "source": "binding",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_r",
+        "zIndex": 13,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "upperArm",
+        "boneId": "shoulder_r",
+        "depthBoneId": "shoulder_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_r",
+        "zIndex": 14,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "forearm",
+        "boneId": "elbow_r",
+        "depthBoneId": "elbow_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_neck",
+        "zIndex": 15,
+        "slot": "BODY_FRONT",
+        "boneId": "neck",
+        "depthBoneId": "neck",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_head",
+        "zIndex": 16,
+        "slot": "BODY_FRONT",
+        "boneId": "head",
+        "depthBoneId": "head",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_r",
+        "zIndex": 17,
+        "slot": "HAND_FRONT",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_r",
+        "depthBoneId": "hand_r",
+        "source": "default",
+        "occlusion": "none"
+      }
+    ]
+  },
+  {
+    "timeMs": 400,
+    "visuals": [
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_l",
+        "zIndex": 0,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "upperArm",
+        "boneId": "shoulder_l",
+        "depthBoneId": "shoulder_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_calf_l",
+        "zIndex": 1,
+        "slot": "BODY",
+        "boneId": "knee_l",
+        "depthBoneId": "knee_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_l",
+        "zIndex": 2,
+        "slot": "BODY",
+        "boneId": "hip_l",
+        "depthBoneId": "hip_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_l",
+        "zIndex": 3,
+        "slot": "BODY",
+        "boneId": "foot_l",
+        "depthBoneId": "foot_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_calf_r",
+        "zIndex": 4,
+        "slot": "BODY",
+        "boneId": "knee_r",
+        "depthBoneId": "knee_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_r",
+        "zIndex": 5,
+        "slot": "BODY",
+        "boneId": "hip_r",
+        "depthBoneId": "hip_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_r",
+        "zIndex": 6,
+        "slot": "BODY",
+        "boneId": "foot_r",
+        "depthBoneId": "foot_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_pelvis",
+        "zIndex": 7,
+        "slot": "BODY",
+        "boneId": "pelvis",
+        "depthBoneId": "pelvis",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__shirt_chest",
+        "zIndex": 8,
+        "slot": "BODY",
+        "boneId": "chest",
+        "depthBoneId": "chest",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow_string",
+        "zIndex": 9,
+        "slot": "CROSS_BODY",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_r",
+        "source": "binding",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_l",
+        "zIndex": 10,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "forearm",
+        "boneId": "elbow_l",
+        "depthBoneId": "elbow_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow",
+        "zIndex": 11,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_r",
+        "zIndex": 12,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "upperArm",
+        "boneId": "shoulder_r",
+        "depthBoneId": "shoulder_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_r",
+        "zIndex": 13,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "forearm",
+        "boneId": "elbow_r",
+        "depthBoneId": "elbow_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_neck",
+        "zIndex": 14,
+        "slot": "BODY_FRONT",
+        "boneId": "neck",
+        "depthBoneId": "neck",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_head",
+        "zIndex": 15,
+        "slot": "BODY_FRONT",
+        "boneId": "head",
+        "depthBoneId": "head",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_r",
+        "zIndex": 16,
+        "slot": "HAND_FRONT",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_r",
+        "depthBoneId": "hand_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_l",
+        "zIndex": 17,
+        "slot": "HAND_FRONT",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      }
+    ]
+  },
+  {
+    "timeMs": 640,
+    "visuals": [
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_l",
+        "zIndex": 0,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "upperArm",
+        "boneId": "shoulder_l",
+        "depthBoneId": "shoulder_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_calf_l",
+        "zIndex": 1,
+        "slot": "BODY",
+        "boneId": "knee_l",
+        "depthBoneId": "knee_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_l",
+        "zIndex": 2,
+        "slot": "BODY",
+        "boneId": "hip_l",
+        "depthBoneId": "hip_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_l",
+        "zIndex": 3,
+        "slot": "BODY",
+        "boneId": "foot_l",
+        "depthBoneId": "foot_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_calf_r",
+        "zIndex": 4,
+        "slot": "BODY",
+        "boneId": "knee_r",
+        "depthBoneId": "knee_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_r",
+        "zIndex": 5,
+        "slot": "BODY",
+        "boneId": "hip_r",
+        "depthBoneId": "hip_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_r",
+        "zIndex": 6,
+        "slot": "BODY",
+        "boneId": "foot_r",
+        "depthBoneId": "foot_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_pelvis",
+        "zIndex": 7,
+        "slot": "BODY",
+        "boneId": "pelvis",
+        "depthBoneId": "pelvis",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__shirt_chest",
+        "zIndex": 8,
+        "slot": "BODY",
+        "boneId": "chest",
+        "depthBoneId": "chest",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow_string",
+        "zIndex": 9,
+        "slot": "CROSS_BODY",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_r",
+        "source": "binding",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_l",
+        "zIndex": 10,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "forearm",
+        "boneId": "elbow_l",
+        "depthBoneId": "elbow_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow",
+        "zIndex": 11,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_r",
+        "zIndex": 12,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "upperArm",
+        "boneId": "shoulder_r",
+        "depthBoneId": "shoulder_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_r",
+        "zIndex": 13,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "forearm",
+        "boneId": "elbow_r",
+        "depthBoneId": "elbow_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_neck",
+        "zIndex": 14,
+        "slot": "BODY_FRONT",
+        "boneId": "neck",
+        "depthBoneId": "neck",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_head",
+        "zIndex": 15,
+        "slot": "BODY_FRONT",
+        "boneId": "head",
+        "depthBoneId": "head",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_r",
+        "zIndex": 16,
+        "slot": "HAND_FRONT",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_r",
+        "depthBoneId": "hand_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_l",
+        "zIndex": 17,
+        "slot": "HAND_FRONT",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      }
+    ]
+  },
+  {
+    "timeMs": 920,
+    "visuals": [
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_l",
+        "zIndex": 0,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "upperArm",
+        "boneId": "shoulder_l",
+        "depthBoneId": "shoulder_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_calf_l",
+        "zIndex": 1,
+        "slot": "BODY",
+        "boneId": "knee_l",
+        "depthBoneId": "knee_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_l",
+        "zIndex": 2,
+        "slot": "BODY",
+        "boneId": "hip_l",
+        "depthBoneId": "hip_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_l",
+        "zIndex": 3,
+        "slot": "BODY",
+        "boneId": "foot_l",
+        "depthBoneId": "foot_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_calf_r",
+        "zIndex": 4,
+        "slot": "BODY",
+        "boneId": "knee_r",
+        "depthBoneId": "knee_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_r",
+        "zIndex": 5,
+        "slot": "BODY",
+        "boneId": "hip_r",
+        "depthBoneId": "hip_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_r",
+        "zIndex": 6,
+        "slot": "BODY",
+        "boneId": "foot_r",
+        "depthBoneId": "foot_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_pelvis",
+        "zIndex": 7,
+        "slot": "BODY",
+        "boneId": "pelvis",
+        "depthBoneId": "pelvis",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__shirt_chest",
+        "zIndex": 8,
+        "slot": "BODY",
+        "boneId": "chest",
+        "depthBoneId": "chest",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow_string",
+        "zIndex": 9,
+        "slot": "CROSS_BODY",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_r",
+        "source": "binding",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_l",
+        "zIndex": 10,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "forearm",
+        "boneId": "elbow_l",
+        "depthBoneId": "elbow_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow",
+        "zIndex": 11,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_r",
+        "zIndex": 12,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "upperArm",
+        "boneId": "shoulder_r",
+        "depthBoneId": "shoulder_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_r",
+        "zIndex": 13,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "forearm",
+        "boneId": "elbow_r",
+        "depthBoneId": "elbow_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_neck",
+        "zIndex": 14,
+        "slot": "BODY_FRONT",
+        "boneId": "neck",
+        "depthBoneId": "neck",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_head",
+        "zIndex": 15,
+        "slot": "BODY_FRONT",
+        "boneId": "head",
+        "depthBoneId": "head",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_r",
+        "zIndex": 16,
+        "slot": "HAND_FRONT",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_r",
+        "depthBoneId": "hand_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_l",
+        "zIndex": 17,
+        "slot": "HAND_FRONT",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      }
+    ]
+  },
+  {
+    "timeMs": 1140,
+    "visuals": [
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_l",
+        "zIndex": 0,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "upperArm",
+        "boneId": "shoulder_l",
+        "depthBoneId": "shoulder_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_calf_l",
+        "zIndex": 1,
+        "slot": "BODY",
+        "boneId": "knee_l",
+        "depthBoneId": "knee_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_l",
+        "zIndex": 2,
+        "slot": "BODY",
+        "boneId": "hip_l",
+        "depthBoneId": "hip_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_l",
+        "zIndex": 3,
+        "slot": "BODY",
+        "boneId": "foot_l",
+        "depthBoneId": "foot_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_calf_r",
+        "zIndex": 4,
+        "slot": "BODY",
+        "boneId": "knee_r",
+        "depthBoneId": "knee_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_r",
+        "zIndex": 5,
+        "slot": "BODY",
+        "boneId": "hip_r",
+        "depthBoneId": "hip_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_r",
+        "zIndex": 6,
+        "slot": "BODY",
+        "boneId": "foot_r",
+        "depthBoneId": "foot_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_pelvis",
+        "zIndex": 7,
+        "slot": "BODY",
+        "boneId": "pelvis",
+        "depthBoneId": "pelvis",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__shirt_chest",
+        "zIndex": 8,
+        "slot": "BODY",
+        "boneId": "chest",
+        "depthBoneId": "chest",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow_string",
+        "zIndex": 9,
+        "slot": "CROSS_BODY",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_r",
+        "source": "binding",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_l",
+        "zIndex": 10,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "forearm",
+        "boneId": "elbow_l",
+        "depthBoneId": "elbow_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow",
+        "zIndex": 11,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_r",
+        "zIndex": 12,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "upperArm",
+        "boneId": "shoulder_r",
+        "depthBoneId": "shoulder_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_r",
+        "zIndex": 13,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "forearm",
+        "boneId": "elbow_r",
+        "depthBoneId": "elbow_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_neck",
+        "zIndex": 14,
+        "slot": "BODY_FRONT",
+        "boneId": "neck",
+        "depthBoneId": "neck",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_head",
+        "zIndex": 15,
+        "slot": "BODY_FRONT",
+        "boneId": "head",
+        "depthBoneId": "head",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_l",
+        "zIndex": 16,
+        "slot": "HAND_FRONT",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_r",
+        "zIndex": 17,
+        "slot": "HAND_FRONT",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_r",
+        "depthBoneId": "hand_r",
+        "source": "default",
+        "occlusion": "none"
+      }
+    ]
+  },
+  {
+    "timeMs": 1360,
+    "visuals": [
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_l",
+        "zIndex": 0,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "upperArm",
+        "boneId": "shoulder_l",
+        "depthBoneId": "shoulder_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_calf_l",
+        "zIndex": 1,
+        "slot": "BODY",
+        "boneId": "knee_l",
+        "depthBoneId": "knee_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_l",
+        "zIndex": 2,
+        "slot": "BODY",
+        "boneId": "hip_l",
+        "depthBoneId": "hip_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_l",
+        "zIndex": 3,
+        "slot": "BODY",
+        "boneId": "foot_l",
+        "depthBoneId": "foot_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_calf_r",
+        "zIndex": 4,
+        "slot": "BODY",
+        "boneId": "knee_r",
+        "depthBoneId": "knee_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_r",
+        "zIndex": 5,
+        "slot": "BODY",
+        "boneId": "hip_r",
+        "depthBoneId": "hip_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_r",
+        "zIndex": 6,
+        "slot": "BODY",
+        "boneId": "foot_r",
+        "depthBoneId": "foot_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_pelvis",
+        "zIndex": 7,
+        "slot": "BODY",
+        "boneId": "pelvis",
+        "depthBoneId": "pelvis",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__shirt_chest",
+        "zIndex": 8,
+        "slot": "BODY",
+        "boneId": "chest",
+        "depthBoneId": "chest",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow_string",
+        "zIndex": 9,
+        "slot": "CROSS_BODY",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_r",
+        "source": "binding",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_l",
+        "zIndex": 10,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "forearm",
+        "boneId": "elbow_l",
+        "depthBoneId": "elbow_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow",
+        "zIndex": 11,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_r",
+        "zIndex": 12,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "upperArm",
+        "boneId": "shoulder_r",
+        "depthBoneId": "shoulder_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_r",
+        "zIndex": 13,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "forearm",
+        "boneId": "elbow_r",
+        "depthBoneId": "elbow_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_neck",
+        "zIndex": 14,
+        "slot": "BODY_FRONT",
+        "boneId": "neck",
+        "depthBoneId": "neck",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_head",
+        "zIndex": 15,
+        "slot": "BODY_FRONT",
+        "boneId": "head",
+        "depthBoneId": "head",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_l",
+        "zIndex": 16,
+        "slot": "HAND_FRONT",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_r",
+        "zIndex": 17,
+        "slot": "HAND_FRONT",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_r",
+        "depthBoneId": "hand_r",
+        "source": "default",
+        "occlusion": "none"
+      }
+    ]
+  },
+  {
+    "timeMs": 1420,
+    "visuals": [
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_l",
+        "zIndex": 0,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "upperArm",
+        "boneId": "shoulder_l",
+        "depthBoneId": "shoulder_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_calf_l",
+        "zIndex": 1,
+        "slot": "BODY",
+        "boneId": "knee_l",
+        "depthBoneId": "knee_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_l",
+        "zIndex": 2,
+        "slot": "BODY",
+        "boneId": "hip_l",
+        "depthBoneId": "hip_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_l",
+        "zIndex": 3,
+        "slot": "BODY",
+        "boneId": "foot_l",
+        "depthBoneId": "foot_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_calf_r",
+        "zIndex": 4,
+        "slot": "BODY",
+        "boneId": "knee_r",
+        "depthBoneId": "knee_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_r",
+        "zIndex": 5,
+        "slot": "BODY",
+        "boneId": "hip_r",
+        "depthBoneId": "hip_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_r",
+        "zIndex": 6,
+        "slot": "BODY",
+        "boneId": "foot_r",
+        "depthBoneId": "foot_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_pelvis",
+        "zIndex": 7,
+        "slot": "BODY",
+        "boneId": "pelvis",
+        "depthBoneId": "pelvis",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__shirt_chest",
+        "zIndex": 8,
+        "slot": "BODY",
+        "boneId": "chest",
+        "depthBoneId": "chest",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow_string",
+        "zIndex": 9,
+        "slot": "CROSS_BODY",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_r",
+        "source": "binding",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_l",
+        "zIndex": 10,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "forearm",
+        "boneId": "elbow_l",
+        "depthBoneId": "elbow_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow",
+        "zIndex": 11,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_r",
+        "zIndex": 12,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "upperArm",
+        "boneId": "shoulder_r",
+        "depthBoneId": "shoulder_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_r",
+        "zIndex": 13,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "forearm",
+        "boneId": "elbow_r",
+        "depthBoneId": "elbow_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_neck",
+        "zIndex": 14,
+        "slot": "BODY_FRONT",
+        "boneId": "neck",
+        "depthBoneId": "neck",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_head",
+        "zIndex": 15,
+        "slot": "BODY_FRONT",
+        "boneId": "head",
+        "depthBoneId": "head",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_l",
+        "zIndex": 16,
+        "slot": "HAND_FRONT",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_r",
+        "zIndex": 17,
+        "slot": "HAND_FRONT",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_r",
+        "depthBoneId": "hand_r",
+        "source": "default",
+        "occlusion": "none"
+      }
+    ]
+  },
+  {
+    "timeMs": 1640,
+    "visuals": [
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_l",
+        "zIndex": 0,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "upperArm",
+        "boneId": "shoulder_l",
+        "depthBoneId": "shoulder_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_calf_l",
+        "zIndex": 1,
+        "slot": "BODY",
+        "boneId": "knee_l",
+        "depthBoneId": "knee_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_l",
+        "zIndex": 2,
+        "slot": "BODY",
+        "boneId": "hip_l",
+        "depthBoneId": "hip_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_l",
+        "zIndex": 3,
+        "slot": "BODY",
+        "boneId": "foot_l",
+        "depthBoneId": "foot_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_calf_r",
+        "zIndex": 4,
+        "slot": "BODY",
+        "boneId": "knee_r",
+        "depthBoneId": "knee_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_r",
+        "zIndex": 5,
+        "slot": "BODY",
+        "boneId": "hip_r",
+        "depthBoneId": "hip_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_r",
+        "zIndex": 6,
+        "slot": "BODY",
+        "boneId": "foot_r",
+        "depthBoneId": "foot_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_pelvis",
+        "zIndex": 7,
+        "slot": "BODY",
+        "boneId": "pelvis",
+        "depthBoneId": "pelvis",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__shirt_chest",
+        "zIndex": 8,
+        "slot": "BODY",
+        "boneId": "chest",
+        "depthBoneId": "chest",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow_string",
+        "zIndex": 9,
+        "slot": "CROSS_BODY",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_r",
+        "source": "binding",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_l",
+        "zIndex": 10,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "forearm",
+        "boneId": "elbow_l",
+        "depthBoneId": "elbow_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow",
+        "zIndex": 11,
+        "slot": "CROSS_BODY",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_r",
+        "zIndex": 12,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "upperArm",
+        "boneId": "shoulder_r",
+        "depthBoneId": "shoulder_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_r",
+        "zIndex": 13,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "forearm",
+        "boneId": "elbow_r",
+        "depthBoneId": "elbow_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_neck",
+        "zIndex": 14,
+        "slot": "BODY_FRONT",
+        "boneId": "neck",
+        "depthBoneId": "neck",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_head",
+        "zIndex": 15,
+        "slot": "BODY_FRONT",
+        "boneId": "head",
+        "depthBoneId": "head",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_r",
+        "zIndex": 16,
+        "slot": "HAND_FRONT",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_r",
+        "depthBoneId": "hand_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_l",
+        "zIndex": 17,
+        "slot": "HAND_FRONT",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "clip",
+        "occlusion": "none"
+      }
+    ]
+  },
+  {
+    "timeMs": 1940,
+    "visuals": [
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_l",
+        "zIndex": 0,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "upperArm",
+        "boneId": "shoulder_l",
+        "depthBoneId": "shoulder_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_l",
+        "zIndex": 1,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "forearm",
+        "boneId": "elbow_l",
+        "depthBoneId": "elbow_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow",
+        "zIndex": 2,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_hand_l",
+        "zIndex": 3,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_calf_l",
+        "zIndex": 4,
+        "slot": "BODY",
+        "boneId": "knee_l",
+        "depthBoneId": "knee_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_l",
+        "zIndex": 5,
+        "slot": "BODY",
+        "boneId": "hip_l",
+        "depthBoneId": "hip_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_l",
+        "zIndex": 6,
+        "slot": "BODY",
+        "boneId": "foot_l",
+        "depthBoneId": "foot_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_calf_r",
+        "zIndex": 7,
+        "slot": "BODY",
+        "boneId": "knee_r",
+        "depthBoneId": "knee_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_r",
+        "zIndex": 8,
+        "slot": "BODY",
+        "boneId": "hip_r",
+        "depthBoneId": "hip_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_r",
+        "zIndex": 9,
+        "slot": "BODY",
+        "boneId": "foot_r",
+        "depthBoneId": "foot_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_pelvis",
+        "zIndex": 10,
+        "slot": "BODY",
+        "boneId": "pelvis",
+        "depthBoneId": "pelvis",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__shirt_chest",
+        "zIndex": 11,
+        "slot": "BODY",
+        "boneId": "chest",
+        "depthBoneId": "chest",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow_string",
+        "zIndex": 12,
+        "slot": "CROSS_BODY",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_r",
+        "source": "binding",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_r",
+        "zIndex": 13,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "upperArm",
+        "boneId": "shoulder_r",
+        "depthBoneId": "shoulder_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_r",
+        "zIndex": 14,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "forearm",
+        "boneId": "elbow_r",
+        "depthBoneId": "elbow_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_neck",
+        "zIndex": 15,
+        "slot": "BODY_FRONT",
+        "boneId": "neck",
+        "depthBoneId": "neck",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_head",
+        "zIndex": 16,
+        "slot": "BODY_FRONT",
+        "boneId": "head",
+        "depthBoneId": "head",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_r",
+        "zIndex": 17,
+        "slot": "HAND_FRONT",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_r",
+        "depthBoneId": "hand_r",
+        "source": "default",
+        "occlusion": "none"
+      }
+    ]
+  },
+  {
+    "timeMs": 2000,
+    "visuals": [
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_l",
+        "zIndex": 0,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "upperArm",
+        "boneId": "shoulder_l",
+        "depthBoneId": "shoulder_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_l",
+        "zIndex": 1,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "forearm",
+        "boneId": "elbow_l",
+        "depthBoneId": "elbow_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow",
+        "zIndex": 2,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_hand_l",
+        "zIndex": 3,
+        "slot": "FAR_LIMB",
+        "role": "far",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_l",
+        "source": "default",
+        "occlusion": "behindBody"
+      },
+      {
+        "id": "part__hero_calf_l",
+        "zIndex": 4,
+        "slot": "BODY",
+        "boneId": "knee_l",
+        "depthBoneId": "knee_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_l",
+        "zIndex": 5,
+        "slot": "BODY",
+        "boneId": "hip_l",
+        "depthBoneId": "hip_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_l",
+        "zIndex": 6,
+        "slot": "BODY",
+        "boneId": "foot_l",
+        "depthBoneId": "foot_l",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_calf_r",
+        "zIndex": 7,
+        "slot": "BODY",
+        "boneId": "knee_r",
+        "depthBoneId": "knee_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_thigh_r",
+        "zIndex": 8,
+        "slot": "BODY",
+        "boneId": "hip_r",
+        "depthBoneId": "hip_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_foot_r",
+        "zIndex": 9,
+        "slot": "BODY",
+        "boneId": "foot_r",
+        "depthBoneId": "foot_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_pelvis",
+        "zIndex": 10,
+        "slot": "BODY",
+        "boneId": "pelvis",
+        "depthBoneId": "pelvis",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__shirt_chest",
+        "zIndex": 11,
+        "slot": "BODY",
+        "boneId": "chest",
+        "depthBoneId": "chest",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_weapon_main__bow_25d__bow_string",
+        "zIndex": 12,
+        "slot": "CROSS_BODY",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_l",
+        "depthBoneId": "hand_r",
+        "source": "binding",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_upper_r",
+        "zIndex": 13,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "upperArm",
+        "boneId": "shoulder_r",
+        "depthBoneId": "shoulder_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "slot__side_slot_torso__trader_tunic_25d__sleeve_lower_r",
+        "zIndex": 14,
+        "slot": "NEAR_LIMB",
+        "role": "near",
+        "segment": "forearm",
+        "boneId": "elbow_r",
+        "depthBoneId": "elbow_r",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_neck",
+        "zIndex": 15,
+        "slot": "BODY_FRONT",
+        "boneId": "neck",
+        "depthBoneId": "neck",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_head",
+        "zIndex": 16,
+        "slot": "BODY_FRONT",
+        "boneId": "head",
+        "depthBoneId": "head",
+        "source": "default",
+        "occlusion": "none"
+      },
+      {
+        "id": "part__hero_hand_r",
+        "zIndex": 17,
+        "slot": "HAND_FRONT",
+        "role": "near",
+        "segment": "hand",
+        "boneId": "hand_r",
+        "depthBoneId": "hand_r",
+        "source": "default",
+        "occlusion": "none"
+      }
+    ]
+  }
+]

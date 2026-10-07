@@ -186,8 +186,11 @@ export interface EntityVisual {
  * legacy_full_frame: the part uses a viewBox-sized full-frame overlay (v1.x compat).
  */
 export interface ItemPart {
+  /** Depth owner can differ from the bone that physically carries the attachment. */
+  depthBinding?: { boneId: string; nearSlot: DepthSlot; farSlot: DepthSlot };
   mesh?: SkinMesh;
   dynamicLine?: {
+    kind?: "string" | "arrow";
     pathId: string; targetBoneId: string; clipId: string;
     start: {x:number;y:number}; end: {x:number;y:number};
     attachMs: number; releaseMs: number; settleMs: number;
@@ -421,6 +424,8 @@ export interface EvaluatedVisual {
   partId?:         string;
   entityVisualId?: string;
   boneId?:         string;
+  renderDepth?: { slot: DepthSlot; role?: "near" | "far"; segment?: "upperArm" | "forearm" | "hand";
+    boneId?: string; depthBoneId?: string; source: "default" | "clip" | "binding"; occlusion: "behindBody" | "none" };
 }
 
 // ── Canvas editor types (M1-E3B) ──────────────────────────────────────────────
@@ -526,8 +531,11 @@ export interface BonePart {
   zOffset:       number;
   /** Named alternative drawings for this bone's slot, selected by AnimationClip.attachments. */
   attachments?:  Record<string, string>;
+  /** Each replacement hand drawing can have its own bone-local palm socket. */
+  attachmentGrips?: Record<string, { x: number; y: number; rotation?: number }>;
   /** Point attachment in bone coordinates where held items and strings are gripped (palm centre). */
   grip?:         { x: number; y: number };
+  gripSocket?:   { x: number; y: number; rotation?: number };
 }
 
 export interface TemplateView {
@@ -638,6 +646,7 @@ export interface Keyframe {
 
 export interface KeyframeTrack {
   boneId: string;
+  rotationMode?: "shortest" | "unwrapped";
   keyframes: Keyframe[];
 }
 
@@ -647,8 +656,12 @@ export interface AnimationLayer {
 }
 
 export type BoneInherit = "normal" | "noScale";
+export type DepthSlot = "FAR_BACK" | "FAR_LIMB" | "BODY_BACK" | "BODY" | "CROSS_BODY" | "BODY_FRONT" | "NEAR_LIMB" | "HAND_FRONT" | "EQUIPMENT_FRONT";
+export type LimbDepthState = Partial<Record<"nearUpperArm" | "nearForearm" | "nearHand" | "farUpperArm" | "farForearm" | "farHand", DepthSlot>>;
 
 export interface AnimationClip {
+  /** Stepped semantic segment states; each key overrides side-view defaults, never lerps depth. */
+  limbDepth?: { timeMs: number; facing?: "left" | "right"; state: LimbDepthState }[];
   /**
    * Stepped draw-order keys. `raise` moves only the listed bones (with the garments and
    * held items bound to them) above another bone; everything else keeps setup depth.
@@ -663,10 +676,22 @@ export interface AnimationClip {
    * Two-bone IK constraints solved at runtime (Spine IkConstraint). `bones` is
    * [chain root, child, effector]; targets are skeleton-space positions for the
    * effector, `rotation` its angle relative to the chain root's parent, `mix` the
-   * blend over the FK keys. `bend` picks the elbow side; `stretch` allows reaching further.
+   * blend over the FK keys. `bend` picks the elbow side. Named arm chains never stretch;
+   * non-arm legacy chains can still opt into `stretch`. With a grip socket, targets
+   * address the palm; without it they address the wrist (legacy compatibility).
    */
   ik?: { bones: [string, string, string]; bend: 1 | -1; stretch?: boolean;
-    keyframes: { timeMs: number; x: number; y: number; rotation?: number; mix: number }[] }[];
+    /** Arm chains keep rig lengths. Other two-bone chains can opt in explicitly. */
+    fixedLength?: boolean;
+    pole?: { x: number; y: number };
+    gripSocket?: { x: number; y: number; rotation?: number };
+    target?: { objectId: string; socketId: string };
+    /** Stable chain-root X for generated profile projection; blended by IK mix, ignored by authored rigs. */
+    profileRootX?: number;
+    keyframes: { timeMs: number; x: number; y: number; rotation?: number; mix: number; bend?: 1 | -1; easing?: "linear" | "smooth" }[] }[];
+  /** Virtual object poses survive export without equipping a weapon. Multiple hands share one pose. */
+  gripObjects?: { id: string; sockets: Record<string, { x: number; y: number; rotation?: number }>;
+    keyframes: { timeMs: number; x: number; y: number; rotation: number }[] }[];
   /** Per-bone scale inheritance while this clip plays. noScale keeps the parent's rotation and position only. */
   inherit?: Record<string, BoneInherit>;
   id: string;

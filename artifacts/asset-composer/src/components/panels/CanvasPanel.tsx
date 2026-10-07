@@ -11,6 +11,7 @@ import { computeSceneBounds, fitSceneToViewport } from "@/lib/sceneUtils";
 import { animController } from "@/core-v2/AnimationController";
 import { entityVisualRevision } from "@/lib/entityVisualRevision";
 import { Button } from "@/components/ui/button";
+import { SkeletonDebugOverlay } from "./SkeletonDebugOverlay";
 import { ZoomIn, ZoomOut, Maximize2, MousePointer2, Move, LayoutGrid } from "lucide-react";
 import type { BodyMorphRegionId, CanvasMode, FaceAuthoringTool, FaceFeatureKey } from "@/domain/types";
 
@@ -994,6 +995,7 @@ export function CanvasPanel() {
     >
       {/* Canvas — no CSS transform; Fabric viewport handles zoom/pan */}
       <canvas ref={canvasRef} className="absolute inset-0" />
+      <SkeletonDebugOverlay viewport={vp} />
 
       <div className="absolute top-3 left-3 z-10 flex items-center gap-1 rounded-lg border border-border bg-card/85 p-1 backdrop-blur">
         {MODE_BUTTONS.map(({ mode, label, title, icon: Icon }) => {
