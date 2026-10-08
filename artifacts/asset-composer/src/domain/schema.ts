@@ -2,6 +2,21 @@ import { z } from "zod";
 
 // ── Primitives ────────────────────────────────────────────────────────────────
 
+const VisualContentSchema: z.ZodType<import("./types").VisualContent> = z.lazy(() => z.union([
+  z.object({kind:z.literal("vector"),svgData:z.string()}),
+  z.object({kind:z.literal("raster"),assetId:z.string()}),
+  z.object({kind:z.literal("document"),documentId:z.string(),nodeId:z.string().optional()}),
+  z.object({kind:z.literal("composite"),width:z.number().positive(),height:z.number().positive(),children:z.array(z.object({content:VisualContentSchema,matrix:z.tuple([z.number(),z.number(),z.number(),z.number(),z.number(),z.number()]),opacity:z.number().min(0).max(1)}))})
+]));
+const VisualMeshSchema = z.object({
+  vertices:z.array(z.object({x:z.number().finite(),y:z.number().finite(),u:z.number().finite(),v:z.number().finite(),weights:z.array(z.object({boneId:z.string(),weight:z.number().finite().nonnegative()})).min(1)})).min(3),
+  triangles:z.array(z.number().int().nonnegative()),bindMatrices:z.record(z.string(),z.tuple([z.number(),z.number(),z.number(),z.number(),z.number(),z.number()])),
+  manualMesh:z.boolean().optional(),manualWeights:z.boolean().optional(),quality:z.enum(["low","medium","high"])
+}).superRefine((m,c)=>{if(m.triangles.length%3 || m.triangles.some(i=>i>=m.vertices.length) || m.vertices.some(v=>v.weights.reduce((a,w)=>a+w.weight,0)<1e-8 || v.weights.some(w=>!m.bindMatrices[w.boneId])))c.addIssue({code:z.ZodIssueCode.custom,message:"Invalid visual mesh"});});
+const RigBindingSchema = z.discriminatedUnion("mode",[
+  z.object({setupMatrix:z.tuple([z.number(),z.number(),z.number(),z.number(),z.number(),z.number()]).optional(),mode:z.literal("rigid"),boneId:z.string(),bindMatrix:z.tuple([z.number(),z.number(),z.number(),z.number(),z.number(),z.number()])}),
+  z.object({setupMatrix:z.tuple([z.number(),z.number(),z.number(),z.number(),z.number(),z.number()]).optional(),mode:z.literal("weighted"),boneId:z.string(),bindMatrix:z.tuple([z.number(),z.number(),z.number(),z.number(),z.number(),z.number()]),mesh:VisualMeshSchema})
+]);
 const BoneTransformSchema = z.object({
   tx: z.number(),
   ty: z.number(),
@@ -60,14 +75,15 @@ const EntityVisualSchema = z.object({
   id:             z.string(),
   bodyPartId:     z.string().optional(),
   bodyView: z.enum(["front", "side"]).optional(),
-  svgData:        z.string(),
+  svgData:        z.string().optional(),
+  content: VisualContentSchema.optional(),
   boneId:         z.string(),
   metrics:        VectorAssetMetricsSchema,
   pivot:          PivotSchema,
   localTransform: LocalTransformSchema,
   zIndex:         z.number(),
   source: z.object({
-    format: z.enum(["svg", "png"]),
+    format: z.enum(["svg", "png", "webp", "jpeg"]),
     name: z.string(),
     originalFileName: z.string(),
     mimeType: z.string(),
@@ -122,19 +138,21 @@ const SkinMeshSchema = z.object({
 const DepthSlotSchema = z.enum(["FAR_BACK","FAR_LIMB","BODY_BACK","BODY","CROSS_BODY","BODY_FRONT","NEAR_LIMB","HAND_FRONT","EQUIPMENT_FRONT"]);
 
 const ItemPartSchema = z.object({
+  occludedByBones: z.array(z.string().min(1)).optional(),
   depthBinding: z.object({boneId:z.string(),nearSlot:DepthSlotSchema,farSlot:DepthSlotSchema}).optional(),
   mesh: SkinMeshSchema.optional(),
   dynamicLine:z.object({kind:z.enum(["string","arrow"]).optional(),pathId:z.string(),targetBoneId:z.string(),clipId:z.string(),start:z.object({x:z.number().finite(),y:z.number().finite()}),end:z.object({x:z.number().finite(),y:z.number().finite()}),attachMs:z.number().finite().nonnegative(),releaseMs:z.number().finite().nonnegative(),settleMs:z.number().finite().positive()}).optional(),
   id:             z.string(),
   boneId:         z.string(),
-  svgData:        z.string(),
+  svgData:        z.string().optional(),
+  content: VisualContentSchema.optional(),
   metrics:        VectorAssetMetricsSchema,
   pivot:          PivotSchema,
   localTransform: LocalTransformSchema,
   coordinateMode: CoordinateModeSchema,
   zOffset:        z.number(),
   source: z.object({
-    format: z.enum(["svg", "png"]),
+    format: z.enum(["svg", "png", "webp", "jpeg"]),
     name: z.string(),
     originalFileName: z.string(),
     mimeType: z.string(),
@@ -193,6 +211,12 @@ const FaceFeatureTransformSchema = z.object({
 });
 
 const FaceFeatureConfigSchema = z.object({
+  content: VisualContentSchema.optional(),
+  artworkBounds: z.object({minX:z.number().finite(),minY:z.number().finite(),maxX:z.number().finite(),maxY:z.number().finite()}).optional(),
+  eyeOpenness: z.number().min(0).max(1).optional(),
+  mouthOpenness: z.number().min(0).max(1).optional(),
+  mouthMotion: z.object({enabled:z.boolean(),periodMs:z.number().min(200).max(3000)}).optional(),
+  blink: z.object({enabled:z.boolean(),intervalMs:z.number().min(600).max(10000),durationMs:z.number().min(80).max(500)}).optional(),
   presetId: z.string().default("none"),
   color: z.string().default("#000000"),
   visible: z.boolean().default(false),
@@ -208,13 +232,14 @@ const FaceOverlaySchema = z.object({
   overlayRole: FaceOverlayRoleSchema.optional(),
   symmetryMode: SpriteEditorSymmetryModeSchema.optional().default("none"),
   paintTarget: SpriteEditorPaintTargetSchema.optional().default("both"),
-  svgData: z.string(),
+  svgData: z.string().optional(),
+  content: VisualContentSchema.optional(),
   zOffset: z.number(),
   pivot: PivotSchema,
   metrics: VectorAssetMetricsSchema,
   localTransform: LocalTransformSchema,
   source: z.object({
-    format: z.enum(["svg", "png"]),
+    format: z.enum(["svg", "png", "webp", "jpeg"]),
     name: z.string(),
     originalFileName: z.string(),
     mimeType: z.string(),
@@ -277,13 +302,14 @@ const FaceAuthoringStateSchema = z.object({
 const BonePartSchema = z.object({
   id:            z.string(),
   boneId:        z.string(),
-  svgData:       z.string(),
+  svgData:       z.string().optional(),
+  content: VisualContentSchema.optional(),
   naturalWidth:  z.number(),
   naturalHeight: z.number(),
   localX:        z.number(),
   localY:        z.number(),
   zOffset:       z.number(),
-  attachments:   z.record(z.string(), z.string()).optional(),
+  attachments:   z.record(z.string(), z.union([z.string(), VisualContentSchema])).optional(),
   attachmentGrips: z.record(z.string(), z.object({x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional()})).optional(),
   grip:          z.object({ x: z.number().finite(), y: z.number().finite() }).optional(),
   gripSocket: z.object({x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional()}).optional(),
@@ -348,7 +374,8 @@ export const EntitySchema = z.object({
     slimness: z.number().min(0).max(1),
     muscle: z.number().min(0).max(1),
     fat: z.number().min(0).max(1),
-    nose: z.enum(["none", "button", "small", "straight", "pointed", "rounded", "broad", "upturned", "aquiline"]),
+    nose: z.enum(["none", "button", "small", "straight", "pointed", "rounded", "broad", "upturned", "aquiline", "soft_round", "delicate_bridge", "roman", "flat_wide", "heart_tip", "long_bridge", "painted_nose"]),
+    noseArtwork: z.object({content:VisualContentSchema,bounds:z.object({minX:z.number().finite(),minY:z.number().finite(),maxX:z.number().finite(),maxY:z.number().finite()})}).optional(),
     freckles: z.boolean(),
     freckleStyle: z.enum(["light", "nose", "dense", "full"]).optional(),
     freckleIntensity: z.number().min(0).max(1).optional(),
@@ -385,7 +412,8 @@ export const EntitySchema = z.object({
 const SvgLayerSchema = z.object({
   id: z.string(),
   styleSetId: z.string().nullable(),
-  svgData: z.string(),
+  svgData: z.string().optional(),
+  content: VisualContentSchema.optional(),
   paletteChannels: z.array(z.string()),
   zOffset: z.number(),
 });
@@ -474,6 +502,12 @@ const AnimationLayerSchema = z.object({
 });
 
 const AnimationClipSchema = z.object({
+  equipmentDepth: z.array(z.object({
+    slotId: z.string().min(1), partId: z.string().min(1).optional(),
+    keyframes: z.array(z.object({timeMs: z.number().finite().nonnegative(), facing: z.enum(["left", "right"]).optional(), slot: DepthSlotSchema.nullable(), occludedByBones: z.array(z.string().min(1)).optional()})),
+  })).optional(),
+  templateId:z.string().optional(),
+  reviewMarkers: z.array(z.object({ label: z.string().trim().min(1), timeMs: z.number().finite().nonnegative() })).optional(),
   headOverlap:z.array(z.object({startMs:z.number().finite().nonnegative(),endMs:z.number().finite().nonnegative(),bones:z.array(z.string()).min(1),reason:z.string().trim().min(1)}).refine(p=>p.endMs>p.startMs,"Head-overlap phase must have a positive duration")).optional(),
   limbDepth:z.array(z.object({timeMs:z.number().finite().nonnegative(),facing:z.enum(["left","right"]).optional(),state:z.object({
     nearUpperArm:DepthSlotSchema.optional(),nearForearm:DepthSlotSchema.optional(),nearHand:DepthSlotSchema.optional(),
@@ -557,6 +591,7 @@ const SlotEditorStateSchema = z.object({
 const ProjectEditorMetaSchema = z.object({
   slotEditorByTemplateId: z.record(SlotEditorStateSchema).default({}),
   spriteEditorDocuments: z.array(z.object({
+    studioArtwork:z.boolean().optional(),studioEntityId:z.string().optional(),sampling:z.enum(["smooth","pixel"]).optional(),
     id: z.string(),
     name: z.string(),
     width: z.number(),
@@ -568,14 +603,14 @@ const ProjectEditorMetaSchema = z.object({
       offHandGrip: z.object({ x: z.number(), y: z.number() }).optional(),
     }).optional(),
     referenceAsset: z.object({
-      format: z.enum(["svg", "png"]),
+      format: z.enum(["svg", "png", "webp", "jpeg"]),
       name: z.string(),
       originalFileName: z.string(),
       mimeType: z.string(),
       dataUri: z.string().optional(),
     }).nullable().optional(),
     tracingAsset: z.object({
-      format: z.enum(["svg", "png"]),
+      format: z.enum(["svg", "png", "webp", "jpeg"]),
       name: z.string(),
       originalFileName: z.string(),
       mimeType: z.string(),
@@ -593,6 +628,10 @@ const ProjectEditorMetaSchema = z.object({
       locked: z.boolean().optional(),
       opacity: z.number().min(0).max(1).optional(),
       zIndex: z.number(),
+      anatomicalOwner:z.string().optional(),depthBinding:z.object({boneId:z.string(),nearSlot:DepthSlotSchema,farSlot:DepthSlotSchema}).optional(),
+      kind:z.enum(["vector","raster","group"]).optional(),parentId:z.string().nullable().optional(),
+      assetId:z.string().optional(),transform:LocalTransformSchema.optional(),binding:RigBindingSchema.optional(),
+      sourceSvg:z.string().optional(),savedMesh:VisualMeshSchema.optional(),sampling:z.enum(["smooth","pixel"]).optional(),
       shapes: z.array(z.object({
         id: z.string(),
         type: z.enum(["rect", "ellipse", "path"]),
@@ -650,6 +689,7 @@ const ItemFitProfileSchema = z.object({
 // ── Project schema v2.0 ───────────────────────────────────────────────────────
 
 export const ProjectSchema = z.object({
+  assets:z.record(z.string(),z.object({id:z.string(),name:z.string(),mimeType:z.enum(["image/png","image/webp","image/jpeg"]),width:z.number().positive(),height:z.number().positive(),dataUri:z.string().startsWith("data:image/")})).default({}),
   id: z.string(),
   version: z.string(),
   name: z.string(),

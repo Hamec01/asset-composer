@@ -1,3 +1,4 @@
+import { vectorSource } from "@/lib/visualContent";
 import type { BonePart, CharacterAppearance, PaletteTokens } from "@/domain/types";
 import { archeryHandSvg } from "./archeryArt";
 
@@ -116,7 +117,7 @@ export function createChibiSideBody(palette: PaletteTokens, build: number, a: Ch
       s => backShade(15, 4.3 * sk, s.shade) + (m > .3 ? line(`M${f2(1.2 * sk)} ${f2(9.5)} Q${f2(3.4 * sk + m)} ${f2(10.5)} ${f2(3.9 * sk + m)} 8`, s.shade, .6, m) : ""));
     const shootingUpper = render(upperPart.id, upperPart.boneId, upperPart.zOffset,
       limb(15, 4.2*sk, 3.4*sk, t => bump(t,.45,.3,.5*sk), () => 0), style);
-    upperPart.attachments = { archery_arm: shootingUpper.svgData.replace(/viewBox="[^"]+"/, upperPart.svgData.match(/viewBox="[^"]+"/)![0]) };
+    upperPart.attachments = { archery_arm: vectorSource(shootingUpper).replace(/viewBox="[^"]+"/, vectorSource(upperPart).match(/viewBox="[^"]+"/)![0]) };
     parts.push(upperPart);
 
     // Forearm: proximal cap smaller than the elbow cap; muscle mass near the elbow.
@@ -126,7 +127,7 @@ export function createChibiSideBody(palette: PaletteTokens, build: number, a: Ch
     const forePart = render(`hero_arm_${side}_lower`, `elbow_${side}`, -860, fore, style, s => backShade(13, 3.6 * sk, s.shade));
     const shootingFore = render(forePart.id, forePart.boneId, forePart.zOffset,
       limb(13, 3.1*sk, 2.7*sk, t => bump(t,.25,.3,.3*sk), () => 0), style);
-    forePart.attachments = { archery_forearm: shootingFore.svgData.replace(/viewBox="[^"]+"/, forePart.svgData.match(/viewBox="[^"]+"/)![0]) };
+    forePart.attachments = { archery_forearm: vectorSource(shootingFore).replace(/viewBox="[^"]+"/, vectorSource(forePart).match(/viewBox="[^"]+"/)![0]) };
     parts.push(forePart);
 
     // Fist: knuckles forward, thumb over the top, finger creases on the front.
@@ -141,7 +142,7 @@ export function createChibiSideBody(palette: PaletteTokens, build: number, a: Ch
       line([3, 5, 7].map(y => `M${f2(1.2 * hs)} ${f2(y * hs)} L${f2(6.1 * hs)} ${f2((y + .3) * hs)}`).join(" "), s.outline, .55)
       + line(`M${f2(-1.2 * hs)} ${f2(1.4 * hs)} Q${f2(2.8 * hs)} ${f2(.4 * hs)} ${f2(5.2 * hs)} ${f2(2.2 * hs)}`, s.outline, .6)
       + line(`M${f2(-3.6 * hs)} ${f2(2 * hs)} L${f2(-3.6 * hs)} ${f2(8 * hs)}`, s.shade, 2.2, .45));
-    hand.attachments = { grip: grip.svgData };
+    hand.attachments = { grip: vectorSource(grip) };
     hand.attachmentGrips={};
     // Centre the invisible handle socket so body morphs cannot change grip spacing.
     hand.attachments.two_hand_grip = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${6-7*hs} ${-7*hs} ${14*hs} ${14*hs}"><g transform="translate(${6-5*hs} 0)">${archeryHandSvg("bow_grip", palette.skin, palette.outline, hs).replace(/<svg[^>]*>|<\/svg>/g, "")}</g></svg>`;

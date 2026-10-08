@@ -494,8 +494,9 @@ describe("project session persistence", () => {
     const doc = restored?.editorMeta?.spriteEditorDocuments?.[0];
 
     expect(doc?.id).toBe("doc-1");
-    expect(doc?.layers[0]?.shapes[0]?.width).toBe(30);
-    expect(doc?.referenceAsset?.format).toBe("png");
+    expect(doc?.layers.find(layer=>layer.kind==="vector")?.shapes[0]?.width).toBe(30);
+    expect(doc?.referenceAsset).toBeNull();
+    expect(doc?.layers.find(layer=>layer.kind==="raster")?.assetId).toBeTruthy();
     expect(doc?.authoringHint?.bodyMorphPresetId).toBe("heroic");
     expect(doc?.authoringHint?.symmetryMode).toBe("mirror_x");
     expect(doc?.authoringHint?.paintTarget).toBe("both");

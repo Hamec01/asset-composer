@@ -1,3 +1,5 @@
+import { compactProjectAssets } from "./projectAssets";
+import { databaseReady,databaseEntries,databaseLast,saveDatabaseSession,clearSessionDatabase,initializeSessionDatabase } from "./sessionDatabase";
 import { parseProjectSnapshot } from "@/lib/projectValidation";
 import type { AttachmentOverride, Item, Project, Template } from "@/domain/types";
 import {
@@ -13,6 +15,7 @@ const MAX_RECENT_PROJECTS = 6;
 const MAX_DEBUG_EVENTS = 120;
 
 export function clearProjectSessions() {
+  void clearSessionDatabase().catch(reportPersistenceError);
   if (typeof window === "undefined") return;
   for (const key of [LAST_PROJECT_KEY, LAST_PROJECT_KEY_LEGACY, RECENT_PROJECTS_KEY, SESSION_DEBUG_KEY]) {
     window.localStorage.removeItem(key);
@@ -212,6 +215,7 @@ function normalizeSessionSnapshot(snapshot: unknown, source: string): Project | 
 }
 
 function persistNormalizedLastSnapshot(project: Project) {
+  if(databaseReady()){void saveDatabaseSession(project).catch(reportPersistenceError);return;}
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(LAST_PROJECT_KEY, JSON.stringify(project));
@@ -221,6 +225,7 @@ function persistNormalizedLastSnapshot(project: Project) {
 }
 
 function loadRecentProjectEntries(): ProjectSessionEntry[] {
+  if(databaseReady())return databaseEntries();
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(RECENT_PROJECTS_KEY);
@@ -250,6 +255,7 @@ function loadRecentProjectEntries(): ProjectSessionEntry[] {
 }
 
 function saveRecentProjectEntries(entries: ProjectSessionEntry[]): void {
+  if(databaseReady())return;
   if (typeof window === "undefined") return;
   window.localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(entries.slice(0, MAX_RECENT_PROJECTS)));
 }
@@ -290,6 +296,7 @@ export function getRecentProjectFolderPath(projectId: string): string | null {
 }
 
 export function loadLastProjectSnapshot(): unknown | null {
+  if(databaseReady())return databaseLast();
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(LAST_PROJECT_KEY) ?? window.localStorage.getItem(LAST_PROJECT_KEY_LEGACY);
@@ -310,6 +317,11 @@ export function getLastProjectSnapshotName(): string | null {
 }
 
 export function saveLastProjectSnapshot(project: unknown, folderPath?: string): boolean {
+  if(databaseReady()){
+    const normalized=normalizeSessionSnapshot(compactProjectAssets(project as Project),"database-save");
+    if(!normalized)return false;
+    void saveDatabaseSession(normalized,folderPath).catch(reportPersistenceError);return true;
+  }
   if (typeof window === "undefined") return false;
   const result = normalizeSessionSnapshot(project, "save-last-project");
   if (!result) {
@@ -362,4 +374,25 @@ export function restoreLastProjectSnapshot(): unknown | null {
     persistNormalizedLastSnapshot(normalized);
   }
   return normalized;
+}
+
+function reportPersistenceError(error:unknown) {
+  window.dispatchEvent(new CustomEvent("project-save-error",{detail:error instanceof Error?error.message:String(error)}));
+}
+export async function initializeProjectSessions(){
+  try{
+    const legacyLast=loadLastProjectSnapshot(),legacyEntries=loadRecentProjectEntries();
+    await initializeSessionDatabase();
+    if(!databaseReady())return;
+    for(const entry of legacyEntries){
+      if(databaseEntries().some(e=>e.id===entry.id))continue;
+      const normalized=normalizeSessionSnapshot(entry.snapshot,"database-import");
+      if(normalized)await saveDatabaseSession(normalized,entry.folderPath);
+    }
+    if(legacyLast && !databaseLast()){
+      const normalized=normalizeSessionSnapshot(legacyLast,"database-import-last");
+      if(normalized)await saveDatabaseSession(normalized);
+    }
+    for(const key of [LAST_PROJECT_KEY,LAST_PROJECT_KEY_LEGACY,RECENT_PROJECTS_KEY])window.localStorage.removeItem(key);
+  }catch(error){reportPersistenceError(error);}
 }

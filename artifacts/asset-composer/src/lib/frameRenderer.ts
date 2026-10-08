@@ -1,3 +1,4 @@
+import { drawVisual as drawEvaluatedVisual } from "./visualRenderer";
 /**
  * frameRenderer.ts — Main-thread frame renderer for the Export Dialog preview.
  *
@@ -43,25 +44,8 @@ async function drawVisual(
   frameSz: number,
   scale:   number,
 ): Promise<void> {
-  const [wa, wb, wc, wd, we, wf] = visual.worldMatrix;
-  const lb  = visual.localBounds;
-  const lw  = lb.maxX - lb.minX;
-  const lh  = lb.maxY - lb.minY;
-  if (lw <= 0 || lh <= 0) return;
-
-  const pxW = Math.max(1, Math.ceil(lw * scale));
-  const pxH = Math.max(1, Math.ceil(lh * scale));
-
-  const img = await loadSvgAsImage(visual.svgData, pxW, pxH, visual.svgFitMode ?? "legacy_full_frame");
-  ctx.save();
-  ctx.setTransform(
-    scale * wa, scale * wb,
-    scale * wc, scale * wd,
-    scale * we + frameSz / 2,
-    scale * wf + frameSz / 2,
-  );
-  ctx.drawImage(img, lb.minX, lb.minY, lw, lh);
-  ctx.restore();
+  ctx.save();ctx.setTransform(scale,0,0,scale,frameSz/2,frameSz/2);
+  await drawEvaluatedVisual(ctx,visual);ctx.restore();
 }
 
 /**

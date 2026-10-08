@@ -12,7 +12,8 @@ export type SkeletonFamilyId =
   | "quadruped_side_v1"
   | "bird_side_v1"
   | "humanoid_monster_v1"
-  | "siege_static_v1";
+  | "siege_static_v1"
+  | "custom_2d_v1";
 
 export type ViewProfile =
   | "topdown_45"
@@ -162,7 +163,8 @@ export interface EntityVisual {
   id:             string;
   bodyPartId?:    string;
   bodyView?: "front" | "side";
-  svgData:        string;
+  svgData?: string;
+  content?: VisualContent;
   /** Bone this visual follows.  "root" for monolithic full-vector imports. */
   boneId:         string;
   metrics:        VectorAssetMetrics;
@@ -186,6 +188,8 @@ export interface EntityVisual {
  * legacy_full_frame: the part uses a viewBox-sized full-frame overlay (v1.x compat).
  */
 export interface ItemPart {
+  /** Body silhouettes that cover this rigid part even when it is in front of the head. */
+  occludedByBones?: string[];
   /** Depth owner can differ from the bone that physically carries the attachment. */
   depthBinding?: { boneId: string; nearSlot: DepthSlot; farSlot: DepthSlot };
   mesh?: SkinMesh;
@@ -197,7 +201,8 @@ export interface ItemPart {
   };
   id:             string;
   boneId:         string;
-  svgData:        string;
+  svgData?: string;
+  content?: VisualContent;
   metrics:        VectorAssetMetrics;
   pivot:          Pivot;
   localTransform: LocalTransform;
@@ -215,7 +220,7 @@ export interface SkinMesh {
   paths: { indices: number[]; closed: boolean; smooth: boolean; fill: string; stroke: string; strokeWidth: number }[];
 }
 
-export type AssetSourceFormat = "svg" | "png";
+export type AssetSourceFormat = "svg" | "png" | "webp" | "jpeg";
 
 export interface ImportedAssetSource {
   format: AssetSourceFormat;
@@ -253,7 +258,8 @@ export interface CharacterAppearance {
   slimness: number;
   muscle: number;
   fat: number;
-  nose: "none" | "button" | "small" | "straight" | "pointed" | "rounded" | "broad" | "upturned" | "aquiline";
+  nose: "none" | "button" | "small" | "straight" | "pointed" | "rounded" | "broad" | "upturned" | "aquiline" | "soft_round" | "delicate_bridge" | "roman" | "flat_wide" | "heart_tip" | "long_bridge" | "painted_nose";
+  noseArtwork?: {content: VisualContent; bounds: AABB};
   freckles: boolean;
   freckleStyle?: "light" | "nose" | "dense" | "full";
   freckleIntensity?: number;
@@ -286,6 +292,12 @@ export interface FaceFeatureTransform {
 }
 
 export interface FaceFeatureConfig {
+  content?: VisualContent;
+  artworkBounds?: AABB;
+  eyeOpenness?: number;
+  blink?: { enabled: boolean; intervalMs: number; durationMs: number };
+  mouthOpenness?: number;
+  mouthMotion?: { enabled: boolean; periodMs: number };
   presetId: string;
   color: string;
   visible: boolean;
@@ -299,7 +311,8 @@ export interface FaceOverlay {
   overlayRole?: FaceOverlayRole;
   symmetryMode?: SpriteEditorSymmetryMode;
   paintTarget?: SpriteEditorPaintTarget;
-  svgData: string;
+  svgData?: string;
+  content?: VisualContent;
   zOffset: number;
   pivot: Pivot;
   metrics: VectorAssetMetrics;
@@ -356,7 +369,34 @@ export interface SpriteEditorShape {
   pathData?: string;
 }
 
+export interface VisualAsset {
+  id: string; name: string; mimeType: "image/png" | "image/webp" | "image/jpeg";
+  width: number; height: number; dataUri: string;
+}
+export type VisualContent =
+  | { kind: "vector"; svgData: string }
+  | { kind: "raster"; assetId: string }
+  | { kind: "document"; documentId: string; nodeId?: string }
+  | { kind: "composite"; width: number; height: number; children: { content: VisualContent; matrix: Matrix2D; opacity: number }[] };
+export interface VisualMesh {
+  vertices: { x: number; y: number; u: number; v: number; weights: { boneId: string; weight: number }[] }[];
+  triangles: number[]; bindMatrices: Record<string, Matrix2D>;
+  manualMesh?: boolean; manualWeights?: boolean; quality: "low" | "medium" | "high";
+}
+export type RigBinding = { mode: "rigid"; boneId: string; bindMatrix: Matrix2D; setupMatrix?: Matrix2D }
+  | { mode: "weighted"; boneId: string; mesh: VisualMesh; bindMatrix: Matrix2D; setupMatrix?: Matrix2D };
+
 export interface SpriteEditorLayer {
+  anatomicalOwner?: string;
+  depthBinding?: ItemPart["depthBinding"];
+  kind?: "vector" | "raster" | "group";
+  parentId?: string | null;
+  assetId?: string;
+  transform?: LocalTransform;
+  binding?: RigBinding;
+  sourceSvg?: string;
+  savedMesh?: VisualMesh;
+  sampling?: "smooth" | "pixel";
   id: string;
   name: string;
   visible: boolean;
@@ -367,6 +407,9 @@ export interface SpriteEditorLayer {
 }
 
 export interface SpriteEditorDocument {
+  studioArtwork?: boolean;
+  studioEntityId?: string;
+  sampling?: "smooth" | "pixel";
   id: string;
   name: string;
   width: number;
@@ -420,8 +463,18 @@ export interface SpriteEditorDocument {
 export type VisualSourceKind = "item-part" | "bone-part" | "entity-visual" | "base-layer";
 
 export interface EvaluatedVisual {
+  /** Immutable, non-recursive body silhouettes used as local alpha cutouts. */
+  occlusionMasks?: EvaluatedVisual[];
+  depthBinding?: ItemPart["depthBinding"];
+  /** Immutable resource snapshot for asynchronous render/export. */
+  assetResources?: Record<string, VisualAsset>;
+  surface?: { sourceWidth: number; sourceHeight: number; clipToMesh?: boolean; vertices: { x: number; y: number; u: number; v: number; weights?: {boneId:string;weight:number}[] }[]; triangles: number[] };
+  tint?: string;
+  opacity?: number;
+  sampling?: "smooth" | "pixel";
   id:           string;
-  svgData:      string;
+  svgData?: string;
+  content?: VisualContent;
   zIndex:       number;
   /** SVG fitting policy used by rasterizers. */
   svgFitMode?:  "legacy_full_frame" | "v2_vector";
@@ -438,6 +491,8 @@ export interface EvaluatedVisual {
   partId?:         string;
   entityVisualId?: string;
   boneId?:         string;
+  /** True only for anatomical body artwork, including user replacements. */
+  anatomicalBody?: boolean;
   renderDepth?: { slot: DepthSlot; role?: "near" | "far"; segment?: "upperArm" | "forearm" | "hand";
     boneId?: string; depthBoneId?: string; source: "default" | "clip" | "binding"; occlusion: "behindBody" | "none" };
 }
@@ -523,7 +578,8 @@ export interface AnchorPoint {
 export interface SvgLayer {
   id: string;
   styleSetId: string | null;
-  svgData: string;
+  svgData?: string;
+  content?: VisualContent;
   paletteChannels: (keyof PaletteTokens)[];
   zOffset: number;
 }
@@ -536,7 +592,8 @@ export interface SvgLayer {
 export interface BonePart {
   id:            string;
   boneId:        string;
-  svgData:       string;
+  svgData?: string;
+  content?: VisualContent;
   naturalWidth:  number;
   naturalHeight: number;
   localX:        number;
@@ -544,7 +601,7 @@ export interface BonePart {
   /** Used as EvaluatedVisual.zIndex — keep negative to stay below slot items */
   zOffset:       number;
   /** Named alternative drawings for this bone's slot, selected by AnimationClip.attachments. */
-  attachments?:  Record<string, string>;
+  attachments?:  Record<string, string | VisualContent>;
   /** Each replacement hand drawing can have its own bone-local palm socket. */
   attachmentGrips?: Record<string, { x: number; y: number; rotation?: number }>;
   /** Point attachment in bone coordinates where held items and strings are gripped (palm centre). */
@@ -674,6 +731,15 @@ export type DepthSlot = "FAR_BACK" | "FAR_LIMB" | "BODY_BACK" | "BODY" | "CROSS_
 export type LimbDepthState = Partial<Record<"nearUpperArm" | "nearForearm" | "nearHand" | "farUpperArm" | "farForearm" | "farHand", DepthSlot>>;
 
 export interface AnimationClip {
+  /** Independent stepped depth tracks for equipment; null restores its setup depth. */
+  equipmentDepth?: {
+    slotId: string;
+    partId?: string;
+    keyframes: { timeMs: number; facing?: "left" | "right"; slot: DepthSlot | null; occludedByBones?: string[] }[];
+  }[];
+  templateId?: string;
+  /** Named sampling points for Animation X-Ray; not animation keyframes. */
+  reviewMarkers?: { label: string; timeMs: number }[];
   /** Explicit, time-bounded exception. Never inferred from a visible/frontmost limb. */
   headOverlap?: { startMs: number; endMs: number; bones: string[]; reason: string }[];
   /** Stepped semantic segment states; each key overrides side-view defaults, never lerps depth. */
@@ -830,6 +896,7 @@ export interface Entity {
 }
 
 export interface Project {
+  assets?: Record<string, VisualAsset>;
   id: string;
   version: string;
   name: string;

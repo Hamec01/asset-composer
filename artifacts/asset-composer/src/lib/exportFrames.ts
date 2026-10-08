@@ -1,8 +1,10 @@
+import { drawVisual, visualSvg, createSvgAssetRegistry, type SvgAssetRegistry } from "./visualRenderer";
 import type { AnimationClip, Entity, Item, ItemFitProfile, Template } from "@/domain/types";
 import type { EvaluatedScene } from "./evaluationPipeline";
 import { templateSupportsAnimationClip } from "./animationCompatibility";
-import { buildMultiClipPose, evaluateSkeleton, evaluateScene } from "./evaluationPipeline";
+import { buildMultiClipPose, evaluateSkeleton } from "./evaluationPipeline";
 import { scaleSvgToFit, svgToDataUrl } from "./svgUtils";
+import { evaluatePresentedScene, xrayOverlaySvg, type AnimationXRayOptions } from "./animationXRay";
 
 export interface ExportFrameSpec { key: string; clip: AnimationClip | null; frame: number; timeMs: number }
 
@@ -23,11 +25,11 @@ export function exportFramePlan(entity: Entity, template: Template, clips: Anima
 }
 
 /** Same pose and scene evaluation as the editor canvas, so skinning, attachments and draw order match. */
-export function evaluateExportScene(entity: Entity, template: Template, clips: AnimationClip[], items: Item[], fitProfiles: ItemFitProfile[], spec: ExportFrameSpec): EvaluatedScene {
+export function evaluateExportScene(entity: Entity, template: Template, clips: AnimationClip[], items: Item[], fitProfiles: ItemFitProfile[], spec: ExportFrameSpec, options?: AnimationXRayOptions): EvaluatedScene {
   const playing = { ...entity, activeAnimationClipId: spec.clip?.id ?? entity.activeAnimationClipId };
   const pose = spec.clip ? buildMultiClipPose(clips, spec.clip.id, null, null, 0, spec.timeMs, playing, items) : new Map();
   const skeleton = evaluateSkeleton(template.bones, pose, entity.bodyMorphs, entity.appearance);
-  return evaluateScene(playing, template, skeleton, items, fitProfiles);
+  return evaluatePresentedScene(playing, template, skeleton, items, fitProfiles, options);
 }
 
 export interface ExportCamera { x: number; y: number; size: number }
@@ -45,15 +47,10 @@ export function exportCamera(scenes: EvaluatedScene[], padding = 0.06): ExportCa
 }
 
 /** One vector document per frame, drawn exactly like the editor canvas places each visual. */
-export function composeFrameSvg(scene: EvaluatedScene, camera: ExportCamera, frameSz: number): string {
-  const images = [...scene.visuals].sort((a, b) => a.zIndex - b.zIndex).map(visual => {
-    const b = visual.localBounds;
-    const w = b.maxX - b.minX, h = b.maxY - b.minY;
-    if (!(w > 0 && h > 0)) return "";
-    const sized = scaleSvgToFit(visual.svgData, Math.max(2, Math.round(w)), Math.max(2, Math.round(h)), visual.svgFitMode ?? "legacy_full_frame");
-    return `<g transform="matrix(${visual.worldMatrix.join(" ")})"><image x="${b.minX}" y="${b.minY}" width="${w}" height="${h}" preserveAspectRatio="none" href="${svgToDataUrl(sized)}"/></g>`;
-  }).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${frameSz}" height="${frameSz}" viewBox="${camera.x} ${camera.y} ${camera.size} ${camera.size}">${images}</svg>`;
+export function composeFrameSvg(scene: EvaluatedScene, camera: ExportCamera, frameSz: number, sharedAssets?: SvgAssetRegistry): string {
+  const assets = sharedAssets ?? createSvgAssetRegistry();
+  const images = [...scene.visuals].sort((a,b)=>a.zIndex-b.zIndex).map(v=>visualSvg(v,frameSz/camera.size,assets)).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${frameSz}" height="${frameSz}" viewBox="${camera.x} ${camera.y} ${camera.size} ${camera.size}">${sharedAssets ? "" : assets.definitions()}${images}${xrayOverlaySvg(scene, frameSz / camera.size)}</svg>`;
 }
 
 export function rasterizeFrame(svg: string, frameSz: number): Promise<ImageBitmap> {
@@ -70,4 +67,13 @@ export function rasterizeFrame(svg: string, frameSz: number): Promise<ImageBitma
     img.onerror = () => reject(new Error("Failed to rasterize export frame"));
     img.src = svgToDataUrl(svg);
   });
+}
+
+/** Raster formats consume the same evaluated textured triangles directly. */
+export async function rasterizeScene(scene:EvaluatedScene,camera:ExportCamera,size:number):Promise<ImageBitmap>{
+  const canvas=document.createElement("canvas");canvas.width=size;canvas.height=size;
+  const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Canvas 2D is unavailable");
+  ctx.scale(size/camera.size,size/camera.size);ctx.translate(-camera.x,-camera.y);
+  for(const visual of scene.visuals)await drawVisual(ctx,visual);
+  return createImageBitmap(canvas);
 }

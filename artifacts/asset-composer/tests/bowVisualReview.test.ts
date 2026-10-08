@@ -8,6 +8,7 @@ import { evaluateSkeleton, evaluateScene, type EvaluatedScene } from "../src/lib
 import { CHIBI_ANIMATIONS } from "../src/data/chibiAnimations";
 import { animController } from "../src/core-v2/AnimationController";
 import { archeryHandSketchSheet } from "../src/data/archeryArt";
+import { buildAnimationReview } from "../src/lib/animationReview";
 
 function sceneArt(scene:EvaluatedScene) {
   return scene.visuals.sort((a,b)=>a.zIndex-b.zIndex).map(v=>{
@@ -26,7 +27,6 @@ it.skipIf(!process.env.BOW_REVIEW)("renders a contact sheet for visual review", 
   if (process.env.BOW_BARE) entity.slots.forEach(slot => { if (slot.slotId !== "side_slot_weapon_main") slot.itemId = null; });
   const frames = [["bow_shoot",0],["bow_shoot",.2],["bow_shoot",process.env.BOW_REACH ? .26 : .46],["bow_shoot",.64],["bow_shoot",.73],["bow_shoot",1]] as const;
   const labels = ["Rest", "Raise bow", "Draw string", "Aim", "Release", "Return"];
-  const rigs: string[] = [];
   const small: string[] = [];
   const joints: unknown[] = [];
   const panels=["right", "left"].flatMap(view => frames.map(([name,fraction],index)=>{
@@ -47,21 +47,19 @@ it.skipIf(!process.env.BOW_REVIEW)("renders a contact sheet for visual review", 
     joints.push({view,fraction,bones:Object.fromEntries([...skeleton.bones].filter(([id])=> /^(shoulder|elbow|hand|head|chest|neck)/.test(id))),visuals:scene.visuals.filter(v=>v.renderDepth?.segment || v.boneId === "head").map(v=>({id:v.id,matrix:v.worldMatrix,bounds:v.worldBounds,depth:v.renderDepth}))});
     const art=sceneArt(scene);
     const row = view === "right" ? 0 : 430;
-    const point = (id: string) => skeleton.bones.get(id)!;
-    const chain = (ids: string[], color: string) => `<polyline points="${ids.map(id => `${point(id).x},${point(id).y}`).join(" ")}" fill="none" stroke="${color}" stroke-width="1.7"/>${ids.map(id => `<circle cx="${point(id).x}" cy="${point(id).y}" r="2" fill="#252729" stroke="${color}" stroke-width=".8"/>`).join("")}`;
-    const head = point("head");
-    const rig = `<ellipse cx="${head.x}" cy="${head.y-8}" rx="22" ry="21" fill="#d1ba9c" opacity=".25"/>`
-      + chain(["head", "neck", "chest", "spine", "pelvis"], "#a78ae6")
-      + chain(["shoulder_l", "elbow_l", "hand_l"], "#5ec5ff")
-      + chain(["shoulder_r", "elbow_r", "hand_r"], "#ff7878")
-      + ["l", "r"].map(side => chain(["pelvis", `hip_${side}`, `knee_${side}`, `foot_${side}`], "#a7c6a2")).join("");
-    rigs.push(`<g transform="translate(${index*300+(view === "right" ? 135 : 165)} ${row+290}) scale(2.25)">${rig}</g><text x="${index*300+150}" y="${row+405}" text-anchor="middle" fill="#ddd" font-family="sans-serif" font-size="16">${labels[index]}</text>`);
     small.push(`<g transform="translate(${index*140+70} ${view === "right" ? 90 : 230}) scale(.55)">${art}</g>`);
     return `<g transform="translate(${index*300+(view === "right" ? 135 : 165)} ${row+290}) scale(2.25)">${art}</g><text x="${index*300+150}" y="${row+405}" text-anchor="middle" fill="#ddd" font-family="sans-serif" font-size="16">${labels[index]}</text>`;
   })).join('');
   writeFileSync(process.env.BOW_REVIEW!,`<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="860"><rect width="1800" height="860" fill="#252729"/>${panels}</svg>`);
   if(process.env.BOW_JOINTS) writeFileSync(process.env.BOW_JOINTS,JSON.stringify(joints,null,2));
-  if (process.env.BOW_RIG) writeFileSync(process.env.BOW_RIG, `<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="860"><rect width="1800" height="860" fill="#252729"/>${rigs.join("")}</svg>`);
+  if (!process.env.APPEARANCE_REVIEW) {
+    const clip = CHIBI_ANIMATIONS.find(c => c.name === "bow_shoot")!;
+    const review = buildAnimationReview({ entity, template, clips: project.animationClips, clip, items: project.items,
+      fitProfiles: project.itemFitProfiles, markers: frames.map(([, fraction], i) => ({ label: labels[i], timeMs: clip.durationMs * fraction })) });
+    const prefix = (process.env.BOW_RIG ?? process.env.BOW_REVIEW!).replace(/\.svg$/i, "");
+    for (const sheet of review.sheets) writeFileSync(`${prefix}-xray-${sheet.facing}.svg`, sheet.svg);
+    writeFileSync(`${prefix}-xray-review.json`, JSON.stringify(review.report, null, 2));
+  }
   if (process.env.BOW_HANDS) writeFileSync(process.env.BOW_HANDS, archeryHandSketchSheet());
   if (process.env.BOW_SMALL) writeFileSync(process.env.BOW_SMALL, `<svg xmlns="http://www.w3.org/2000/svg" width="840" height="280"><rect width="840" height="280" fill="#252729"/>${small.join("")}</svg>`);
   if (process.env.BOW_PROJECT) {

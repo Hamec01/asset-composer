@@ -11,6 +11,7 @@ import { getClipsForTemplate } from "@/lib/animationCompatibility";
 import { getAllBoneIds, getKeyframesForBone, timeMsToFrame, frameToTimeMs } from "@/lib/animationRuntime";
 import { resolveTemplate } from "@/data/templates";
 import type { Keyframe } from "@/domain/types";
+import { EquipmentDepthPanel } from "./EquipmentDepthPanel";
 
 const TRACK_H = 24;
 const LABEL_W = 80;
@@ -277,6 +278,7 @@ export function TimelinePanel() {
       </div>
 
       {/* ── Multi-clip blend row ── */}
+      <EquipmentDepthPanel />
       {activeEntity && !activeEntity.templateId.startsWith("biped_profile_") && (
         <div className="flex items-center gap-2 px-2 py-1 border-b border-border flex-shrink-0 bg-background/40">
           <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider w-14 flex-shrink-0">Blend</span>

@@ -1,3 +1,4 @@
+import { vectorSource } from "@/lib/visualContent";
 import type { Item, ItemCategory, ItemPart } from "@/domain/types";
 import { parseMetrics } from "@/lib/svgMetrics";
 
@@ -147,6 +148,59 @@ bowString.depthBinding = {boneId:"hand_r",nearSlot:"CROSS_BODY",farSlot:"BODY_BA
 bowString.localTransform.rotation = 180;
 bowString.dynamicLine = {kind:"string",pathId:"bow-string",targetBoneId:"hand_r",clipId:"chibi_front__bow_shoot",start:{x:17,y:13},end:{x:17,y:77},attachMs:640,releaseMs:1360,settleMs:160};
 
+const merchantVestParts: ItemPart[] = [
+  part("shirt_waist_bridge", "pelvis", 21, 20, -4,
+    `<path d="M3 1 Q10 0 18 1 L20 19 H1Z" fill="#32543B" stroke="none"/><path d="M2 12 H20 L19 18 H2Z" fill="#543A26"/><path d="M8 12 H14 V18 H8Z" fill="#D4A853"/>`),
+  part("shirt_chest", "chest", 25, 38, 13,
+    `<path d="M8 2 Q12 6 17 2 L21 5 Q25 6 24 12 L21 32 L22 37 H2 L3 32 L1 10 Q1 6 5 5Z" fill="#3A6345"/>`
+    + `<path d="M8 2 L12 9 L17 2Z" fill="#E2DCBD"/>`
+    + `<path d="M12 9 L12 25" stroke="#25422D" stroke-width=".8"/>`
+    + `<circle cx="12" cy="13" r="1" fill="#D4A853"/><circle cx="12" cy="18" r="1" fill="#D4A853"/><circle cx="12" cy="23" r="1" fill="#D4A853"/>`
+    + `<path d="M4 10 L22 28 M4 22 L18 8 M2 16 L20 34 M8 8 L24 24" fill="none" stroke="#2D4D36" stroke-width=".5" opacity=".6"/>`),
+  part("shirt_hem", "spine", 21, 24, 9,
+    `<path d="M2 0 H19 L18 12 L20 22 Q10 24 1 22 L3 12Z" fill="#3A6345" stroke="none"/>`
+    + `<path d="M2 4 L3 12 L1 22 Q10 24 20 22 L18 12 L19 4" fill="none"/>`
+    + `<path d="M2 13 H19 V17 H2Z" fill="#543A26"/>`
+    + `<rect x="8" y="12" width="6" height="6" rx="1" fill="#D4A853" stroke="#3A2518" stroke-width=".5"/>`
+    + `<path d="M14 15 Q19 15 19 22 Q16 25 13 24 Q13 18 14 15Z" fill="#5F402B" stroke="#332115" stroke-width=".6"/>`),
+];
+merchantVestParts[0].zOffset = -15;
+for (const side of ["r", "l"] as const) {
+  const fill = side === "r" ? "#C8C0A7" : "#E2DCBD";
+  merchantVestParts.push(part(`sleeve_upper_${side}`, `shoulder_${side}`, 13, 23, 7,
+    `<path d="M1 6 Q1 1 6.5 1 Q12 1 12 6 L10 22 H3Z" fill="${fill}"/><path d="M2 8 Q7 10 11 8 M2 13 Q7 15 11 13 M2 18 Q7 20 10 18" fill="none" stroke="#B0A68A"/>`));
+  merchantVestParts.push(part(`sleeve_lower_${side}`, `elbow_${side}`, 12, 18, 5,
+    `<path d="M2 0 H10 L9 16 Q6 18 3 16Z" fill="${fill}"/><path d="M2 5 Q6 7 10 5 M2 10 Q6 12 9 10" fill="none" stroke="#B0A68A"/><path d="M3 13 H9 L9 16 H3Z" fill="#B8AF94" stroke="none"/>`));
+}
+
+const warriorUndershirtParts: ItemPart[] = [
+  part("shirt_waist_bridge", "pelvis", 21, 20, -4,
+    `<path d="M3 1 Q10 0 18 1 L20 19 H1Z" fill="#E2DCBD" stroke="none"/>`),
+  part("shirt_chest", "chest", 25, 38, 13,
+    `<path d="M8 2 Q12 6 17 2 L21 5 Q25 6 24 12 L21 32 L22 37 H2 L3 32 L1 10 Q1 6 5 5Z" fill="#E2DCBD"/>`
+    + `<path d="M8 2 L12 12 L17 2" fill="none" stroke="#65452F" stroke-width=".8"/>`
+    + `<path d="M9 5 L16 9 M16 5 L9 9 M10 8 L15 12 M15 8 L10 12" fill="none" stroke="#5A3D28" stroke-width=".9"/>`
+    + `<path d="M4 12 Q2 22 4 30 M21 12 Q23 22 21 30" fill="none" stroke="#BDB59B" stroke-width=".6"/>`),
+  part("shirt_hem", "spine", 21, 24, 9,
+    `<path d="M2 0 H19 L18 12 L20 22 Q10 24 1 22 L3 12Z" fill="#E2DCBD" stroke="none"/>`
+    + `<path d="M2 4 L3 12 L1 22 Q10 24 20 22 L18 12 L19 4" fill="none"/>`
+    + `<path d="M2 20 Q10 22 19 20" stroke="#AAA288" fill="none"/>`),
+];
+warriorUndershirtParts[0].zOffset = -15;
+
+const warriorFootwrapsParts: ItemPart[] = [];
+for (const side of ["r", "l"] as const) {
+  const wrap = side === "r" ? "#CCC5AD" : "#E2DCBD";
+  const boot = side === "r" ? "#4F3624" : "#65452F";
+  warriorFootwrapsParts.push(part(`boot_shaft_${side}`, `knee_${side}`, 12, 12, 9,
+    `<path d="M2 1 H10 L9 11 H3Z" fill="${wrap}"/>`
+    + `<path d="M2 2 L9 6 M3 6 L10 10 M9 2 L2 7 M10 6 L3 11" fill="none" stroke="#9E947A" stroke-width=".7"/>`));
+  warriorFootwrapsParts.push(part(`boot_foot_${side}`, `foot_${side}`, 17, 13, 4,
+    `<path d="M3 0 H9 L9 4 Q16 5 16 9 Q16 12 12 12 H2 Q0 10 2 5Z" fill="${boot}"/>`
+    + `<path d="M3 1 L9 3 M3 3 L9 5" fill="none" stroke="${wrap}" stroke-width=".8"/>`
+    + `<path d="M1 10 Q8 12 16 10" fill="none" stroke="#2D1C11" stroke-width="1.2"/>`, 2));
+}
+
 export const PEASANT_EQUIPMENT = [
   item("peasant_shirt_25d", "Льняная рубаха", "torso", "slot_torso", shirt),
   item("peasant_trousers_25d", "Крестьянские штаны", "legs", "slot_legs", trousers),
@@ -154,6 +208,9 @@ export const PEASANT_EQUIPMENT = [
   item("peasant_axe_25d", "Рабочий топор", "weapon_main", "slot_weapon_main", [axe]),
   item("iron_sword_25d", "Железный меч", "weapon_main", "slot_weapon_main", [sword]),
   item("bow_25d", "Охотничий лук", "weapon_main", "slot_weapon_main", [bow, bowString], ["weapon", "bow", "лук", "охотник", "2.5d", "rig-depth"]),
+  item("merchant_quilted_vest_25d", "Стеганый жилет купца", "torso", "slot_torso", merchantVestParts, ["outfit", "merchant", "купец", "жилет", "2.5d", "rig-depth"]),
+  item("warrior_laced_undershirt_25d", "Боевая рубаха мечника", "torso", "slot_torso", warriorUndershirtParts, ["outfit", "warrior", "воин", "мечник", "2.5d", "rig-depth"]),
+  item("warrior_footwraps_25d", "Боевые сапоги с обмотками", "feet", "slot_foot_l", warriorFootwrapsParts, ["outfit", "warrior", "воин", "сапоги", "2.5d", "rig-depth"]),
   item("trader_tunic_25d", "Камзол торговца", "torso", "slot_torso", traderTorso, ["outfit", "trader", "торговец", "2.5d", "rig-depth"]),
   item("trader_breeches_25d", "Бриджи торговца", "legs", "slot_legs", traderLegs, ["outfit", "trader", "торговец", "2.5d", "rig-depth"]),
   item("trader_boots_25d", "Сапоги торговца", "feet", "slot_foot_l", traderBoots, ["outfit", "trader", "торговец", "2.5d", "rig-depth"]),
@@ -175,7 +232,7 @@ for (const garment of fittedGarments) {
   feminine.tags = garment.tags.filter(tag => tag !== "male").concat("female");
   for (const piece of feminine.parts ?? []) {
     if (piece.boneId === "chest") {
-      piece.svgData = piece.svgData.replace("L21 23 L21 26 H3 L3 23", "Q28 15 23 20 L20 26 H4 L3 23")
+      piece.svgData = vectorSource(piece).replace("L21 23 L21 26 H3 L3 23", "Q28 15 23 20 L20 26 H4 L3 23")
         .replace("</g>", '<path d="M16 17 Q20 20 24 17" fill="none" stroke="#493D35" stroke-width=".45"/></g>');
     }
   }

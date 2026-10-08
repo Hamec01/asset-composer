@@ -13,6 +13,11 @@ export const twoHandedSwordStrike: AnimationClip = {
   id: "chibi_front__two_handed_sword_strike", name: "two_handed_sword_strike",
   label: "Удар двуручным мечом", skeletonFamily: "humanoid_side_v1",
   durationMs: 1600, fps: 30, loops: false,
+  reviewMarkers: [
+    { label: "Guard", timeMs: 0 }, { label: "Windup", timeMs: 280 },
+    { label: "Apex", timeMs: 600 }, { label: "Contact", timeMs: 880 },
+    { label: "Follow-through", timeMs: 1060 }, { label: "Recover", timeMs: 1600 },
+  ],
   gripObjects: [{ id: "two_hand_handle", sockets: {
     bladeHand: { x: 0, y: -7.5 }, pommelHand: { x: 0, y: 7.5 },
   }, keyframes: [
@@ -101,7 +106,9 @@ export function upgradeTwoHandedSwordClip(clip: AnimationClip): AnimationClip {
     ik:c.ik, gripObjects:c.gripObjects, attachments:c.attachments, limbDepth:c.limbDepth,
     headOverlap:c.headOverlap, drawOrder:c.drawOrder,
   }));
-  return [previousStrike,previousTiming,previousTimingBeforeElbowFix].some(old=>motion(clip)===motion(old))
+  const upgraded = [previousStrike,previousTiming,previousTimingBeforeElbowFix].some(old=>motion(clip)===motion(old))
     ? {...clip,gripObjects:structuredClone(twoHandedSwordStrike.gripObjects),
       layers:structuredClone(twoHandedSwordStrike.layers),limbDepth:structuredClone(twoHandedSwordStrike.limbDepth)} : clip;
+  return !upgraded.reviewMarkers && motion(upgraded) === motion(twoHandedSwordStrike)
+    ? { ...upgraded, reviewMarkers: structuredClone(twoHandedSwordStrike.reviewMarkers) } : upgraded;
 }

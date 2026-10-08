@@ -87,6 +87,8 @@ function makeEngineHarness() {
       __slotId: visual.slotId,
       __itemId: visual.itemId,
       __partId: visual.partId,
+      width: visual.localBounds.maxX - visual.localBounds.minX,
+      height: visual.localBounds.maxY - visual.localBounds.minY,
       set: vi.fn(),
       setCoords: vi.fn(),
     };

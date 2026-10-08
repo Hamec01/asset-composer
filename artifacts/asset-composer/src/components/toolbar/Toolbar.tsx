@@ -1,3 +1,4 @@
+import { compactProjectAssets } from "@/lib/projectAssets";
 import { useStore } from "@/store";
 import { useState } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -34,7 +35,7 @@ export function Toolbar() {
   const canRedo = history.future.length > 0;
 
   async function handleSaveProject() {
-    const result = ProjectSchema.safeParse(project);
+    const result = ProjectSchema.safeParse(compactProjectAssets(project));
     if (!result.success) {
       const msgs = result.error.issues
         .slice(0, 5)
@@ -66,9 +67,12 @@ export function Toolbar() {
     const input    = document.createElement("input");
     input.type     = "file";
     input.accept   = ".json";
+    input.style.display = "none";
+    document.body.appendChild(input);
+    input.addEventListener("cancel", () => input.remove(), { once: true });
     input.onchange = async () => {
       const file = input.files?.[0];
-      if (!file) return;
+      if (!file) { input.remove(); return; }
       try {
         const text   = await file.text();
         const parsed = JSON.parse(text);
@@ -84,8 +88,10 @@ export function Toolbar() {
           return;
         }
         loadProject(migrated);
-      } catch {
-        alert("Failed to load project: invalid JSON.");
+      } catch (error) {
+        alert("Failed to load project: " + (error instanceof Error ? error.message : "invalid JSON"));
+      } finally {
+        input.remove();
       }
     };
     input.click();

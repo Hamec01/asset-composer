@@ -1,4 +1,5 @@
 import type { AnimationClip, BonePart, VectorAssetMetrics } from "@/domain/types";
+import { getVisualResources } from "./visualContent";
 import { parseMetrics } from "./svgMetrics";
 export interface AnimationContext { clip: AnimationClip; timeMs: number }
 const contexts=new WeakMap<object,AnimationContext>();
@@ -28,8 +29,16 @@ const attachmentFrames=new Map<string,VectorAssetMetrics>();
 /** Resolve art, authored frame and palm together; swapping only SVG shifts the wrist. */
 export function boneAttachmentAt(part:BonePart,context:AnimationContext|undefined):BonePart {
   const name=attachmentAt(context,part.boneId);
-  const svgData=name ? part.attachments?.[name] : undefined;
-  if(!svgData || !name) return part;
+  const attachment=name ? part.attachments?.[name] : undefined;
+  if(!attachment || !name)return part;
+  const content=typeof attachment==="string"?{kind:"vector" as const,svgData:attachment}:attachment;
+  if(content.kind!=="vector") {
+    const resources=getVisualResources(),asset=content.kind==="raster"?resources.assets[content.assetId]:content.kind==="document"?resources.documents.find(d=>d.id===content.documentId):content;
+    if(!asset)throw new Error("Missing attachment artwork");
+    const grip=part.attachmentGrips?.[name];
+    return {...part,svgData:undefined,content,naturalWidth:asset.width,naturalHeight:asset.height,localX:asset.width/2,localY:asset.height/2,...(grip?{grip,gripSocket:grip}:{})};
+  }
+  const svgData=content.svgData;
   let frame=attachmentFrames.get(svgData);
   if(!frame) {
     frame=parseMetrics(svgData);
@@ -37,7 +46,7 @@ export function boneAttachmentAt(part:BonePart,context:AnimationContext|undefine
     attachmentFrames.set(svgData,frame);
   }
   const grip=part.attachmentGrips?.[name];
-  return {...part,svgData,localX:frame.viewBoxX+frame.viewBoxWidth/2,
+  return {...part,svgData,content,localX:frame.viewBoxX+frame.viewBoxWidth/2,
     localY:frame.viewBoxY+frame.viewBoxHeight/2,naturalWidth:frame.viewBoxWidth,naturalHeight:frame.viewBoxHeight,
     ...(grip ? {grip,gripSocket:grip} : {})};
 }

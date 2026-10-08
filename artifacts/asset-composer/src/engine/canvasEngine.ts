@@ -1,3 +1,5 @@
+import { visualKey, vectorSource } from "@/lib/visualContent";
+import { visualCanvas } from "@/lib/visualRenderer";
 /**
  * canvasEngine.ts  (v3.0 — mode-aware, item-selectable, bone-local math)
  *
@@ -202,8 +204,10 @@ function makeFabricImagePlacement(
   worldMatrix: ReturnType<typeof identity>,
   localCenterX: number,
   localCenterY: number,
+  textureScaleX = 1,
+  textureScaleY = 1,
 ) {
-  const centeredMatrix = multiply(worldMatrix, localTransformToMatrix(localCenterX, localCenterY, 0, 1, 1));
+  const centeredMatrix = multiply(worldMatrix, localTransformToMatrix(localCenterX, localCenterY, 0, textureScaleX, textureScaleY));
   return fabricUtil.qrDecompose(centeredMatrix);
 }
 
@@ -438,7 +442,7 @@ export class CanvasEngine {
     const loads: Promise<void>[] = [];
     for (const visual of scene.visuals) {
       const cached = this.svgCache.get(visual.id);
-      if (this.fabricImages.has(visual.id) && cached === visual.svgData) continue;
+      if (this.fabricImages.has(visual.id) && cached === visualKey(visual)) continue;
       const old = this.fabricImages.get(visual.id);
       if (old) {
         this.canvas.remove(old);
@@ -506,11 +510,12 @@ export class CanvasEngine {
     const pixH = Math.max(2, Math.round(vH));
 
     try {
-      const sized  = scaleSvgToFit(visual.svgData, pixW, pixH, visual.svgFitMode ?? "legacy_full_frame");
-      const imgEl  = await FabricImage.fromURL(svgToDataUrl(sized));
+      const native = (!!visual.content && visual.content.kind !== "vector") || visual.surface || visual.tint || visual.occlusionMasks?.length;
+      const imgEl = native ? new FabricImage(await visualCanvas(visual)) : await FabricImage.fromURL(svgToDataUrl(scaleSvgToFit(vectorSource(visual),pixW,pixH,visual.svgFitMode??"legacy_full_frame")));
+      imgEl.set({imageSmoothing:visual.sampling!=="pixel", opacity:visual.opacity??1});
       const localCenterX = (visual.localBounds.minX + visual.localBounds.maxX) / 2;
       const localCenterY = (visual.localBounds.minY + visual.localBounds.maxY) / 2;
-      const placement = makeFabricImagePlacement(visual.worldMatrix, localCenterX, localCenterY);
+      const placement = makeFabricImagePlacement(visual.worldMatrix, localCenterX, localCenterY, vW / imgEl.width, vH / imgEl.height);
 
       imgEl.set({
         left:      placement.translateX,
@@ -556,7 +561,7 @@ export class CanvasEngine {
       }
 
       this.fabricImages.set(visual.id, tagged);
-      this.svgCache.set(visual.id, visual.svgData);
+      this.svgCache.set(visual.id, visualKey(visual));
       this.canvas.add(tagged);
     } catch { /* silently skip broken SVGs */ }
   }
@@ -597,7 +602,7 @@ export class CanvasEngine {
     let depthChanged = false;
     for (const visual of scene.visuals) {
       const img = this.fabricImages.get(visual.id);
-      if ((!img || this.svgCache.get(visual.id) !== visual.svgData) && !this.pendingAnimatedVisuals.has(visual.id)) {
+      if ((!img || this.svgCache.get(visual.id) !== visualKey(visual)) && !this.pendingAnimatedVisuals.has(visual.id)) {
         this.pendingAnimatedVisuals.add(visual.id);
         const generation = this.reconcileGeneration;
         void this._loadVisual(visual, generation).then(() => {
@@ -606,7 +611,7 @@ export class CanvasEngine {
           if (img && this.fabricImages.get(visual.id) !== img) this.canvas.remove(img);
           // A seek/pause can arrive while the SVG is decoding. Drain the latest
           // pose and artwork even when no further animation tick will arrive.
-          if (this.svgCache.get(visual.id) === visual.svgData && this.currentScene) {
+          if (this.svgCache.get(visual.id) === visualKey(visual) && this.currentScene) {
             this.updateSceneTransforms(this.currentScene);
           }
           this._sortCanvasObjects();
@@ -620,11 +625,12 @@ export class CanvasEngine {
       }
       const localCenterX = (visual.localBounds.minX + visual.localBounds.maxX) / 2;
       const localCenterY = (visual.localBounds.minY + visual.localBounds.maxY) / 2;
-      const placement = makeFabricImagePlacement(visual.worldMatrix, localCenterX, localCenterY);
+      const placement = makeFabricImagePlacement(visual.worldMatrix, localCenterX, localCenterY, (visual.localBounds.maxX-visual.localBounds.minX) / img.width, (visual.localBounds.maxY-visual.localBounds.minY) / img.height);
       img.__centerX = localCenterX;
       img.__centerY = localCenterY;
       img.set({
         visible: true,
+        opacity: visual.opacity ?? 1,
         left: placement.translateX,
         top: placement.translateY,
         angle: placement.angle,
@@ -1218,7 +1224,7 @@ export class CanvasEngine {
       );
       const localCenterX = (siblingVisual.localBounds.minX + siblingVisual.localBounds.maxX) / 2;
       const localCenterY = (siblingVisual.localBounds.minY + siblingVisual.localBounds.maxY) / 2;
-        const placement = makeFabricImagePlacement(worldM, localCenterX, localCenterY);
+        const placement = makeFabricImagePlacement(worldM, localCenterX, localCenterY, (siblingVisual.localBounds.maxX-siblingVisual.localBounds.minX) / siblingImg.width, (siblingVisual.localBounds.maxY-siblingVisual.localBounds.minY) / siblingImg.height);
         siblingImg.__centerX = localCenterX;
         siblingImg.__centerY = localCenterY;
         siblingImg.set({

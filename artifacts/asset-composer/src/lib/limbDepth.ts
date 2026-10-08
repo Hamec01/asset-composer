@@ -24,6 +24,19 @@ export function resolveLimbDepth(clip?: AnimationClip, timeMs = 0, facing: "left
   return {...defaults,...key?.state};
 }
 
+export function resolveEquipmentDepth(clip: AnimationClip | undefined, slotId: string, partId: string | undefined, timeMs: number, facing: "left" | "right") {
+  let resolved: NonNullable<AnimationClip["equipmentDepth"]>[number]["keyframes"][number] | undefined;
+  for (const specific of [false, true]) {
+    for (const track of clip?.equipmentDepth ?? []) {
+      if (track.slotId !== slotId || (specific ? track.partId !== partId || !track.partId : !!track.partId)) continue;
+      const key = track.keyframes.filter(k => k.timeMs <= timeMs && (!k.facing || k.facing === facing))
+        .sort((a,b) => a.timeMs-b.timeMs || Number(!!a.facing)-Number(!!b.facing)).at(-1);
+      if (key) resolved = key;
+    }
+  }
+  return resolved;
+}
+
 /** Only render metadata/order is changed. Matrices, joints, grips and IK are untouched. */
 export function applyLimbDepth(visuals: EvaluatedVisual[], items: Item[], facing: "left" | "right", clip?: AnimationClip, timeMs = 0) {
   const roles=resolveArmRoles(facing);
@@ -32,8 +45,10 @@ export function applyLimbDepth(visuals: EvaluatedVisual[], items: Item[], facing
   const rows=visuals.map((visual,index) => {
     const item=items.find(item=>item.id === visual.itemId);
     const part=item?.parts?.find(part=>part.id === visual.partId);
+    const equipmentKey = item && visual.slotId ? resolveEquipmentDepth(clip, visual.slotId, visual.partId, timeMs, facing) : undefined;
     const boneId=visual.boneId ?? part?.boneId;
-    const depthBoneId=part?.depthBinding?.boneId ?? boneId;
+    const depthBinding=visual.depthBinding??part?.depthBinding;
+    const depthBoneId=depthBinding?.boneId ?? boneId;
     const arm=/^(shoulder|elbow|hand)_([lr])$/.exec(depthBoneId ?? "");
     let slot:DepthSlot = boneId === "head" || boneId === "neck" || visual.entityVisualId?.startsWith("face__") ? "BODY_FRONT" : "BODY";
     let segment: "upperArm" | "forearm" | "hand" | undefined;
@@ -49,14 +64,23 @@ export function applyLimbDepth(visuals: EvaluatedVisual[], items: Item[], facing
       source=authored?.[key] ? "clip" : "default";
       // A handle authored behind the palm must not jump over the head
       // just because the fingers enter HAND_FRONT. Positive offsets stay in front.
-      if(part?.depthBinding) {
-        slot=role === "near" ? part.depthBinding.nearSlot : part.depthBinding.farSlot;
+      if(depthBinding) {
+        slot=role === "near" ? depthBinding.nearSlot : depthBinding.farSlot;
         source="binding";
         segmentOrder=-1;
       } else if(segment === "hand" && slot === "HAND_FRONT" && item && ["weapon_main","weapon_off","shield"].includes(item.category)) {
         slot=(part?.zOffset ?? 0)<0 ? role === "far" ? "CROSS_BODY" : "NEAR_LIMB" : "EQUIPMENT_FRONT";
       }
     }
+    if (equipmentKey?.slot) {
+      slot = equipmentKey.slot;
+      source = "clip";
+      segmentOrder = -1;
+    }
+    const occluders = equipmentKey?.occludedByBones ?? part?.occludedByBones;
+    visual.occlusionMasks = item && occluders?.length ? visuals
+      .filter(v => v.anatomicalBody && v.boneId && occluders.includes(v.boneId))
+      .map(v => ({...v, opacity: 1, occlusionMasks: undefined})) : undefined;
     visual.renderDepth={slot,role,segment,boneId,depthBoneId,source,occlusion:DEPTH_SLOTS[slot]<DEPTH_SLOTS.BODY ? "behindBody" : "none"};
     return {visual,index,old:visual.zIndex,slot,segmentOrder};
   });

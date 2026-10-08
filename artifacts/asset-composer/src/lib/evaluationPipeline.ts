@@ -1,3 +1,6 @@
+import { contentOf, getVisualResources, type VisualResources } from "./visualContent";
+import { evaluateArtDocument } from "./artDocument";
+import { vectorSource } from "@/lib/visualContent";
 /**
  * evaluationPipeline.ts
  *
@@ -23,6 +26,7 @@ import { resolveClipPose, blendPoses } from "./animationRuntime";
 import { getCharacterBodyParts } from "@/data/chibiBody";
 import { chibiFeatureSvg, DEFAULT_APPEARANCE } from "@/data/characterAppearance";
 import type { CharacterAppearance } from "@/domain/types";
+import type { AnimationXRayPresentation } from "./animationXRay";
 import { getSideGaitClip, upgradeBowClip } from "@/data/chibiAnimations";
 import type { BoneTransformMap } from "./animationRuntime";
 import { applyPaletteToSvg } from "./svgUtils";
@@ -33,6 +37,8 @@ import { skinVertices, renderSkinMesh } from "./skinning";
 import { createGarmentMesh } from "./garmentMesh";
 import { applyDrawOrder } from "./drawOrder";
 import { applyLimbDepth } from "./limbDepth";
+import { eyeOpennessAt, mouthOpennessAt } from "./faceAnimation";
+import { faceArtworkVisuals, mouthArtworkVisuals } from "./faceArtwork";
 import { armChains, fixedArmPose } from "./armRig";
 import { ikContext, solveIkPose, profileIkRootX } from "./ikConstraint";
 import { deformAttachmentLine } from "./dynamicAttachment";
@@ -77,6 +83,7 @@ export interface SceneLayer {
 // ── EvaluatedScene ────────────────────────────────────────────────────────────
 
 export interface EvaluatedScene {
+  presentation?: AnimationXRayPresentation;
   entityId:       string;
   templateId:     string;
   skeletonFamily: SkeletonFamilyId;
@@ -415,7 +422,7 @@ function makeFaceFeatureSvg(feature: keyof Omit<FaceCustomization, "overlays">, 
   }
 }
 
-function makeFaceCustomizationVisuals(entity: Entity, skeleton: EvaluatedSkeleton): EvaluatedVisual[] {
+function makeFaceCustomizationVisuals(entity: Entity, skeleton: EvaluatedSkeleton, resources=getVisualResources()): EvaluatedVisual[] {
   const face = entity.faceCustomization;
   const headBone = skeleton.bones.get("head");
   if (!face || !headBone) return [];
@@ -438,7 +445,22 @@ function makeFaceCustomizationVisuals(entity: Entity, skeleton: EvaluatedSkeleto
     if (chibi && !appearancePresetAllowed(def.key, config.presetId, entity.appearance?.sex)) continue;
     const presetId = laughing && def.key === "eyes" ? "closed_happy"
       : laughing && def.key === "mouth" ? "open_smile" : config.presetId;
-    const svgData = chibi ? chibiFeatureSvg(def.key, presetId, config.color, { ...DEFAULT_APPEARANCE, ...entity.appearance }) : makeFaceFeatureSvg(def.key, presetId, config.color);
+    const openness=laughing && def.key === "eyes" ? 0 : eyeOpennessAt(config,getAnimationContext(skeleton));
+    const mouthOpening=def.key === "mouth" ? mouthOpennessAt(config,getAnimationContext(skeleton)) : undefined;
+    if(chibi && config.content && config.artworkBounds) {
+      let base=multiply(boneM,localTransformToMatrix(config.transform.x,-8+config.transform.y,config.transform.rotation,config.transform.scaleX,config.transform.scaleY,0,0));
+      if(def.key === "hair" && entity.appearance?.view !== "front") base=multiply(base,localTransformToMatrix(1,0,0,.92,1,0,0));
+      if(def.key === "mouth" && entity.appearance?.view !== "front") base=multiply(base,localTransformToMatrix(5,0,0,.85,1,0,0));
+      const positions=def.key === "eyes" ? entity.appearance?.view === "front" ? [-7,7] : [-2,11] : [0];
+      for(const [index,x] of positions.entries()) {
+        const world=multiply(base,localTransformToMatrix(x,0,0,x === 11 ? .8 : 1,1,0,0));
+        const id=`face__${entity.id}__${def.key}_${index}`;
+        if(def.key === "mouth" && mouthOpening!==undefined) visuals.push(...mouthArtworkVisuals(config.content,config.artworkBounds,world,id,def.zIndex,resources,mouthOpening));
+        else visuals.push(...faceArtworkVisuals(config.content,config.artworkBounds,world,id,def.key,def.zIndex,resources,def.key === "eyes" ? openness : undefined));
+      }
+      continue;
+    }
+    const svgData = chibi ? chibiFeatureSvg(def.key, presetId, config.color, { ...DEFAULT_APPEARANCE, ...entity.appearance },false,openness,mouthOpening) : makeFaceFeatureSvg(def.key, presetId, config.color);
     if (!svgData) continue;
     const metrics = parseMetrics(svgData);
     // Face feature SVGs use centered viewBoxes like -12..12, so their pivot
@@ -478,6 +500,11 @@ function makeFaceCustomizationVisuals(entity: Entity, skeleton: EvaluatedSkeleto
   if (chibi && entity.appearance) {
     const appearance = { ...DEFAULT_APPEARANCE, ...entity.appearance };
     for (const feature of ["nose", "marks"] as const) {
+      if(feature === "nose" && appearance.nose !== "none" && appearance.noseArtwork) {
+        const world=multiply(boneM,localTransformToMatrix(appearance.view === "front" ? 0 : 5,-8,0,appearance.view === "front" ? 1 : .85,1,0,0));
+        visuals.push(...faceArtworkVisuals(appearance.noseArtwork.content,appearance.noseArtwork.bounds,world,`face__${entity.id}__nose`,feature,-695.5,resources));
+        continue;
+      }
       const svgData = chibiFeatureSvg(feature, feature === "nose" ? appearance.nose : "marks", "#b67d5c", appearance);
       if (!svgData) continue;
       const metrics = parseMetrics(svgData);
@@ -508,7 +535,8 @@ function makeFaceCustomizationVisuals(entity: Entity, skeleton: EvaluatedSkeleto
     const worldBounds = transformAABB(worldM, localBounds);
     visuals.push({
       id: `face_overlay__${overlay.id}`,
-      svgData: overlay.svgData,
+      svgData: vectorSource(overlay),
+      content:overlay.content,
       zIndex: overlay.zOffset,
       worldMatrix: worldM,
       localBounds,
@@ -752,6 +780,7 @@ export function evaluateScene(
   skeleton: EvaluatedSkeleton,
   items:    Item[],
   fitProfiles: ItemFitProfile[] = [],
+  options: { includeCoveredBody?: boolean; resources?:VisualResources } = {},
 ): EvaluatedScene {
   const effectiveItems = refreshCanonicalBuiltInTypedItems(items);
   const coveredBodyBoneIds = getCoveredBodyBoneIds(entity, template, effectiveItems);
@@ -766,8 +795,21 @@ export function evaluateScene(
   // ── 1. Entity visuals (full-vector body, v2.0) ─────────────────────────────
   for (const visual of getRenderableEntityVisuals(entity, template)) {
     if (visual.bodyPartId && (visual.bodyView ?? "front") !== (entity.appearance?.view && entity.appearance.view !== "front" ? "side" : "front")) continue;
-    if (visual.bodyPartId && coveredBodyBoneIds.has(visual.boneId)) continue;
-    const svgData = applyPaletteToSvg(visual.svgData, template.paletteTokens, entity.palette);
+    if (!options.includeCoveredBody && visual.bodyPartId && coveredBodyBoneIds.has(visual.boneId)) continue;
+    if(visual.content?.kind==="document") {
+      const resources=options.resources??getVisualResources(),doc=resources.documents.find(d=>d.id===(visual.content as {documentId:string}).documentId);
+      const bone=skeleton.bones.get(visual.boneId),lt=visual.localTransform;
+      const parent=multiply(bone?worldBoneToMatrix(bone):identity(),localTransformToMatrix(lt.x,lt.y,lt.rotation,lt.scaleX,lt.scaleY));
+      const placement=doc?.studioEntityId?identity():multiply(parent,translation(visual.metrics.viewBoxX-visual.pivot.x,visual.metrics.viewBoxY-visual.pivot.y));
+      const art=evaluateArtDocument(visual.content.documentId,skeleton,"vis__"+visual.id,visual.content.nodeId,resources,placement);
+      for(const v of art){
+        v.entityVisualId=visual.id;v.anatomicalBody=v.anatomicalBody||!!visual.bodyPartId;
+        if(!doc?.studioEntityId){v.boneId??=visual.boneId;v.zIndex=visual.zIndex+v.zIndex/1000;}
+        visuals.push(v);
+      }
+      continue;
+    }
+    const svgData = applyPaletteToSvg(vectorSource(visual), template.paletteTokens, entity.palette);
 
     const wb = skeleton.bones.get(visual.boneId);
     const boneM: Matrix2D = wb ? worldBoneToMatrix(wb) : identity();
@@ -795,6 +837,8 @@ export function evaluateScene(
       worldBounds,
       sourceKind: "entity-visual",
       entityVisualId: visual.id,
+      boneId: visual.boneId,
+      anatomicalBody: !!visual.bodyPartId,
       svgFitMode: "v2_vector",
     });
 
@@ -811,9 +855,9 @@ export function evaluateScene(
     // Stage 3: per-bone SVG parts
     for (const part of bodyParts) {
       if (entity.visuals?.some(visual => visual.bodyPartId === part.id && (visual.bodyView ?? "front") === (entity.appearance?.view && entity.appearance.view !== "front" ? "side" : "front"))) continue;
-      if (coveredBodyBoneIds.has(part.boneId)) continue;
+      if (!options.includeCoveredBody && coveredBodyBoneIds.has(part.boneId)) continue;
       // Spine-style slot: an attachment key swaps the drawing, not the bone binding.
-      const svgData = applyPaletteToSvg(part.svgData, template.paletteTokens, entity.palette);
+      const svgData = applyPaletteToSvg(vectorSource(part), template.paletteTokens, entity.palette);
 
       const wb = skeleton.bones.get(part.boneId);
       const boneM: Matrix2D = wb ? worldBoneToMatrix(wb) : identity();
@@ -832,6 +876,7 @@ export function evaluateScene(
         worldBounds,
         sourceKind: "bone-part",
         boneId: part.boneId,
+        anatomicalBody: true,
         svgFitMode: "v2_vector",
       });
 
@@ -846,7 +891,7 @@ export function evaluateScene(
   } else if (getRenderableEntityVisuals(entity, template).length === 0) {
     // Fallback: full-frame base body layers (no boneParts, no entity.visuals)
     for (const bodyLayer of template.baseBodyLayers) {
-      const svgData = applyPaletteToSvg(bodyLayer.svgData, template.paletteTokens, entity.palette);
+      const svgData = applyPaletteToSvg(vectorSource(bodyLayer), template.paletteTokens, entity.palette);
       const zIndex  = -1000 + bodyLayer.zOffset;
       const worldM  = makeFullFrameMatrix();
       const localBounds = makeLocalBounds(fw, fh);
@@ -872,7 +917,7 @@ export function evaluateScene(
   }
 
   // ── 3. Slot item layers ────────────────────────────────────────────────────
-  for (const faceVisual of makeFaceCustomizationVisuals(entity, skeleton)) {
+  for (const faceVisual of makeFaceCustomizationVisuals(entity, skeleton, options.resources??getVisualResources())) {
     visuals.push(faceVisual);
   }
 
@@ -896,7 +941,7 @@ export function evaluateScene(
           const rest=evaluateSkeleton(template.bones,new Map(),entity.bodyMorphs,entity.appearance);
           const matrices=new Map([...skeleton.bones].map(([id,bone])=>[id,worldBoneToMatrix(bone)]));
           const bind=new Map([...rest.bones].map(([id,bone])=>[id,worldBoneToMatrix(bone)]));
-          const cloth=applyPaletteToSvg(part.svgData,ITEM_SOURCE_PALETTE,effectivePalette).match(/fill="(#[0-9a-fA-F]+)"/)?.[1]??"#8C5A3C";
+          const cloth=applyPaletteToSvg(vectorSource(part),ITEM_SOURCE_PALETTE,effectivePalette).match(/fill="(#[0-9a-fA-F]+)"/)?.[1]??"#8C5A3C";
           const mesh=part.mesh ?? createGarmentMesh(bind,bodyParts,cloth,entity.appearance?.sex==="female");
           const {bounds,svgData}=renderSkinMesh(mesh,skinVertices(mesh,matrices,meshDeformAt(getAnimationContext(skeleton),part.id)));
           const id=`slot__${slotAssign.slotId}__${item.id}__${part.id}`;
@@ -909,7 +954,7 @@ export function evaluateScene(
         const attachmentContext = getAnimationContext(skeleton);
         if (part.dynamicLine?.kind === "arrow" && (!attachmentContext || attachmentContext.clip.id !== part.dynamicLine.clipId
           || attachmentContext.timeMs < part.dynamicLine.attachMs || attachmentContext.timeMs >= part.dynamicLine.releaseMs)) continue;
-        let svgData = applyPaletteToSvg(part.svgData, ITEM_SOURCE_PALETTE, effectivePalette);
+        let svgData = applyPaletteToSvg(vectorSource(part), ITEM_SOURCE_PALETTE, effectivePalette);
         const binding = part.coordinateMode === "bone_local"
           ? resolveItemPartBinding(entity, template, skeleton, item, slotAssign, slotDef, part, fitProfiles) : null;
         const heldItem = ["weapon_main", "weapon_off", "shield"].includes(item.category);
@@ -1010,7 +1055,7 @@ export function evaluateScene(
     } else {
       // Legacy: item has only svgLayers → full-frame overlays
       for (const svgLayer of item.svgLayers) {
-        const svgData = applyPaletteToSvg(svgLayer.svgData, ITEM_SOURCE_PALETTE, effectivePalette);
+        const svgData = applyPaletteToSvg(vectorSource(svgLayer), ITEM_SOURCE_PALETTE, effectivePalette);
         const zIndex  = slotDef.zIndex + svgLayer.zOffset;
         const { width: frameWidth, height: frameHeight } = getLegacyOverlayFrameSize(item, template, svgData);
         const slotBoneMatrix = getSlotBoneMatrix(skeleton, slotDef);
@@ -1042,12 +1087,35 @@ export function evaluateScene(
     }
   }
 
+  // Resolve source content after legacy fitting/palette calculations.
+  for(const v of visuals) {
+    if(v.content)continue;
+    const source=v.sourceKind==="entity-visual" ? entity.visuals?.find(x=>x.id===v.entityVisualId)
+      : v.sourceKind==="bone-part" ? bodyParts.find(x=>"part__"+x.id===v.id)
+      : v.sourceKind==="item-part" ? (effectiveItems.find(x=>x.id===v.itemId)?.parts?.find(x=>x.id===v.partId)??effectiveItems.find(x=>x.id===v.itemId)?.svgLayers.find(x=>x.id===v.partId))
+      : template.baseBodyLayers.find(x=>"base__"+x.id===v.id);
+    v.content=source?.content && source.content.kind!=="vector" ? source.content : {kind:"vector",svgData:v.svgData??""};
+  }
+  const expanded:EvaluatedVisual[]=[];
+  for(const v of visuals){
+    if(v.content?.kind!=="document"){expanded.push(v);continue;}
+    const resources=options.resources??getVisualResources();
+    const placement=multiply(v.worldMatrix,translation(v.localBounds.minX,v.localBounds.minY));
+    for(const art of evaluateArtDocument(v.content.documentId,skeleton,v.id,v.content.nodeId,resources,placement)){
+      art.sourceKind=v.sourceKind;art.slotId=v.slotId;art.itemId=v.itemId;art.partId=v.partId;art.boneId??=v.boneId;art.anatomicalBody||=v.anatomicalBody;art.zIndex=v.zIndex+art.zIndex/1000;expanded.push(art);
+    }
+  }
+  visuals.splice(0,visuals.length,...expanded);
   applyDrawOrder(visuals,effectiveItems,getAnimationContext(skeleton),entity.appearance?.view === "left" ? "r" : "l");
-  if(entity.entityType === "character" && (entity.appearance?.view === "left" || entity.appearance?.view === "right" || template.id.startsWith("biped_profile_"))) {
-    const context=getAnimationContext(skeleton);
+  const context=getAnimationContext(skeleton);
+  if(context?.clip?.equipmentDepth?.length || (entity.entityType === "character" && (entity.appearance?.view === "left" || entity.appearance?.view === "right" || template.id.startsWith("biped_profile_")))) {
     applyLimbDepth(visuals,effectiveItems,entity.appearance?.view === "left" ? "left" : "right",context?.clip,context?.timeMs);
   }
   for(const layer of layers) { const visual=visuals.find(v=>v.id===layer.id); if(visual)layer.zIndex=visual.zIndex; }
+  for(const v of visuals) {
+    v.assetResources=(options.resources??getVisualResources()).assets;
+    for (const mask of v.occlusionMasks ?? []) mask.assetResources = v.assetResources;
+  }
   visuals.sort((a, b) => a.zIndex - b.zIndex);
   layers.sort((a, b)  => a.zIndex - b.zIndex);
 

@@ -293,7 +293,7 @@ export function wrapRasterDataUriAsSvg(
 }
 
 export function makeImportedAssetSource(options: {
-  format: "svg" | "png";
+  format: "svg" | "png" | "webp" | "jpeg";
   name: string;
   originalFileName: string;
   mimeType: string;
@@ -387,6 +387,7 @@ export function buildImportedProjectItem(options: {
           id: "thumb",
           styleSetId: null,
           svgData: firstPart.svgData,
+          content: firstPart.content,
           paletteChannels: EMPTY_CHANNELS,
           zOffset: 0,
         }]

@@ -1,3 +1,4 @@
+import { ArtStudioPanel } from "@/components/studio/ArtStudioPanel";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toolbar } from "@/components/toolbar/Toolbar";
@@ -97,6 +98,7 @@ export function IDE() {
   const authoringMode = useStore(s => s.project.editorMeta.activeAuthoringMode);
   const activeEntityId = useStore(s => s.project.activeEntityId);
   const [workspace, setWorkspace] = useState("character");
+  const [legacyDrawing,setLegacyDrawing]=useState(false);
   const [libraryTab, setLibraryTab] = useState<LibraryTabId>("appearance");
   useEffect(() => {
     if (activeTab === "authoring") {
@@ -137,7 +139,7 @@ export function IDE() {
                 setInspectorCollapsed(id === "draw");
                 setLibraryTab(id === "equipment" ? "items" : id === "draw" ? "body" : "appearance");
                 store.setActiveAuthoringMode(id === "draw" ? "sprite-editor" : null);
-                store.setCanvasMode(id === "equipment" ? "edit-attachment" : "select");
+                store.setCanvasMode("select");
                 setTimelineCollapsed(id === "character" || id === "equipment");
                 if (id === "draw") {
                   store.setAnimBottomTab("authoring");
@@ -160,7 +162,7 @@ export function IDE() {
           {/* Left: Library Panel (collapsible) */}
           <div
             data-testid="library-panel-wrapper"
-            style={{ width: effectiveLibW, flexShrink: 0 }}
+            style={{ width: drawingWorkspace ? 0 : effectiveLibW, flexShrink: 0, display:drawingWorkspace ? "none":undefined }}
             className="flex flex-col overflow-hidden border-r border-border transition-[width] duration-150"
           >
             {libraryCollapsed ? (
@@ -210,7 +212,7 @@ export function IDE() {
           <div className="flex-1 flex flex-col overflow-hidden min-w-0">
             {/* Canvas area */}
             <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
-              {drawingWorkspace ? <AuthoringPanel standalone /> : <CanvasPanel />}
+              {drawingWorkspace ? (legacyDrawing ? <div className="h-full flex flex-col"><button className="text-xs p-1 border" onClick={()=>setLegacyDrawing(false)}>Back to Art Studio</button><div className="flex-1 min-h-0"><AuthoringPanel standalone /></div></div> : <ArtStudioPanel onLegacyEditor={()=>setLegacyDrawing(true)}/>) : <CanvasPanel />}
             </div>
 
             {/* Horizontal resize handle */}
@@ -286,7 +288,7 @@ export function IDE() {
           </div>
 
           {/* Vertical resize handle — canvas ↔ inspector */}
-          {!inspectorCollapsed && (
+          {!drawingWorkspace && !inspectorCollapsed && (
             <div
               className="w-1 bg-border/40 hover:bg-primary/50 active:bg-primary cursor-col-resize transition-colors flex-shrink-0"
               onMouseDown={e => startHDrag(e, inspectorWidth, setInspectorWidth, true)}
@@ -296,7 +298,7 @@ export function IDE() {
           {/* Right: Inspector (collapsible) */}
           <div
             data-testid="inspector-panel-wrapper"
-            style={{ width: effectiveInspW, flexShrink: 0 }}
+            style={{ width: effectiveInspW, flexShrink: 0, display: drawingWorkspace ? "none" : undefined }}
             className="flex flex-col overflow-hidden border-l border-border transition-[width] duration-150"
           >
             {inspectorCollapsed ? (

@@ -1,3 +1,4 @@
+import { upgradeHybridProject } from "./hybridMigration";
 import { ProjectSchema } from "@/domain/schema";
 import { refreshCanonicalBuiltInItems } from "@/lib/canonicalItems";
 import { refreshCanonicalBuiltInTemplates } from "@/data/templates";
@@ -130,7 +131,7 @@ export function detectProjectVersion(raw: unknown): string {
 /** Migrate any project version to v2.0. Safe to call on already-v2.0 data. */
 export function migrateProject(raw: unknown): unknown {
   const version = detectProjectVersion(raw);
-  const migrated = version === "2.0" ? normalizeV2Project(raw) : migrateV1ToV2(raw);
+  const migrated = upgradeHybridProject(version === "2.0" || version === "3.0" ? normalizeV2Project(raw) : migrateV1ToV2(raw));
   const parsed = ProjectSchema.safeParse(migrated);
   return parsed.success ? parsed.data : migrated;
 }

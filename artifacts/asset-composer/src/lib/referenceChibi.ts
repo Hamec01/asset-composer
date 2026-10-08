@@ -1,3 +1,4 @@
+import { vectorSource } from "@/lib/visualContent";
 import type { BonePart, ImportedAssetSource, Template } from "@/domain/types";
 import { createEditableBodyPart } from "./bodyPartAuthoring";
 import { createDocumentFromEntityVisual, extractSpriteShapesFromSvg, spriteEditorDocumentToSvg, translateSpriteShape } from "./spriteEditor";
@@ -96,7 +97,7 @@ export function createReferenceChibiTemplate(base: Template, id: string): Templa
     return { id: `hero_${trace.id}`, boneId: trace.bone, naturalWidth: w * SCALE, naturalHeight: h * SCALE,
       localX: (x + w / 2 - jointX) * SCALE, localY: (y + h / 2 - jointY) * SCALE, zOffset: trace.z,
       svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}"><path d="${trace.path}" fill="${fill}" stroke="none"/><path d="${trace.contour ?? trace.path}" fill="none" stroke="${palette.outline}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>${trace.detail ? `<path d="${trace.detail}" fill="none" stroke="${trace.id === "pelvis" ? "#596C76" : "#E8A078"}" stroke-width="5" stroke-linecap="round"/>` : ""}</svg>` };
-  }).map(part => ({ ...part, svgData: normalizeReferenceSvg(part.svgData) })).sort((a, b) => a.zOffset - b.zOffset);
+  }).map(part => ({ ...part, svgData: normalizeReferenceSvg(vectorSource(part)) })).sort((a, b) => a.zOffset - b.zOffset);
   const bones = base.bones.map(bone => {
     const point = JOINTS[bone.id];
     const parent = JOINTS[bone.parentId ?? "root"];
@@ -124,7 +125,7 @@ export function createReferenceChibiDocuments(template: Template, entityId: stri
     visual.svgData = spriteEditorDocumentToSvg(doc);
     visual.editorDocumentId = doc.id;
     // SVG serialization changed the viewBox origin; rebuild matching metrics.
-    visual.metrics = getAuthoredDocumentMetrics(visual.svgData, w, h);
+    visual.metrics = getAuthoredDocumentMetrics(vectorSource(visual), w, h);
     return { visual, doc };
   });
 }

@@ -1,3 +1,5 @@
+import { makeRasterAsset } from "@/lib/visualContent";
+import { studioCommit } from "@/lib/studioActions";
 import { useCallback, useMemo, useState } from "react";
 import {
   Dialog,
@@ -27,7 +29,7 @@ import {
   makeImportedAssetSource,
   makeImportedItemId,
   resolveImportedPartRole,
-  wrapRasterDataUriAsSvg,
+
 } from "@/lib/assetImport";
 import { buildImportedEntityVisual, getDefaultImportPivot } from "@/lib/entityVisualImport";
 import { createDocumentFromEntityVisual, createDocumentFromItemPart } from "@/lib/spriteEditor";
@@ -86,6 +88,7 @@ interface ImportedAssetDraft {
   role: ImportPartRole;
   source: ImportedAssetSource;
   svgData: string;
+  rasterAsset?:import("@/domain/types").VisualAsset;
   metrics: VectorAssetMetrics;
   boneId: string;
   pivotX: number;
@@ -208,10 +211,11 @@ async function fileToAssetDraft(
     };
   }
 
-  if (file.type === "image/png" || file.name.toLowerCase().endsWith(".png")) {
+  if (["image/png","image/webp","image/jpeg"].includes(file.type) || /\.(png|webp|jpe?g)$/i.test(file.name)) {
     const dataUri = await readFileAsDataUrl(file);
     const { width, height } = await loadRasterDimensions(dataUri);
-    const svgData = wrapRasterDataUriAsSvg(dataUri, width, height);
+    const rasterAsset=makeRasterAsset(dataUri,width,height,displayName);
+    const svgData = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+width+' '+height+'"></svg>';
     const metrics = parseMetrics(svgData);
     const pivot = getDefaultImportPivot(svgData, "center");
     return {
@@ -220,13 +224,14 @@ async function fileToAssetDraft(
       displayName,
       role: "auto",
       source: makeImportedAssetSource({
-        format: "png",
+        format: rasterAsset.mimeType==="image/webp"?"webp":rasterAsset.mimeType==="image/jpeg"?"jpeg":"png",
         name: displayName,
         originalFileName: file.name,
         mimeType: file.type || "image/png",
         dataUri,
       }),
       svgData,
+      rasterAsset,
       metrics,
       boneId: defaultBoneId,
       pivotX: pivot.x,
@@ -235,7 +240,7 @@ async function fileToAssetDraft(
     };
   }
 
-  throw new Error(`${file.name}: only SVG and PNG are supported.`);
+  throw new Error(`${file.name}: only SVG, PNG, WebP and JPEG are supported.`);
 }
 
 function getRoleOptions(category: ItemCategory): ImportPartRole[] {
@@ -295,12 +300,8 @@ function applyAutoPartMapping(
 export function ImportWizard({ open, onClose, activeEntityId }: Props) {
   const project = useStore(s => s.project);
   const editor = useStore(s => s.editor);
-  const addEntityVisual = useStore(s => s.addEntityVisual);
-  const addProjectItem = useStore(s => s.addProjectItem);
-  const setEntitySlot = useStore(s => s.setEntitySlot);
   const setSelectedSlot = useStore(s => s.setSelectedSlot);
   const setEditorSelection = useStore(s => s.setEditorSelection);
-  const upsertSpriteEditorDocument = useStore(s => s.upsertSpriteEditorDocument);
   const setActiveAuthoringMode = useStore(s => s.setActiveAuthoringMode);
   const setActiveSpriteDocument = useStore(s => s.setActiveSpriteDocument);
   const setAnimBottomTab = useStore(s => s.setAnimBottomTab);
@@ -318,7 +319,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
   const activeSlot = slots.find(slot => slot.id === ws.slotId) ?? selectedSlot;
   const previewAsset = ws.assets[0] ?? null;
   const previewUrl = previewAsset
-    ? (previewAsset.source.format === "png" && previewAsset.source.dataUri
+    ? (previewAsset.source.format !== "svg" && previewAsset.source.dataUri
       ? previewAsset.source.dataUri
       : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(previewAsset.svgData)}`)
     : null;
@@ -338,7 +339,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
         const renderedHeight = height * scale;
         const left = centerX - asset.pivotX * scale;
         const top = centerY - asset.pivotY * scale;
-        const src = asset.source.format === "png" && asset.source.dataUri
+        const src = asset.source.format !== "svg" && asset.source.dataUri
           ? asset.source.dataUri
           : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(asset.svgData)}`;
         return {
@@ -483,9 +484,18 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
         source: asset.source,
         editorDocumentId: null,
       };
-      addEntityVisual(activeEntityId, visual);
+      if(asset.rasterAsset){visual.content={kind:"raster",assetId:asset.rasterAsset.id};delete visual.svgData;visual.source={...asset.source,dataUri:undefined};}
       const doc = createDocumentFromEntityVisual(activeEntityId, visual);
-      upsertSpriteEditorDocument(doc);
+      if(asset.rasterAsset){doc.referenceAsset=null;doc.layers=[{id:crypto.randomUUID(),name:asset.displayName,kind:"raster",assetId:asset.rasterAsset.id,visible:true,zIndex:0,shapes:[]}];}
+      visual.editorDocumentId = doc.id;
+      studioCommit("Import artwork", p => {
+        if (asset.rasterAsset) { p.assets ??= {}; p.assets[asset.rasterAsset.id] = asset.rasterAsset; }
+        const entity = p.entities.find(e => e.id === activeEntityId)!;
+        entity.visuals ??= [];
+        entity.visuals.push(visual);
+        p.editorMeta.spriteEditorDocuments.push(doc);
+        p.editorMeta.activeSpriteDocumentId = doc.id;
+      });
       setActiveSpriteDocument(doc.id);
       setEditorSelection({
         kind: "entity-visual",
@@ -512,6 +522,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
       }),
     );
 
+    parts.forEach((part,index)=>{const asset=ws.assets[index];if(asset.rasterAsset){part.content={kind:"raster",assetId:asset.rasterAsset.id};delete part.svgData;part.source={...asset.source,dataUri:undefined};}});
     const item = buildImportedProjectItem({
       id: makeImportedItemId(ws.itemName),
       name: ws.itemName.trim(),
@@ -523,21 +534,27 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
       parts,
     });
 
-    addProjectItem(item);
+    const docs = (item.parts ?? []).map(part => {
+      const doc = createDocumentFromItemPart(activeEntityId, item, part);
+      part.editorDocumentId = doc.id;
+      return doc;
+    });
+    const preferredDoc = docs.find(doc => doc.name.toLowerCase().includes("body"))
+      ?? docs.find(doc => doc.name.toLowerCase().includes("head")) ?? docs[0];
+    studioCommit("Import item artwork", p => {
+      p.assets ??= {};
+      ws.assets.forEach(a => { if (a.rasterAsset) p.assets![a.rasterAsset.id] = a.rasterAsset; });
+      p.items.push(item);
+      const entity = p.entities.find(e => e.id === activeEntityId)!;
+      const slot = entity.slots.find(s => s.slotId === ws.slotId);
+      if (slot) slot.itemId = item.id;
+      else entity.slots.push({ slotId: ws.slotId, itemId: item.id, paletteOverride: {}, attachmentOverride: {} });
+      p.editorMeta.spriteEditorDocuments.push(...docs);
+      if (preferredDoc) p.editorMeta.activeSpriteDocumentId = preferredDoc.id;
+    });
     setSelectedSlot(ws.slotId);
-    setEntitySlot(activeEntityId, ws.slotId, item.id);
     if (item.parts?.length) {
-      const docs = item.parts.map(part => createDocumentFromItemPart(activeEntityId, item, part));
-      for (const doc of docs) {
-        upsertSpriteEditorDocument(doc);
-      }
-      const preferredDoc =
-        docs.find(doc => doc.name.toLowerCase().includes("body"))
-        ?? docs.find(doc => doc.name.toLowerCase().includes("head"))
-        ?? docs[0];
-      if (preferredDoc) {
-        setActiveSpriteDocument(preferredDoc.id);
-      }
+      if (preferredDoc) setActiveSpriteDocument(preferredDoc.id);
       const preferredPart = preferredDoc?.target.partId ?? item.parts[0]?.id;
       if (preferredPart) {
         setEditorSelection({
@@ -556,7 +573,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
 
   const stepDescription =
     ws.step === 1
-      ? "Upload one or more SVG or PNG files."
+      ? "Upload one or more SVG, PNG, WebP or JPEG files."
       : ws.step === 2
         ? "Map the imported assets to a slot and bones."
         : "Review the import and create the project asset.";
@@ -592,7 +609,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
               <Upload className="w-8 h-8 text-muted-foreground" />
               <div className="text-center">
                 <p className="text-sm font-medium">
-                  {dragOver ? "Drop assets here" : "Drag SVG or PNG files here"}
+                  {dragOver ? "Drop assets here" : "Drag SVG, PNG, WebP or JPEG files here"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Single-file or multi-part item import is supported
@@ -602,7 +619,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
             <input
               id="import-asset-input"
               type="file"
-              accept=".svg,.png,image/svg+xml,image/png"
+              accept=".svg,.png,.webp,.jpg,.jpeg,image/svg+xml,image/png,image/webp,image/jpeg"
               multiple
               className="hidden"
               onChange={onFileInput}

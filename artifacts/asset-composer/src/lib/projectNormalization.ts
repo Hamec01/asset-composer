@@ -1,3 +1,4 @@
+import { vectorSource } from "@/lib/visualContent";
 import type { Entity, EntityVisual, Item, SlotAssignment, Template } from "@/domain/types";
 
 const BODY_CLONE_BONE_IDS = new Set([
@@ -182,14 +183,15 @@ function matchesTemplateBodyPartVisual(visual: EntityVisual, template: Template)
     return false;
   }
 
-  const visualSvgKey = normalizeSvgKey(visual.svgData);
+  const visualSvgKey = normalizeSvgKey(vectorSource(visual));
+  if(!visualSvgKey)return false;
 
   return (template.boneParts ?? []).some(part => {
     if (part.boneId !== visual.boneId) {
       return false;
     }
 
-    if (normalizeSvgKey(part.svgData) === visualSvgKey) {
+    if (normalizeSvgKey(vectorSource(part)) === visualSvgKey) {
       return true;
     }
 
@@ -218,8 +220,9 @@ function matchesTemplateRootBodyCloneVisual(visual: EntityVisual, template: Temp
     return false;
   }
 
-  const visualSvgKey = normalizeSvgKey(visual.svgData);
-  if ((template.baseBodyLayers ?? []).some(layer => normalizeSvgKey(layer.svgData) === visualSvgKey)) {
+  const visualSvgKey = normalizeSvgKey(vectorSource(visual));
+  if(!visualSvgKey)return false;
+  if ((template.baseBodyLayers ?? []).some(layer => normalizeSvgKey(layer.svgData ?? "") === visualSvgKey)) {
     return true;
   }
 

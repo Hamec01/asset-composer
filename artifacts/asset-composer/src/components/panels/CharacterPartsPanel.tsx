@@ -1,3 +1,5 @@
+import { VisualThumbnail } from "@/components/VisualThumbnail";
+import { vectorSource } from "@/lib/visualContent";
 import { Pencil, RotateCcw, Plus } from "lucide-react";
 import { useStore } from "@/store";
 import { resolveTemplate } from "@/data/templates";
@@ -70,7 +72,7 @@ export function CharacterPartsPanel() {
                 onClick={() => project.editorMeta.activeAuthoringMode === "sprite-editor" ? editPart(part) : useStore.getState().setEditorSelection({ kind: "bone", entityId: entity.id, boneId: part.boneId })}
                 className="flex items-center gap-2 flex-1 min-w-0 text-left"
               >
-                <span className="w-8 h-9 flex-shrink-0 overflow-hidden" dangerouslySetInnerHTML={{ __html: sanitizeSvg(replacement?.svgData ?? part.svgData) }} />
+                <span className="w-8 h-9 flex-shrink-0 overflow-hidden"><VisualThumbnail visual={replacement??part}/></span>
                 <span className="text-xs break-words">{PART_NAMES[part.id] ?? part.id}</span>
               </button>
               {replacement && <button title="Вернуть базовую часть" aria-label={`Вернуть ${PART_NAMES[part.id] ?? part.id}`} className="p-1 text-muted-foreground hover:text-foreground" onClick={() => useStore.getState().removeEntityVisual(entity.id, replacement.id)}><RotateCcw size={13} /></button>}

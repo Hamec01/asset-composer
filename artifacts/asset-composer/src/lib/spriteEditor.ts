@@ -1,3 +1,4 @@
+import { vectorSource, contentOf, getVisualResources } from "@/lib/visualContent";
 import type {
   EntityVisual,
   FaceOverlay,
@@ -553,17 +554,29 @@ export function spriteEditorDocumentToSvg(document: SpriteEditorDocument, option
   ].join("");
 }
 
+function artworkLayers(value: EntityVisual | ItemPart | FaceOverlay): SpriteEditorLayer[] {
+  const content=contentOf(value);
+  if(content.kind==="raster") return [{...createEmptySpriteLayer("Imported artwork"),kind:"raster",assetId:content.assetId}];
+  if(content.kind==="document") {
+    const doc=getVisualResources().documents.find(d=>d.id===content.documentId);
+    if(doc) return structuredClone(doc.layers);
+    throw new Error("Missing editable artwork document");
+  }
+  const svg=vectorSource(value),layers=createDocumentLayersFromSvg(svg);
+  // Unsupported SVG stays editable as a vector source layer, never a tracing guide.
+  if(svg && (value.metrics.viewBoxX!==0||value.metrics.viewBoxY!==0||!layers.some(l=>l.shapes.length)||/<(?:defs|use|image|text|linearGradient|radialGradient|clipPath|mask|filter)\b|\b(?:transform|style)=/i.test(svg)))return [{...createEmptySpriteLayer("Imported SVG"),kind:"vector",sourceSvg:svg}];
+  return layers.map(l=>({...l,kind:"vector" as const}));
+}
+
 export function createDocumentFromEntityVisual(entityId: string, visual: EntityVisual): SpriteEditorDocument {
-  const layers = createDocumentLayersFromSvg(visual.svgData);
+  const layers = artworkLayers(visual);
   return {
     id: visual.editorDocumentId ?? crypto.randomUUID(),
     name: `${visual.boneId} visual`,
     width: visual.metrics.viewBoxWidth,
     height: visual.metrics.viewBoxHeight,
-    pivot: { ...visual.pivot },
-    referenceAsset: layers.some(layer => layer.shapes.length > 0)
-      ? null
-      : createReferenceSourceFromSvg(`${visual.boneId} visual`, `${visual.id}.svg`, visual.svgData),
+    pivot: { ...visual.pivot,x:visual.pivot.x-visual.metrics.viewBoxX,y:visual.pivot.y-visual.metrics.viewBoxY },
+    referenceAsset: null,
     layers,
     target: {
       kind: "entity-visual",
@@ -575,20 +588,15 @@ export function createDocumentFromEntityVisual(entityId: string, visual: EntityV
 }
 
 export function createDocumentFromItemPart(entityId: string | undefined, item: Item, part: ItemPart): SpriteEditorDocument {
-  const layers = createDocumentLayersFromSvg(part.svgData);
-  const canEditDirectly = layers.some(layer => layer.shapes.length > 0);
+  const layers = artworkLayers(part);
   const isWorldProp = item.category === "static_part" || item.tags.includes("world_prop") || item.tags.includes("world_flora") || item.tags.includes("world_building");
   return {
     id: part.editorDocumentId ?? crypto.randomUUID(),
     name: `${item.name}${part.id !== `${item.id}_part` ? ` / ${part.id}` : ""}`,
     width: part.metrics.viewBoxWidth,
     height: part.metrics.viewBoxHeight,
-    pivot: { ...part.pivot },
-    referenceAsset: canEditDirectly
-      ? (part.source?.format === "png" ? part.source : null)
-      : (part.source?.dataUri
-        ? part.source
-        : createReferenceSourceFromSvg(`${item.name} ${part.id}`, `${part.id}.svg`, part.svgData)),
+    pivot: { ...part.pivot,x:part.pivot.x-part.metrics.viewBoxX,y:part.pivot.y-part.metrics.viewBoxY },
+    referenceAsset: null,
     layers,
     authoringHint: {
       preserveFrame: true,
@@ -608,18 +616,14 @@ export function createDocumentFromItemPart(entityId: string | undefined, item: I
 
 export function createDocumentFromFaceOverlay(entityId: string, overlay?: FaceOverlay): SpriteEditorDocument {
   if (overlay) {
-    const layers = createDocumentLayersFromSvg(overlay.svgData);
+    const layers = artworkLayers(overlay);
     return {
       id: overlay.editorDocumentId ?? crypto.randomUUID(),
       name: overlay.name,
       width: overlay.metrics.viewBoxWidth,
       height: overlay.metrics.viewBoxHeight,
-      pivot: { ...overlay.pivot },
-      referenceAsset: layers.some(layer => layer.shapes.length > 0)
-        ? null
-        : (overlay.source?.dataUri
-          ? overlay.source
-          : createReferenceSourceFromSvg(overlay.name, `${overlay.id}.svg`, overlay.svgData)),
+      pivot: { ...overlay.pivot,x:overlay.pivot.x-overlay.metrics.viewBoxX,y:overlay.pivot.y-overlay.metrics.viewBoxY },
+      referenceAsset: null,
       layers,
         authoringHint: {
           faceFeatureKey: overlay.featureTag ?? "generic",

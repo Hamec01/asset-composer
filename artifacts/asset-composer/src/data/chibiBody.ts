@@ -1,3 +1,4 @@
+import { vectorSource } from "@/lib/visualContent";
 import { createChibiSideBody } from "./chibiSideBody";
 import type { Bone, BonePart, PaletteTokens, CharacterAppearance, Entity, Template } from "@/domain/types";
 
@@ -60,7 +61,7 @@ export function createChibiBody(palette: PaletteTokens, build: ChibiBuild, appea
     `<path d="M10 9 Q13 10 15 9 Q17 10 20 9" fill="none" stroke="${shade}" stroke-width="0.55" stroke-linecap="round"/>`);
   if (appearance?.sex === "female") {
     const torso = parts.at(-1)!;
-    torso.svgData = torso.svgData.replace("L25 25 Q23 31 24 37", "Q32 13 28 20 Q25 24 23 27 Q22 32 24 37")
+    torso.svgData = vectorSource(torso).replace("L25 25 Q23 31 24 37", "Q32 13 28 20 Q25 24 23 27 Q22 32 24 37")
       .replace("L25 25 Q23 31 24 36", "Q32 13 28 20 Q25 24 23 27 Q22 32 24 36");
   }
   part("belly", "spine", 22, 24, 9, -830,
@@ -126,7 +127,10 @@ export function getCharacterBodyParts(template: Template, entity: Entity): BoneP
       }
     }
   }
-  return parts;
+  return parts.map(part => {
+    const customPart = template.boneParts?.find(p => p.id === part.id && p.content && p.content.kind !== "vector");
+    return customPart ? { ...customPart, zOffset: part.zOffset } : part;
+  });
 }
 
 export function createChibiThumbnail(parts: BonePart[], bones: Bone[]): string {
@@ -137,6 +141,6 @@ export function createChibiThumbnail(parts: BonePart[], bones: Bone[]): string {
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-32 -88 64 140">${parts.map(part => {
     const bone = world.get(part.boneId)!;
-    return `<g transform="translate(${bone.x + part.localX - part.naturalWidth / 2} ${bone.y + part.localY - part.naturalHeight / 2})"><svg width="${part.naturalWidth}" height="${part.naturalHeight}">${part.svgData}</svg></g>`;
+    return `<g transform="translate(${bone.x + part.localX - part.naturalWidth / 2} ${bone.y + part.localY - part.naturalHeight / 2})"><svg width="${part.naturalWidth}" height="${part.naturalHeight}">${vectorSource(part)}</svg></g>`;
   }).join("")}</svg>`;
 }

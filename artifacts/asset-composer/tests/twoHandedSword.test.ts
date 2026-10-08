@@ -14,7 +14,7 @@ import { resolveTemplate } from "../src/data/templates";
 import { transformPoint, worldBoneToMatrix } from "../src/lib/matrixUtils";
 import { angleDelta } from "../src/lib/angles";
 import { twoHandedSwordStrike as originalClip } from "./fixtures/originalTwoHandedSword";
-import { DEPTH_COLORS } from "../src/lib/limbDepth";
+import { buildAnimationReview } from "../src/lib/animationReview";
 
 const skeleton = (time: number, view: "right" | "left") => evaluateSkeleton(bipedProfileChibiBones,
   resolveClipPose(clip, time), undefined, { ...DEFAULT_APPEARANCE, view });
@@ -118,38 +118,13 @@ describe("two-handed strike", () => {
   });
 });
 
-it.skipIf(!process.env.SWORD_REVIEW)("renders seven phases through the real scene pipeline", () => {
+it.skipIf(!process.env.SWORD_REVIEW)("renders Animation X-Ray review sheets through the real scene pipeline", () => {
   useStore.getState().newProject();
   useStore.getState().createEntity("character","biped_profile_base_v1","Two-handed strike");
   const project=useStore.getState().project, entity=structuredClone(project.entities[0]);
   entity.slots.forEach(slot => { slot.itemId=null; });
   const template=resolveTemplate(project,entity.templateId)!;
-  const labels=["Guard","Windup","Apex","Downstroke","Contact","Follow-through","Recover"];
-  const rigs: string[]=[];
-  const depths: string[]=[];
-  writeFileSync(`${process.env.SWORD_REVIEW}-joints.json`,JSON.stringify(TWO_HANDED_PHASES.map(time=>({time,bones:Object.fromEntries(skeleton(time,"right").bones)})),null,2));
-  const panels=(["right","left"] as const).flatMap((view,row) => TWO_HANDED_PHASES.map((time,i) => {
-    entity.appearance={...entity.appearance!,view};
-    const pose=skeleton(time,view), scene=evaluateScene(entity,template,pose,project.items);
-    const transform=`translate(${i*220+110} ${row*360+235}) scale(2)`;
-    const depthArt:string[]=[];
-    const art=scene.visuals.sort((a,b)=>a.zIndex-b.zIndex).map(v => {
-      const b=v.localBounds;
-      const markup=`<g transform="matrix(${v.worldMatrix.join(" ")})">${v.svgData.replace("<svg ",`<svg x="${b.minX}" y="${b.minY}" width="${b.maxX-b.minX}" height="${b.maxY-b.minY}" `)}</g>`;
-      depthArt.push(markup.replace(/(fill|stroke)="(?!none)[^"]*"/g,`$1="${DEPTH_COLORS[v.renderDepth!.slot]}"`));
-      return markup;
-    }).join("");
-    const rig=(["l","r"] as const).map((side,j) => {
-      const points=[`shoulder_${side}`,`elbow_${side}`,`hand_${side}`].map(id=>pose.bones.get(id)!);
-      return `<polyline points="${points.map(p=>`${p.x},${p.y}`).join(" ")}" fill="none" stroke="${j ? "#ff7386" : "#61d8ff"}" stroke-width="1.5"/>${points.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="2" fill="${j ? "#ff7386" : "#61d8ff"}"/>`).join("")}`;
-    }).join("");
-    const label=`<text x="${i*220+110}" y="${row*360+330}" text-anchor="middle" fill="white" font-family="sans-serif" font-size="14">${labels[i]} / ${view}</text>`;
-    depths.push(`<g transform="${transform}">${depthArt.join("")}</g>${label}`);
-    rigs.push(`<g transform="${transform}"><g opacity=".2">${art}</g>${rig}</g>${label}`);
-    return `<g transform="${transform}">${art}</g>${label}`;
-  }));
-  const svg=(parts:string[])=>`<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="720"><rect width="1540" height="720" fill="#252729"/>${parts.join("")}</svg>`;
-  writeFileSync(`${process.env.SWORD_REVIEW}.svg`,svg(panels));
-  writeFileSync(`${process.env.SWORD_REVIEW}-rig.svg`,svg(rigs));
-  writeFileSync(`${process.env.SWORD_REVIEW}-depth.svg`,svg(depths));
+  const review = buildAnimationReview({ entity, template, clips: project.animationClips, clip, items: project.items, fitProfiles: project.itemFitProfiles });
+  for (const sheet of review.sheets) writeFileSync(`${process.env.SWORD_REVIEW}-${sheet.facing}.svg`,sheet.svg);
+  writeFileSync(`${process.env.SWORD_REVIEW}-review.json`,JSON.stringify(review.report,null,2));
 });

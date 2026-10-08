@@ -7,6 +7,8 @@ import { getCharacterBodyParts } from "@/data/chibiBody";
 import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
 import { buildMultiClipPose, evaluateSkeleton, evaluateScene } from "@/lib/evaluationPipeline";
 import { DEPTH_COLORS } from "@/lib/limbDepth";
+import { ANATOMY_COLORS, XRAY_UNSUPPORTED, evaluatePresentedScene, shoulderRoots, xrayOverlaySvg, type AnimationXRayMode } from "@/lib/animationXRay";
+import { AnimationReviewDialog } from "./AnimationReviewDialog";
 import { transformPoint, worldBoneToMatrix } from "@/lib/matrixUtils";
 import { armDiagnostics } from "@/lib/armDiagnostics";
 import { getAnimationContext } from "@/lib/animationContext";
@@ -15,6 +17,10 @@ import { headClearance, validateAnimationDepth, validateHeadClearance } from "@/
 export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; panX: number; panY: number } }) {
   const project = useStore(s => s.project);
   const playback = useStore(s => s.animPlayback);
+  const xray = useStore(s => s.animationXRay);
+  const setXray = useStore(s => s.setAnimationXRay);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const xrayEnabled = xray.mode !== "normal";
   const [open, setOpen] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [onion, setOnion] = useState(false);
@@ -23,7 +29,10 @@ export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; p
   const [depthEnabled,setDepthEnabled] = useState(false);
   const [stackEnabled,setStackEnabled] = useState(false);
   const [time, setTime] = useState(animController.currentTimeMs);
-  useEffect(() => enabled || depthEnabled || stackEnabled ? animController.addTickListener(setTime) : undefined, [enabled,depthEnabled,stackEnabled]);
+  useEffect(() => {
+    setTime(animController.currentTimeMs);
+    return enabled || depthEnabled || stackEnabled || xrayEnabled ? animController.addTickListener(setTime) : undefined;
+  }, [enabled, depthEnabled, stackEnabled, xrayEnabled]);
   const entity = project.entities.find(e => e.id === project.activeEntityId);
   const template = useMemo(() => entity && resolveTemplate(project, entity.templateId), [project, entity]);
   const clip = project.animationClips.find(c => c.id === playback.activeClipId);
@@ -36,8 +45,10 @@ export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; p
     return Array.from({ length: Math.ceil(clip.durationMs*clip.fps/1000)+1 }, (_, i) =>
       evaluate(Math.min(clip.durationMs, i*1000/clip.fps))?.bones.get(joint)).filter(p => !!p);
   }, [enabled, joint, clip, template, entity, items, playback.upperClipId, playback.lowerClipId, playback.upperBlendWeight]);
-  const skeleton = (enabled || depthEnabled || stackEnabled) && evaluate(time);
-  const scene = skeleton && entity && template ? evaluateScene(entity,template,skeleton,items) : null;
+  const skeleton = (enabled || depthEnabled || stackEnabled || xrayEnabled) && evaluate(time);
+  const scene = skeleton && entity && template ? evaluateScene(entity,template,skeleton,items,project.itemFitProfiles) : null;
+  const presented = skeleton && entity && template && xrayEnabled ? evaluatePresentedScene(entity,template,skeleton,items,project.itemFitProfiles,xray) : null;
+  const roots = presented && shoulderRoots(presented);
   const context = skeleton ? getAnimationContext(skeleton) : undefined;
   const depthWarnings = useMemo(()=>clip ? validateAnimationDepth(clip) : [],[clip]);
   const clearance = scene ? headClearance(scene.visuals) : null;
@@ -71,7 +82,7 @@ export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; p
         const ids = [`shoulder_${side}`, `elbow_${side}`, `hand_${side}`];
         const points = ids.map(id => pose.bones.get(id));
         if (points.some(p => !p)) return null;
-        const color = side === "l" ? "#52C9FF" : "#FF738D";
+        const color = side === "l" ? ANATOMY_COLORS.leftArm : ANATOMY_COLORS.rightArm;
         const hand = points[2]!;
         const part = parts.find(p => p.boneId === ids[2]);
         const socket = part?.gripSocket ?? part?.grip ?? { x: 0, y: 0 };
@@ -99,9 +110,27 @@ export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; p
     </g>;
   };
   return <>
+    <AnimationReviewDialog open={reviewOpen} onOpenChange={setReviewOpen} />
     <div className="absolute right-3 top-3 z-20" onMouseDown={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()} onWheel={event => event.stopPropagation()}>
       <button type="button" aria-label="Debug" title="Debug" aria-expanded={open} onClick={() => setOpen(!open)} className="flex h-8 items-center gap-1 rounded border border-border bg-card px-2 text-xs"><Bug size={14} />Debug</button>
-      {open && <div className="absolute right-0 mt-1 w-56 rounded border border-border bg-card p-2 text-xs space-y-2">
+      {open && <div className="absolute right-0 mt-1 max-h-[80vh] w-72 overflow-y-auto rounded border border-border bg-card p-2 text-xs space-y-2">
+        <label className="block font-semibold">Animation X-Ray
+          <select aria-label="Animation X-Ray mode" value={xray.mode} onChange={e => setXray({mode:e.target.value as AnimationXRayMode})} className="mt-1 w-full rounded border border-border bg-card p-1 font-normal">
+            <option value="normal">Normal</option><option value="rig">Rig Colors</option><option value="depth">Depth Colors</option><option value="skeleton">Skeleton</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={xray.depthShading} disabled={xray.mode !== "rig"} onChange={e => setXray({depthShading:e.target.checked})}/>Depth shading</label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={xray.markers} disabled={!xrayEnabled} onChange={e => setXray({markers:e.target.checked})}/>X-Ray joint markers and labels</label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={xray.showEquipment} disabled={!xrayEnabled} onChange={e => setXray({showEquipment:e.target.checked})}/>Show equipment</label>
+        <button type="button" disabled={!clip || !entity} onClick={() => setReviewOpen(true)} className="w-full rounded border border-border px-2 py-1 disabled:opacity-40">Export Animation Review</button>
+        {xrayEnabled && <div aria-label="Animation X-Ray legend" className="space-y-1 border-t border-border pt-2">
+          <div className="grid grid-cols-2 gap-1">{Object.entries(ANATOMY_COLORS).map(([name,color]) => <div key={name} className="flex items-center gap-1"><span style={{backgroundColor:color}} className="inline-block h-3 w-3 border border-white/30"/>{name}</div>)}</div>
+          <div>Dark = FAR · Base = CROSS_BODY/BODY · Bright = NEAR/FRONT</div>
+          <div>SL/EL/HL · SR/ER/HR: shoulder / elbow / hand. N/F: near / far.</div>
+          <details><summary className="cursor-pointer">Depth slot colors</summary>{Object.entries(DEPTH_COLORS).map(([slot,color]) => <div key={slot} style={{color}}>{slot}</div>)}<div>No depth metadata = neutral gray.</div></details>
+          {roots && <div aria-label="Shoulder roots" className="font-mono text-[10px]">SL: {roots.left ? `${roots.left.x.toFixed(2)}, ${roots.left.y.toFixed(2)}` : "—"}<br/>SR: {roots.right ? `${roots.right.x.toFixed(2)}, ${roots.right.y.toFixed(2)}` : "—"}<br/>Distance: {roots.distance?.toFixed(2) ?? "—"} rig units</div>}
+          {presented?.presentation?.supported === false && <div role="status" className="text-amber-400">{XRAY_UNSUPPORTED}</div>}
+        </div>}
         <label className="flex items-center gap-2"><input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />Skeleton</label>
         <label className="flex items-center gap-2"><input type="checkbox" checked={depthEnabled} onChange={e => setDepthEnabled(e.target.checked)} />Depth Layers</label>
         <label className="flex items-center gap-2"><input type="checkbox" checked={stackEnabled} onChange={e => setStackEnabled(e.target.checked)} />Draw Order Inspector</label>
@@ -157,6 +186,9 @@ export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; p
           {d.pole && <path d={`M${d.pole.x-2} ${d.pole.y}h4 M${d.pole.x} ${d.pole.y-2}v4`} />}
         </g>)}
       </g></svg>
+    </svg>}
+    {presented?.presentation?.supported && <svg aria-label="Animation X-Ray joints" className="pointer-events-none absolute inset-0 z-10 h-full w-full">
+      <svg x="50%" y="50%" overflow="visible"><g transform={`translate(${viewport.panX} ${viewport.panY}) scale(${viewport.zoom})`} dangerouslySetInnerHTML={{__html:xrayOverlaySvg(presented,viewport.zoom)}}/></svg>
     </svg>}
   </>;
 }

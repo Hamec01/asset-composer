@@ -1,9 +1,10 @@
+import { vectorSource } from "@/lib/visualContent";
 import type { BonePart, EntityVisual } from "@/domain/types";
 import { buildImportedEntityVisual } from "./entityVisualImport";
 
 export function createEditableBodyPart(part: BonePart): EntityVisual {
   const visual = buildImportedEntityVisual({
-    id: crypto.randomUUID(), boneId: part.boneId, svgData: part.svgData,
+    id: crypto.randomUUID(), boneId: part.boneId, svgData: vectorSource(part),
     zIndex: part.zOffset, pivotPreset: "center",
   });
   visual.bodyPartId = part.id;

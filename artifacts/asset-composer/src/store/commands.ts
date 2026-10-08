@@ -1,6 +1,8 @@
-import type { Entity, SlotAssignment, PaletteTokens, EntityVisual, LocalTransform, ItemFitProfile } from "@/domain/types";
+import type { Project, AnimationClip, Entity, SlotAssignment, PaletteTokens, EntityVisual, LocalTransform, ItemFitProfile } from "@/domain/types";
 
 export type CommandType =
+  | "STUDIO_EDIT"
+  | "SET_REVIEW_MARKERS"
   | "SET_SLOT"
   | "SET_PALETTE"
   | "SET_APPEARANCE"
@@ -18,12 +20,13 @@ export type CommandType =
   | "SET_ITEM_FIT_PROFILES";
 
 export interface Command {
+  clipId?: string;
   type: CommandType;
   entityId?: string;
   templateId?: string;
   slotId?: string;
-  before: Partial<Entity> & { defaultTransform?: LocalTransform; itemFitProfiles?: ItemFitProfile[] };
-  after: Partial<Entity> & { defaultTransform?: LocalTransform; itemFitProfiles?: ItemFitProfile[] };
+  before: Partial<Entity> & { defaultTransform?: LocalTransform; itemFitProfiles?: ItemFitProfile[]; studioProject?: Project; reviewMarkers?: AnimationClip["reviewMarkers"] };
+  after: Partial<Entity> & { defaultTransform?: LocalTransform; itemFitProfiles?: ItemFitProfile[]; studioProject?: Project; reviewMarkers?: AnimationClip["reviewMarkers"] };
   label: string;
 }
 

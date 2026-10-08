@@ -1,4 +1,7 @@
+import { setVisualResources } from "@/lib/visualContent";
+import { vectorSource } from "@/lib/visualContent";
 import { create } from "zustand";
+import { DEFAULT_XRAY_OPTIONS, type AnimationXRayOptions } from "@/lib/animationXRay";
 import { HISTORY_LIMIT } from "@/lib/history";
 import { PEASANT_EQUIPMENT } from "@/data/peasantEquipment";
 import { DEFAULT_APPEARANCE } from "@/data/characterAppearance";
@@ -33,6 +36,7 @@ import { animController } from "@/core-v2/AnimationController";
 import { resetItemFitProfilePartToItemDefault, upsertItemFitProfilePartTransform } from "@/lib/itemFitProfileMutations";
 import { parseProjectSnapshot } from "@/lib/projectValidation";
 import {
+  templateSupportsAnimationClip,
   getLoopingClipForTemplate,
   getStateMachineForTemplate,
 } from "@/lib/animationCompatibility";
@@ -80,6 +84,9 @@ interface HistoryState {
 }
 
 interface AppStore {
+  animationXRay: AnimationXRayOptions;
+  setAnimationXRay: (patch: Partial<AnimationXRayOptions>) => void;
+  setAnimationReviewMarkers: (clipId: string, markers: NonNullable<AnimationClip["reviewMarkers"]>) => void;
   project:      Project;
   editor:       EditorState;
   history:      HistoryState;
@@ -626,6 +633,12 @@ function applyTemplateCommand(templates: Template[], cmd: Command, direction: "d
 }
 
 function applyProjectCommand(project: Project, cmd: Command, direction: "do" | "undo"): Project {
+  if(cmd.type==="STUDIO_EDIT"){const snapshot=(direction==="do"?cmd.after:cmd.before).studioProject;return snapshot?{...snapshot}:project;}
+  if (cmd.type === "SET_REVIEW_MARKERS") {
+    const patch = direction === "do" ? cmd.after : cmd.before;
+    return { ...project, animationClips: project.animationClips.map(clip => clip.id === cmd.clipId
+      ? { ...clip, reviewMarkers: patch.reviewMarkers?.map(marker => ({ ...marker })) } : clip) };
+  }
   if (cmd.type === "SET_ITEM_FIT_PROFILES") {
     return {
       ...project,
@@ -687,7 +700,7 @@ function hydratePlaybackForEntity(
     }
   }
 
-  if (!activeClipId || (template.id.startsWith("biped_profile_") && !activeClipId.startsWith("chibi_front__"))) {
+  if (!activeClipId || !project.animationClips.some(c => c.id === activeClipId && templateSupportsAnimationClip(template, c))) {
     const firstLoop = getLoopingClipForTemplate(template, project.animationClips);
     if (firstLoop) {
       activeClipId = firstLoop.id;
@@ -697,6 +710,7 @@ function hydratePlaybackForEntity(
 
   if (activeClipId) {
     startClipPlayback(project.animationClips as AnimationClip[], activeClipId, nextPlayback.looping);
+    if (!shouldPlay) animController.pause();
   } else {
     animController.pause();
   }
@@ -739,11 +753,11 @@ function debugLogProjectState(project: Project) {
 function resetTransientProjectUiState(project: Project): Project {
   const nextEditorMeta = {
     ...project.editorMeta,
-    activeAuthoringMode: null,
+    activeAuthoringMode: project.editorMeta.spriteEditorDocuments.some(d => d.id === project.editorMeta.activeSpriteDocumentId && (d.studioArtwork || d.studioEntityId)) ? "sprite-editor" as const : null,
     activeFaceCanvasOverlayId: null,
     activeFaceCanvasTool: null,
     activeFaceCanvasFocusMode: null,
-    activeSpriteDocumentId: null,
+    activeSpriteDocumentId: project.editorMeta.spriteEditorDocuments.some(d=>d.id===project.editorMeta.activeSpriteDocumentId&&(d.studioArtwork||d.studioEntityId))?project.editorMeta.activeSpriteDocumentId:null,
   };
 
   if (
@@ -798,6 +812,24 @@ const DEFAULT_ANIM_PLAYBACK: AnimPlayback = {
 
 export const useStore = create<AppStore>()(
   immer((set, get) => ({
+    animationXRay: { ...DEFAULT_XRAY_OPTIONS },
+    setAnimationXRay: patch => set(state => { Object.assign(state.animationXRay, patch); }),
+    setAnimationReviewMarkers: (clipId, markers) => {
+      const clip = get().project.animationClips.find(c => c.id === clipId);
+      if (!clip) return;
+      if (markers.some(m => !m.label.trim() || !Number.isFinite(m.timeMs) || m.timeMs < 0 || m.timeMs > clip.durationMs)) {
+        throw new Error("Review markers need a name and a time within the clip.");
+      }
+      const after = markers.map(m => ({ label: m.label.trim(), timeMs: m.timeMs })).sort((a, b) => a.timeMs - b.timeMs);
+      set(state => {
+        const command: Command = { type: "SET_REVIEW_MARKERS", clipId, before: { reviewMarkers: clip.reviewMarkers }, after: { reviewMarkers: after }, label: "Set animation review markers" };
+        state.project.animationClips.find(c => c.id === clipId)!.reviewMarkers = after;
+        state.project.updatedAt = Date.now();
+        state.history.past.push(command);
+        if (state.history.past.length > state.history.maxDepth) state.history.past.shift();
+        state.history.future = [];
+      });
+    },
     project:      makeDefaultProject(),
     editor: {
       appState:           "dashboard",
@@ -1412,7 +1444,7 @@ export const useStore = create<AppStore>()(
         item.parts = item.parts.map(existing => existing.id === partId ? { ...existing, ...patch } : existing);
         const updatedPart = item.parts.find(existing => existing.id === partId);
         if (updatedPart && item.svgLayers.length > 0) {
-          item.svgLayers = item.svgLayers.map((layer, index) => index === 0 ? { ...layer, svgData: updatedPart.svgData } : layer);
+          item.svgLayers = item.svgLayers.map((layer, index) => index === 0 ? { ...layer, svgData: updatedPart.svgData,content:updatedPart.content } : layer);
         }
         state.project.updatedAt = Date.now();
       });
@@ -1525,12 +1557,12 @@ export const useStore = create<AppStore>()(
       for (const entity of migrated.entities) {
         if (!entity.templateId.startsWith("biped_profile_reference_")) continue;
         const template = migrated.templates.find(candidate => candidate.id === entity.templateId);
-        if (template?.boneParts) template.boneParts = template.boneParts.map(part => ({ ...part, svgData: normalizeReferenceSvg(part.svgData) }));
+        if (template?.boneParts) template.boneParts = template.boneParts.map(part => ({ ...part, svgData: normalizeReferenceSvg(vectorSource(part)) }));
         for (const doc of migrated.editorMeta.spriteEditorDocuments) {
           if (doc.target.entityId !== entity.id || doc.target.kind !== "entity-visual") continue;
           doc.authoringHint = { ...doc.authoringHint, preserveFrame: true };
           const visual = entity.visuals?.find(candidate => candidate.id === doc.target.visualId);
-          if (visual) visual.metrics = getAuthoredDocumentMetrics(visual.svgData, doc.width, doc.height);
+          if (visual) visual.metrics = getAuthoredDocumentMetrics(vectorSource(visual), doc.width, doc.height);
         }
       }
       for (const item of PEASANT_EQUIPMENT) {
@@ -1583,6 +1615,7 @@ export const useStore = create<AppStore>()(
           (migrated as Project).activeEntityId,
           state.animPlayback,
         );
+        if (migrated.editorMeta.activeAuthoringMode === "sprite-editor") state.animPlayback.activeTab = "authoring";
       });
     },
 
@@ -2024,8 +2057,9 @@ export const useStore = create<AppStore>()(
       const allClips = get().project.animationClips;
       const clip = clipId ? allClips.find(c => c.id === clipId) : null;
       const chibi = get().getActiveEntity()?.templateId.startsWith("biped_profile_");
+      const useClipLoop = chibi || !!clip?.templateId;
       animController.pause();
-      if (clip) { animController.setDuration(clip.durationMs); animController.setLoop(chibi ? clip.loops : get().animPlayback.looping); }
+      if (clip) { animController.setDuration(clip.durationMs); animController.setLoop(useClipLoop ? clip.loops : get().animPlayback.looping); }
       animController.seek(0);
       set(state => {
         state.animPlayback.activeClipId = clipId;
@@ -2033,6 +2067,7 @@ export const useStore = create<AppStore>()(
         state.animPlayback.selectedStateId = null;
         state.animPlayback.timeMs = 0;
         state.animPlayback.playing = false;
+        if (useClipLoop && clip) state.animPlayback.looping = clip.loops;
         if (chibi) {
           state.animPlayback.upperClipId = null;
           state.animPlayback.lowerClipId = null;
@@ -2042,6 +2077,7 @@ export const useStore = create<AppStore>()(
         if (entityId) {
           const e = state.project.entities.find(e => e.id === entityId);
           if (e) {
+            if(e.activeAnimationClipId!==clipId)state.project.updatedAt=Date.now();
             e.activeAnimationClipId = clipId;
             e.activeStateMachineId = null;
           }
@@ -2157,3 +2193,6 @@ if (typeof window !== "undefined") {
 
 export type { AnimBottomTab };
 export { getClipById };
+
+useStore.subscribe(state => setVisualResources({assets:state.project.assets??{},documents:state.project.editorMeta?.spriteEditorDocuments??[]}));
+setVisualResources({assets:useStore.getState().project.assets??{},documents:useStore.getState().project.editorMeta.spriteEditorDocuments});

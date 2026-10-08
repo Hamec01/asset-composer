@@ -1,3 +1,4 @@
+import { VisualThumbnail } from "@/components/VisualThumbnail";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/store";
 import { sanitizeSvg } from "@/lib/sanitize";
@@ -1003,7 +1004,7 @@ export function InspectorPanel() {
                     <div className="flex items-center gap-2">
                       <div className="w-10 h-10 rounded border border-border overflow-hidden bg-background flex-shrink-0">
                         {selectedItem.svgLayers[0] && (
-                          <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: sanitizeSvg(selectedItem.svgLayers[0].svgData) }} />
+                          <VisualThumbnail visual={selectedItem.svgLayers[0]}/>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -2101,7 +2102,7 @@ export function InspectorPanel() {
                   >
                     <div className="w-6 h-6 rounded border border-border overflow-hidden bg-background flex-shrink-0">
                       {item!.svgLayers[0] && (
-                        <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: sanitizeSvg(item!.svgLayers[0].svgData) }} />
+                        <VisualThumbnail visual={item!.svgLayers[0]}/>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

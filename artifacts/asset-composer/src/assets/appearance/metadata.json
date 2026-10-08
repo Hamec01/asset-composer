@@ -1,0 +1,62 @@
+{
+  "painted_bob": {
+    "width": 1254,
+    "height": 1254,
+    "alphaBounds": [
+      55,
+      98,
+      1201,
+      1087
+    ]
+  },
+  "painted_curls": {
+    "width": 1254,
+    "height": 1254,
+    "alphaBounds": [
+      75,
+      50,
+      1230,
+      1190
+    ]
+  },
+  "painted_braid": {
+    "width": 1254,
+    "height": 1254,
+    "alphaBounds": [
+      189,
+      16,
+      1159,
+      1243
+    ]
+  },
+  "painted_eye": {
+    "width": 1254,
+    "height": 1254,
+    "alphaBounds": [
+      188,
+      394,
+      1145,
+      866
+    ]
+  },
+  "painted_lips": {
+    "width": 1254,
+    "height": 1254,
+    "alphaBounds": [
+      144,
+      456,
+      1111,
+      839
+    ]
+  },
+  "painted_nose": {
+    "width": 1254,
+    "height": 1254,
+    "alphaBounds": [
+      518,
+      471,
+      738,
+      806
+    ]
+  }
+}

@@ -15,6 +15,8 @@ export function getClipsForTemplate(
 }
 
 export function templateSupportsAnimationClip(template: Template, clip: AnimationClip): boolean {
+  if(clip.templateId)return clip.templateId===template.id;
+  if(template.skeletonFamily==="custom_2d_v1")return false;
   if (!templateSupportsAnimationFamily(template, clip.skeletonFamily)) return false;
   if (template.id.startsWith("biped_profile_")) {
     return clip.id.startsWith("chibi_front__") || !PRESET_ANIMATIONS.some(preset => preset.id === clip.id);

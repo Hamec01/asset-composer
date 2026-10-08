@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { useEffect, useRef } from "react";
 import { useStore } from "@/store";
 import { IDE } from "@/pages/IDE";
@@ -9,6 +10,7 @@ function App() {
   const saveTimerRef = useRef<number | null>(null);
   const lastQueuedProjectRef = useRef<{ id: string; updatedAt: number } | null>(null);
 
+  useEffect(()=>{const handler=(event:Event)=>toast.error("Project was not saved: "+(event as CustomEvent).detail);window.addEventListener("project-save-error",handler);return ()=>window.removeEventListener("project-save-error",handler);},[]);
   useEffect(() => {
     const unsubscribe = useStore.subscribe((state) => {
       if (state.editor.appState !== "ide") return;

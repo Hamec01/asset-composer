@@ -1,3 +1,4 @@
+import { VisualThumbnail } from "@/components/VisualThumbnail";
 import { useMemo, useState } from "react";
 import { useStore } from "@/store";
 import { resolveTemplate } from "@/data/templates";
@@ -14,6 +15,7 @@ import type { Item, ItemCategory, SlotDef } from "@/domain/types";
 import type { AssetTemplateType } from "@/lib/itemAuthoring";
 import { CharacterPartsPanel } from "./CharacterPartsPanel";
 import { AppearancePanel } from "./AppearancePanel";
+import { CreatePaintedSpearmanButton } from "./CreatePaintedSpearmanButton";
 import {
   Dialog,
   DialogContent,
@@ -104,7 +106,7 @@ function ItemCard({
       >
         <div className="relative w-10 h-10 bg-background rounded border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
           {item.svgLayers[0]
-            ? <div className="w-full h-full p-0.5" dangerouslySetInnerHTML={{ __html: sanitizeSvg(item.svgLayers[0].svgData) }} />
+            ? <VisualThumbnail visual={item.svgLayers[0]}/>
             : <span className="text-muted-foreground text-[10px]">?</span>}
           {isIncompat && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/60">
@@ -309,6 +311,7 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
               <Plus className="w-3.5 h-3.5 mr-1" />
               Создать персонажа
             </Button>
+            <CreatePaintedSpearmanButton />
           </div>
           <div className="flex-1 overflow-auto ide-scroll">
             <div className="px-2 pb-2 space-y-1">

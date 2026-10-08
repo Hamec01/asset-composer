@@ -1,7 +1,14 @@
+import { referencedAssetIds } from "./projectAssets";
 import type { Entity, ExportProfile, Item, ItemFitProfile, Template } from "@/domain/types";
 import { evaluateRestSkeleton, evaluateScene } from "@/lib/evaluationPipeline";
+import { contentOf, getVisualResources } from "./visualContent";
+import { contentSvg } from "./visualRenderer";
 
 interface SvgPartVisualManifestEntry {
+  depthBinding?: import("@/domain/types").ItemPart["depthBinding"];
+  occludedByBones?: string[];
+  content?: import("@/domain/types").VisualContent;
+  surface?: import("@/domain/types").EvaluatedVisual["surface"];
   id: string;
   file: string;
   sourceKind: string | null;
@@ -17,6 +24,8 @@ interface SvgPartVisualManifestEntry {
 }
 
 interface SvgPartManifest {
+  documents?: import("@/domain/types").SpriteEditorDocument[];
+  assets?: Record<string, {file:string;mimeType:string;width:number;height:number}>;
   version: string;
   entity: {
     id: string;
@@ -29,6 +38,7 @@ interface SvgPartManifest {
     viewProfile: string;
     previewWidth: number;
     previewHeight: number;
+    bones?: Template["bones"];
     anchors: Template["anchors"];
     slots: Template["slots"];
   };
@@ -69,7 +79,7 @@ export async function buildSvgPartExportFiles(
     );
 
     const manifest: SvgPartManifest = {
-      version: "2.0",
+      version: scene.visuals.some(v=>v.surface||v.content?.kind!=="vector")||entity.visuals?.some(v=>v.content?.kind==="document")?"3.0":"2.0",
       entity: {
         id: entity.id,
         name: entity.name,
@@ -85,10 +95,15 @@ export async function buildSvgPartExportFiles(
         slots: template.slots,
       },
       visuals: scene.visuals.map(visual => {
-        const file = `visuals/${slugify(visual.id)}.svg`;
-        files[`${entitySlug}/${file}`] = encoder.encode(visual.svgData);
+        const content=contentOf(visual),asset=content.kind==="raster"?getVisualResources().assets[content.assetId]:undefined;
+        const file = asset?"assets/"+asset.id+"."+asset.mimeType.split("/")[1]:"visuals/"+slugify(visual.id)+".svg";
+        files[entitySlug+"/"+file] = asset ? Uint8Array.from(atob(asset.dataUri.slice(asset.dataUri.indexOf(",")+1)),c=>c.charCodeAt(0)) : encoder.encode(content.kind==="vector"?content.svgData:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+(visual.surface?.sourceWidth??(visual.localBounds.maxX-visual.localBounds.minX))+' '+(visual.surface?.sourceHeight??(visual.localBounds.maxY-visual.localBounds.minY))+'">'+contentSvg(content,visual.localBounds.maxX-visual.localBounds.minX,visual.localBounds.maxY-visual.localBounds.minY)+'</svg>');
         return {
           id: visual.id,
+          content: content.kind==="vector"?undefined:content,
+          surface: visual.surface,
+          depthBinding: visual.depthBinding ?? items.find(i => i.id === visual.itemId)?.parts?.find(p => p.id === visual.partId)?.depthBinding,
+          occludedByBones: visual.occlusionMasks?.map(mask => mask.boneId).filter((id): id is string => !!id),
           file,
           sourceKind: visual.sourceKind ?? null,
           svgFitMode: visual.svgFitMode ?? null,
@@ -104,6 +119,19 @@ export async function buildSvgPartExportFiles(
       }),
     };
 
+    if(manifest.version==="3.0"){
+      manifest.template.bones = template.bones;
+      const resources=getVisualResources();
+      const docIds=new Set(entity.visuals?.flatMap(v=>v.content?.kind==="document"?[v.content.documentId]:[])??[]);
+      manifest.documents=resources.documents.filter(d=>docIds.has(d.id)||d.studioEntityId===entity.id||d.target.entityId===entity.id);
+      manifest.assets={};
+      const used=referencedAssetIds({documents:manifest.documents,contents:scene.visuals.map(v=>v.content)});
+      for(const asset of Object.values(resources.assets).filter(a=>used.has(a.id))){
+        const file="assets/"+asset.id+"."+asset.mimeType.split("/")[1];
+        manifest.assets[asset.id]={file,mimeType:asset.mimeType,width:asset.width,height:asset.height};
+        files[entitySlug+"/"+file]=Uint8Array.from(atob(asset.dataUri.slice(asset.dataUri.indexOf(",")+1)),c=>c.charCodeAt(0));
+      }
+    }
     files[`${entitySlug}/manifest.json`] = encodeManifest(manifest);
   }
 

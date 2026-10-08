@@ -12,6 +12,7 @@ import { animController } from "@/core-v2/AnimationController";
 import { entityVisualRevision } from "@/lib/entityVisualRevision";
 import { Button } from "@/components/ui/button";
 import { SkeletonDebugOverlay } from "./SkeletonDebugOverlay";
+import { evaluatePresentedScene } from "@/lib/animationXRay";
 import { ZoomIn, ZoomOut, Maximize2, MousePointer2, Move, LayoutGrid } from "lucide-react";
 import type { BodyMorphRegionId, CanvasMode, FaceAuthoringTool, FaceFeatureKey } from "@/domain/types";
 
@@ -128,6 +129,7 @@ function visualMatchesBodyRegion(visual: { boneId?: string }, region: BodyMorphR
 export function CanvasPanel() {
   const project         = useStore(s => s.project);
   const editor          = useStore(s => s.editor);
+  const animationXRay   = useStore(s => s.animationXRay);
   const animPlayback    = useStore(s => s.animPlayback);
   const setSelectedSlot           = useStore(s => s.setSelectedSlot);
   const setEntityBodyAuthoringState = useStore(s => s.setEntityBodyAuthoringState);
@@ -691,7 +693,7 @@ export function CanvasPanel() {
         effectiveItems,
       );
       const skeleton = evaluateSkeleton(liveTemplate.bones, pose, liveEntity.bodyMorphs, liveEntity.appearance);
-      const scene    = evaluateScene(liveEntity, liveTemplate, skeleton, effectiveItems, store.project.itemFitProfiles);
+      const scene    = evaluatePresentedScene(liveEntity, liveTemplate, skeleton, effectiveItems, store.project.itemFitProfiles, store.animationXRay);
 
       const itemsArr = effectiveItems;
       await engine.reconcileSceneStructure(
@@ -729,6 +731,7 @@ export function CanvasPanel() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     initialized,
+    animationXRay,
     project.activeEntityId,
     entityVisualRevision(activeEntity),
     JSON.stringify(template?.slots),
@@ -761,7 +764,7 @@ export function CanvasPanel() {
         effectiveItems,
       );
       const skeleton = evaluateSkeleton(tmpl.bones, pose, ent.bodyMorphs, ent.appearance);
-      const scene    = evaluateScene(ent, tmpl, skeleton, effectiveItems, store.project.itemFitProfiles);
+      const scene    = evaluatePresentedScene(ent, tmpl, skeleton, effectiveItems, store.project.itemFitProfiles, store.animationXRay);
       engineRef.current.updateSceneTransforms(scene);
     });
     return remove;
@@ -837,7 +840,7 @@ export function CanvasPanel() {
       effectiveItems,
     );
     const skeleton = evaluateSkeleton(template.bones, pose, activeEntity.bodyMorphs, activeEntity.appearance);
-    const scene    = evaluateScene(activeEntity, template, skeleton, effectiveItems, store.project.itemFitProfiles);
+    const scene    = evaluatePresentedScene(activeEntity, template, skeleton, effectiveItems, store.project.itemFitProfiles, store.animationXRay);
     const viewport = getUsableViewportSize(containerRef.current);
     const bounds = computeSceneBounds(scene.visuals, template.previewWidth, template.previewHeight);
     const cam = fitSceneToViewport(bounds, viewport.width, viewport.height);

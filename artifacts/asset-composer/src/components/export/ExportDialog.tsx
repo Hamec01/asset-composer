@@ -14,7 +14,7 @@ import { templateSupportsAnimationClip } from "@/lib/animationCompatibility";
 import type { ExportProfile, Item, ItemFitProfile, Template, Entity, AnimationClip } from "@/domain/types";
 import type { ExportWorkerJob, WorkerOutputMessage } from "@/lib/exportTypes";
 import ExportWorker from "@/workers/export.worker?worker";
-import { composeFrameSvg, evaluateExportScene, exportCamera, exportFramePlan, rasterizeFrame } from "@/lib/exportFrames";
+import { composeFrameSvg, evaluateExportScene, exportCamera, exportFramePlan, rasterizeScene } from "@/lib/exportFrames";
 import { buildSvgPartExportFiles } from "@/lib/svgPartExport";
 import {
   Download, Package, FileImage, Code, FileJson,
@@ -95,7 +95,7 @@ async function renderAllExportFrames(
     const { entity, spec } = work[start];
     onStep(start, work.length, `Rendering ${entity.name} · ${spec.clip?.name ?? "idle"} ${spec.frame + 1}`);
     await Promise.all(work.slice(start, start + batch).map(async ({ spec, scene, camera }) => {
-      frames[spec.key] = await rasterizeFrame(composeFrameSvg(scene, camera, frameSz), frameSz);
+      frames[spec.key] = await rasterizeScene(scene, camera, frameSz);
     }));
   }
   return frames;
@@ -158,6 +158,7 @@ export function ExportDialog() {
   const [progress, setProgress]                       = useState<{ pct: number; msg: string } | null>(null);
   const [errorMsg, setErrorMsg]                       = useState<string | null>(null);
   const [fileCount, setFileCount]                     = useState(0);
+  const [completedDownload, setCompletedDownload] = useState<{blob: Blob; filename: string} | null>(null);
   const [downloadedFilename, setDownloadedFilename]   = useState<string | null>(null);
 
   const workerRef    = useRef<InstanceType<typeof ExportWorker> | null>(null);
@@ -309,6 +310,7 @@ export function ExportDialog() {
     }
     if (templateMap.size === 0) return;
 
+    setCompletedDownload(null);
     setExportState("running");
     setProgress({ pct: 0, msg: "Preparing textures…" });
     setErrorMsg(null);
@@ -360,16 +362,21 @@ export function ExportDialog() {
           const slug = exportSlug(entities[0].name);
           if (msg.singleFile) {
             const { filename, mimeType, buffer } = msg.singleFile;
-            triggerDownload(new Blob([buffer], { type: mimeType }), filename);
+            const blob = new Blob([buffer], { type: mimeType });
+            setCompletedDownload({blob, filename});
+            triggerDownload(blob, filename);
             setDownloadedFilename(filename);
           } else {
             const zipFilename =
               entities.length === 1
                 ? `${slug}_export.zip`
                 : `batch_${entities.length}entities_export.zip`;
-            triggerDownload(new Blob([msg.zipBuffer], { type: "application/zip" }), zipFilename);
+            const blob = new Blob([msg.zipBuffer], { type: "application/zip" });
+            setCompletedDownload({blob, filename: zipFilename});
+            triggerDownload(blob, zipFilename);
             setDownloadedFilename(null);
           }
+          worker.terminate();
           setFileCount(msg.fileCount);
           setExportState("done");
           setProgress(null);
@@ -468,9 +475,10 @@ export function ExportDialog() {
                 <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
                 <p className="text-xs text-primary">
                   {downloadedFilename
-                    ? `Export complete — downloaded ${downloadedFilename}`
-                    : `Export complete — ${fileCount} file${fileCount !== 1 ? "s" : ""} downloaded as ZIP.`}
+                    ? `Export ready — ${downloadedFilename}`
+                    : `Export complete — ${fileCount} file${fileCount !== 1 ? "s" : ""} in ZIP.`}
                 </p>
+                {completedDownload && <button className="text-xs underline ml-auto" onClick={() => triggerDownload(completedDownload.blob, completedDownload.filename)}>Download export</button>}
               </div>
             )}
 

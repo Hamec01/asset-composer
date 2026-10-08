@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { UserRound, Smile, Scissors, RotateCcw, Check } from "lucide-react";
 import { useStore } from "@/store";
 import { APPEARANCE_PRESETS, NOSE_PRESETS, FRECKLE_PRESETS, SCAR_PRESETS, chibiFeatureSvg, DEFAULT_APPEARANCE } from "@/data/characterAppearance";
 import { sanitizeSvg } from "@/lib/sanitize";
 import { appearancePresetAllowed } from "@/lib/appearanceCompatibility";
 import type { FaceFeatureKey, CharacterAppearance } from "@/domain/types";
+import { loadPaintedPreset, paintedPreset } from "@/data/paintedAppearance";
+import { studioCommit } from "@/lib/studioActions";
+import { DEFAULT_BLINK, DEFAULT_MOUTH_MOTION } from "@/lib/faceAnimation";
+import { defaultMouthOpening } from "@/data/chibiFaceArt";
 
 const SKIN_COLORS = ["#FFD0A8", "#F1B88D", "#D99A70", "#AF7451", "#80553F", "#553B30"];
 const HAIR_COLORS = ["#362820", "#75482E", "#AE7748", "#D5B26A", "#B8593D", "#D4D0C7", "#845677"];
@@ -43,6 +47,10 @@ export function AppearancePanel() {
   const entity = useStore(s => s.project.entities.find(candidate => candidate.id === s.project.activeEntityId));
   const [section, setSection] = useState<"body" | "face" | "hair">("face");
   const [feature, setFeature] = useState<FaceFeatureKey | "nose" | "marks">("eyes");
+  const [medium,setMedium]=useState<"all"|"vector"|"painted">("vector");
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+  const selectionRequest=useRef(0);
   if (!entity) return <div className="p-3 text-sm text-muted-foreground">Нет персонажа</div>;
   if (!entity.templateId.startsWith("biped_profile_")) return <div className="p-3 text-sm text-muted-foreground">Выберите базу чиби</div>;
   const store = useStore.getState();
@@ -52,9 +60,35 @@ export function AppearancePanel() {
   const presetId = currentFeature === "nose" ? appearance.nose : config?.visible ? config.presetId : "none";
   const color = config?.color ?? (currentFeature === "hair" ? entity.palette.hair : "#382A24");
   const patchBody = (patch: Partial<CharacterAppearance>) => store.setEntityAppearance(entity.id, patch);
-  const choosePreset = (id: string) => {
-    if (currentFeature === "nose") patchBody({ nose: id as CharacterAppearance["nose"] });
-    else if (currentFeature !== "marks") store.setEntityFaceFeature(entity.id, currentFeature, { presetId: id, visible: id !== "none" });
+  const choosePreset = async (id: string) => {
+    const request=++selectionRequest.current;
+    setError("");setLoading(false);
+    const painted=paintedPreset(id);
+    if(painted) {
+      setLoading(true);
+      try {
+        const asset=await loadPaintedPreset(id);
+        if(request!==selectionRequest.current || useStore.getState().project.activeEntityId!==entity.id) return;
+        studioCommit("Choose painted appearance",p=>{
+          const target=p.entities.find(e=>e.id===entity.id);if(!target)return;
+          p.assets??={};p.assets[asset.id]??=asset;
+          const content={kind:"raster" as const,assetId:asset.id};
+          if(currentFeature === "nose") target.appearance={...DEFAULT_APPEARANCE,...target.appearance,nose:id as CharacterAppearance["nose"],noseArtwork:{content,bounds:painted.bounds}};
+          else if(currentFeature!=="marks" && target.faceCustomization) {
+            const detail=target.faceCustomization[currentFeature];
+            Object.assign(detail,{presetId:id,visible:true,content,artworkBounds:painted.bounds});
+            if(currentFeature === "eyes") Object.assign(detail,{eyeOpenness:1,blink:detail.blink??DEFAULT_BLINK});
+          }
+        });
+      } catch(e) {if(request===selectionRequest.current)setError(e instanceof Error ? e.message : "Не удалось загрузить рисунок");}
+      finally {if(request===selectionRequest.current)setLoading(false);}
+      return;
+    }
+    if (currentFeature === "nose") patchBody({ nose: id as CharacterAppearance["nose"],noseArtwork:undefined });
+    else if (currentFeature !== "marks") {
+      const colors:Record<string,string>={jewel_blue:"#4d90b9",jewel_hazel:"#a18c4e",soft_lashes:"#7f9c8b",fox_liner:"#bc965a",round_glass:"#799eab",narrow_gentle:"#8b96a1",rose_satin:"#c87684",peach_gloss:"#df9787",berry_lips:"#a5506b",cupid_soft:"#cc8591",gentle_smile:"#c48682",parted_lips:"#bd7280"};
+      store.setEntityFaceFeature(entity.id, currentFeature, { presetId: id, visible: id !== "none",content:undefined,artworkBounds:undefined,...(colors[id]?{color:colors[id]}:{}),...(currentFeature === "eyes" ? {eyeOpenness:1,blink:config?.blink??DEFAULT_BLINK} : {}),...(currentFeature === "mouth" ? {mouthOpenness:defaultMouthOpening(id),mouthMotion:DEFAULT_MOUTH_MOTION} : {}) });
+    }
   };
   const presets = currentFeature === "nose"
     ? NOSE_PRESETS
@@ -131,26 +165,44 @@ export function AppearancePanel() {
               svgFor={id => id === "none" ? null : chibiFeatureSvg("marks", "marks", color, { ...appearance, freckles: false, mole: false, scar: id as CharacterAppearance["scar"] }, true)} />
           </fieldset>
         </> : <>
+          <div className="flex gap-1" role="group" aria-label="Стиль деталей">{([["vector","2D чиби"],["all","Все"],["painted","Рисованные"]] as const).map(([value,label])=><button key={value} className={`rounded px-2 py-1 text-[10px] ${medium===value?"bg-primary/15 text-primary":"bg-muted"}`} aria-pressed={medium===value} onClick={()=>setMedium(value)}>{label}</button>)}</div>
+          {loading && <p role="status" className="text-xs text-muted-foreground">Загрузка рисунка…</p>}
+          {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+          {currentFeature === "eyes" && config?.visible && <fieldset className="space-y-2 border border-border rounded p-2"><legend className="px-1 text-xs">Веки и моргание</legend>
+            <div className="flex gap-1">{([[1,"Открыть глаза"],[.45,"Прикрыть глаза"],[0,"Закрыть глаза"]] as const).map(([value,label])=><button key={value} className="rounded bg-muted px-1.5 py-1 text-[10px]" onClick={()=>store.setEntityFaceFeature(entity.id,"eyes",{eyeOpenness:value,blink:{...(config.blink??DEFAULT_BLINK),enabled:false}})}>{label}</button>)}</div>
+            <RangeControl label="Открытие глаз" value={(config.eyeOpenness??1)*100} onChange={value=>store.setEntityFaceFeature(entity.id,"eyes",{eyeOpenness:value/100,blink:{...(config.blink??DEFAULT_BLINK),enabled:false}})}/>
+            <label className="flex justify-between text-xs">Автоматическое моргание<input type="checkbox" aria-label="Автоматическое моргание" checked={config.blink?.enabled??false} onChange={e=>store.setEntityFaceFeature(entity.id,"eyes",{eyeOpenness:1,blink:{...(config.blink??DEFAULT_BLINK),enabled:e.target.checked}})}/></label>
+            {config.blink?.enabled && <RangeControl label="Интервал моргания (мс)" min={600} max={6000} value={config.blink.intervalMs} onChange={value=>store.setEntityFaceFeature(entity.id,"eyes",{blink:{...config.blink!,intervalMs:value}})}/>}
+            <p className="text-[10px] text-muted-foreground">Моргание следует времени анимации и сохраняется при экспорте.</p>
+          </fieldset>}
+          {currentFeature === "mouth" && config?.visible && <fieldset className="space-y-2 border border-border rounded p-2"><legend className="px-1 text-xs">Открытие рта</legend>
+            <div className="flex gap-1">{([[0,"Закрыть рот"],[.4,"Приоткрыть рот"],[1,"Открыть рот"]] as const).map(([value,label])=><button key={value} className="rounded bg-muted px-1.5 py-1 text-[10px]" onClick={()=>store.setEntityFaceFeature(entity.id,"mouth",{mouthOpenness:value,mouthMotion:{...(config.mouthMotion??DEFAULT_MOUTH_MOTION),enabled:false}})}>{label}</button>)}</div>
+            <RangeControl label="Раскрытие рта" value={(config.mouthOpenness??defaultMouthOpening(config.presetId))*100} onChange={value=>store.setEntityFaceFeature(entity.id,"mouth",{mouthOpenness:value/100,mouthMotion:{...(config.mouthMotion??DEFAULT_MOUTH_MOTION),enabled:false}})}/>
+            <label className="flex justify-between text-xs">Анимация рта<input type="checkbox" aria-label="Анимация рта" checked={config.mouthMotion?.enabled??false} onChange={e=>store.setEntityFaceFeature(entity.id,"mouth",{mouthOpenness:1,mouthMotion:{...(config.mouthMotion??DEFAULT_MOUTH_MOTION),enabled:e.target.checked}})}/></label>
+            {config.mouthMotion?.enabled && <RangeControl label="Цикл рта (мс)" min={200} max={3000} value={config.mouthMotion.periodMs} onChange={value=>store.setEntityFaceFeature(entity.id,"mouth",{mouthMotion:{...config.mouthMotion!,periodMs:value}})}/>}
+            <p className="text-[10px] text-muted-foreground">Цикл открытия и закрытия по времени клипа. Сохраняется в экспортированных кадрах.</p>
+          </fieldset>}
           <div className="grid grid-cols-2 gap-2">
-            {presets.filter(preset => appearancePresetAllowed(currentFeature, preset.id, appearance.sex)).map(preset => {
+            {presets.filter(preset => appearancePresetAllowed(currentFeature, preset.id, appearance.sex) && (medium === "all" || preset.id === "none" || (medium === "painted") === !!paintedPreset(preset.id))).map(preset => {
               const svg = chibiFeatureSvg(currentFeature, preset.id, color, appearance, true);
+              const painted=paintedPreset(preset.id);
               return <button key={preset.id} data-testid={`appearance-${currentFeature}-${preset.id}`} aria-pressed={presetId === preset.id}
                 className={`relative min-w-0 rounded border p-2 ${presetId === preset.id ? "border-primary bg-primary/15 ring-1 ring-primary/50" : "border-border hover:bg-accent/40"}`}
                 onClick={() => choosePreset(presetId === preset.id ? "none" : preset.id)}>
                 {presetId === preset.id && preset.id !== "none" && <Check size={14} className="absolute top-1 right-1 text-primary bg-background rounded-sm" aria-hidden="true" />}
                 <div className={`w-full ${currentFeature === "hair" ? "h-20" : "h-12"} flex items-center justify-center overflow-hidden bg-[#b7b7ad] rounded-sm`}>
-                  {svg ? <div className="h-full w-full [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }} /> : <span className="text-lg text-[#53564f]">×</span>}
+                  {painted ? <img src={painted.url} alt={preset.label} loading="lazy" className="w-full h-full object-contain"/> : svg ? <div className="h-full w-full [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }} /> : <span className="text-lg text-[#53564f]">×</span>}
                 </div>
                 <span className="block mt-2 text-xs leading-snug break-words">{preset.label}</span>
               </button>;
             })}
           </div>
           {config && config.visible && <>
-            <label className="flex items-center justify-between text-xs">Цвет
+            {!config.content && <label className="flex items-center justify-between text-xs">Цвет
               <input type="color" aria-label="Цвет выбранной детали" value={color} className="h-7 w-10 bg-transparent"
                 onChange={event => store.setEntityFaceFeature(entity.id, currentFeature as FaceFeatureKey, { color: event.target.value })} />
-            </label>
-            {currentFeature === "hair" && <div className="flex flex-wrap gap-2">{HAIR_COLORS.map(hair => <button key={hair} title={hair} aria-label={`Волосы ${hair}`}
+            </label>}
+            {currentFeature === "hair" && !config.content && <div className="flex flex-wrap gap-2">{HAIR_COLORS.map(hair => <button key={hair} title={hair} aria-label={`Волосы ${hair}`}
               className="h-6 w-6 rounded border border-border" style={{ background: hair }} onClick={() => store.setEntityFaceFeature(entity.id, "hair", { color: hair })} />)}</div>}
             <RangeControl label="Размер" min={70} max={130} value={config.transform.scaleX * 100}
               onChange={value => store.setEntityFaceFeatureTransform(entity.id, currentFeature as FaceFeatureKey, { scaleX: value / 100, scaleY: value / 100 })} />

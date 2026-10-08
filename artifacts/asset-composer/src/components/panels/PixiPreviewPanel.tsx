@@ -1,5 +1,7 @@
+import { visualKey, vectorSource, contentUri } from "@/lib/visualContent";
+import { loadImage, visualCanvas } from "@/lib/visualRenderer";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Application, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
+import { Application, Container, Graphics, Matrix, Sprite, Text, Texture } from "pixi.js";
 import { useStore } from "@/store";
 import { resolveTemplate } from "@/data/templates";
 import { ITEM_ANIMATION_CLIPS } from "@/data/presetAnimations";
@@ -69,6 +71,10 @@ async function rasterizeSvg(
 
 // ── Pooled sprite record ──────────────────────────────────────────────────────
 interface PooledSprite {
+  loadingSurface?: boolean;
+  dynamicTexture?: boolean;
+  surfaceKey?: string;
+  surfaceVisual?: import("@/domain/types").EvaluatedVisual;
   sprite:        Sprite;
   visualId:      string;
   localWidth:    number;
@@ -98,7 +104,7 @@ export function PixiPreviewPanel() {
     if (!eId) return "";
     const entity = s.project.entities.find(e => e.id === eId);
     if (!entity) return eId;
-    return entityVisualRevision(entity);
+    return entityVisualRevision(entity)+":"+JSON.stringify(s.project.editorMeta.spriteEditorDocuments.map(d=>[d.id,d.updatedAt]));
   });
 
   const mountRef = useRef<HTMLDivElement>(null);
@@ -259,16 +265,33 @@ export function PixiPreviewPanel() {
           for (const ps of spritePoolRef.current) {
             const visual = scene.visuals.find(v => v.id === ps.visualId);
             if (!visual) { ps.sprite.visible = false; continue; }
-            const localCenterX = (visual.localBounds.minX + visual.localBounds.maxX) / 2;
-            const localCenterY = (visual.localBounds.minY + visual.localBounds.maxY) / 2;
-            const center = transformPoint(visual.worldMatrix, localCenterX, localCenterY);
-            const d = decompose(visual.worldMatrix);
-            ps.sprite.visible  = true;
-            ps.sprite.x        = center.x * sceneScale;
-            ps.sprite.y        = center.y * sceneScale;
-            ps.sprite.rotation = (d.rotation * Math.PI) / 180;
-            ps.sprite.width    = ps.localWidth * sceneScale * d.scaleX;
-            ps.sprite.height   = ps.localHeight * sceneScale * d.scaleY;
+            const dynamic = !!visual.surface || visual.entityVisualId === "face__eyes" || visual.entityVisualId === "face__mouth" || !!visual.occlusionMasks?.length || !!ps.surfaceVisual?.occlusionMasks?.length;
+            const key = dynamic ? visualKey(visual) : undefined;
+            if(dynamic && ps.surfaceKey !== key && !ps.loadingSurface) {
+              ps.loadingSurface = true;
+              void visualCanvas(visual).then(canvas => {
+                if (!ps.sprite.destroyed) {
+                  const old = ps.sprite.texture;
+                  ps.sprite.texture = Texture.from(canvas);
+                  if (ps.dynamicTexture) old.destroy(true);
+                  ps.dynamicTexture = true;
+                  ps.surfaceKey = key;
+                  ps.surfaceVisual = visual;
+                }
+              }).catch(error => console.warn("[PixiPreviewPanel] surface update failed", error)).finally(() => { ps.loadingSurface = false; });
+            }
+            const placed = visual.surface && ps.surfaceVisual ? {...ps.surfaceVisual,worldMatrix:visual.worldMatrix} : visual;
+            const localCenterX = (placed.localBounds.minX + placed.localBounds.maxX) / 2;
+            const localCenterY = (placed.localBounds.minY + placed.localBounds.maxY) / 2;
+            const center = transformPoint(placed.worldMatrix, localCenterX, localCenterY);
+            const [a,b,c,d] = placed.worldMatrix;
+            const sx = (placed.localBounds.maxX-placed.localBounds.minX) / ps.sprite.texture.width;
+            const sy = (placed.localBounds.maxY-placed.localBounds.minY) / ps.sprite.texture.height;
+            ps.sprite.visible = true;
+            ps.sprite.setFromMatrix(new Matrix(a*sx*sceneScale,b*sx*sceneScale,c*sy*sceneScale,d*sy*sceneScale,center.x*sceneScale,center.y*sceneScale));
+            ps.sprite.alpha=visual.opacity??1;
+            ps.sprite.zIndex=visual.zIndex;
+            ps.sprite.texture.source.scaleMode=visual.sampling==="pixel"?"nearest":"linear";
           }
 
           const skelScale = sceneScale;
@@ -331,9 +354,9 @@ export function PixiPreviewPanel() {
     const spriteLayer = spriteLayerRef.current;
     if (!spriteLayer) return;
 
-    for (const { sprite } of spritePoolRef.current) {
+    for (const { sprite, dynamicTexture } of spritePoolRef.current) {
       spriteLayer.removeChild(sprite);
-      sprite.destroy({ texture: false });
+      sprite.destroy({ texture: !!dynamicTexture });
     }
     spritePoolRef.current = [];
     textureCacheRef.current.clear();
@@ -356,11 +379,11 @@ export function PixiPreviewPanel() {
       for (const visual of scene.visuals) {
         if (cancelled || !spriteLayerRef.current) return;
 
-        const cacheKey = visual.id;
+        const cacheKey = visualKey(visual);
         let texture = textureCacheRef.current.get(cacheKey);
         if (!texture) {
           try {
-            texture = await rasterizeSvg(visual.svgData, 256, visual.svgFitMode ?? "legacy_full_frame");
+            texture = visual.surface || visual.tint || visual.occlusionMasks?.length || visual.content?.kind==="composite" ? Texture.from(await visualCanvas(visual)) : visual.content?.kind==="raster" ? Texture.from(await loadImage(contentUri(visual.content))) : await rasterizeSvg(vectorSource(visual),256,visual.svgFitMode??"legacy_full_frame");
             if (cancelled) { texture.destroy(true); return; }
             textureCacheRef.current.set(cacheKey, texture);
           } catch (e) {
@@ -389,8 +412,8 @@ export function PixiPreviewPanel() {
     })();
     return () => {
       cancelled = true;
-      for (const { sprite } of newPool) {
-        if (!sprite.destroyed) sprite.destroy({ texture: false });
+      for (const { sprite, dynamicTexture } of newPool) {
+        if (!sprite.destroyed) sprite.destroy({ texture: !!dynamicTexture });
       }
       if (spritePoolRef.current === newPool) spritePoolRef.current = [];
     };
