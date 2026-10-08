@@ -674,6 +674,8 @@ export type DepthSlot = "FAR_BACK" | "FAR_LIMB" | "BODY_BACK" | "BODY" | "CROSS_
 export type LimbDepthState = Partial<Record<"nearUpperArm" | "nearForearm" | "nearHand" | "farUpperArm" | "farForearm" | "farHand", DepthSlot>>;
 
 export interface AnimationClip {
+  /** Explicit, time-bounded exception. Never inferred from a visible/frontmost limb. */
+  headOverlap?: { startMs: number; endMs: number; bones: string[]; reason: string }[];
   /** Stepped semantic segment states; each key overrides side-view defaults, never lerps depth. */
   limbDepth?: { timeMs: number; facing?: "left" | "right"; state: LimbDepthState }[];
   /**
@@ -705,7 +707,7 @@ export interface AnimationClip {
     keyframes: { timeMs: number; x: number; y: number; rotation?: number; mix: number; bend?: 1 | -1; easing?: "linear" | "smooth" }[] }[];
   /** Virtual object poses survive export without equipping a weapon. Multiple hands share one pose. */
   gripObjects?: { id: string; sockets: Record<string, { x: number; y: number; rotation?: number }>;
-    keyframes: { timeMs: number; x: number; y: number; rotation: number }[] }[];
+    keyframes: { timeMs: number; x: number; y: number; rotation: number; easing?: "linear" | "smooth" | "ease_in" | "ease_out" }[] }[];
   /** Per-bone scale inheritance while this clip plays. noScale keeps the parent's rotation and position only. */
   inherit?: Record<string, BoneInherit>;
   id: string;

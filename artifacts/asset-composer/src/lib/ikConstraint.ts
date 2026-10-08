@@ -33,7 +33,11 @@ export function virtualGripTarget(clip: AnimationClip, target: {objectId:string;
   const ordered=[...object.keyframes].sort((a,b)=>a.timeMs-b.timeMs);
   const a=ordered.filter(key => key.timeMs<=timeMs).at(-1) ?? ordered[0];
   const b=ordered.find(key => key.timeMs>timeMs) ?? a;
-  const t=a===b ? 0 : Math.max(0,Math.min(1,(timeMs-a.timeMs)/(b.timeMs-a.timeMs)));
+  const alpha=a===b ? 0 : Math.max(0,Math.min(1,(timeMs-a.timeMs)/(b.timeMs-a.timeMs)));
+  // Ease the shared object, never its hands independently: socket spacing stays rigid.
+  const t=a.easing === "smooth" ? alpha*alpha*(3-2*alpha)
+    : a.easing === "ease_in" ? alpha*alpha
+    : a.easing === "ease_out" ? 1-(1-alpha)*(1-alpha) : alpha;
   const rotation=shortestAngleLerp(a.rotation,b.rotation,t);
   const radians=rotation/DEG;
   return {x:a.x+(b.x-a.x)*t+socket.x*Math.cos(radians)-socket.y*Math.sin(radians),

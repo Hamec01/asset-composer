@@ -20,7 +20,7 @@ describe("2.5D segment depth",()=>{
   });
   it("uses safe defaults for clips without depth keys",()=>{
     expect(resolveLimbDepth()).toEqual({farUpperArm:"FAR_LIMB",farForearm:"FAR_LIMB",farHand:"FAR_LIMB",
-      nearUpperArm:"NEAR_LIMB",nearForearm:"NEAR_LIMB",nearHand:"HAND_FRONT"});
+      nearUpperArm:"NEAR_LIMB",nearForearm:"NEAR_LIMB",nearHand:"NEAR_LIMB"});
   });
   it("switches discrete slots at the key, never between keys",()=>{
     expect(resolveLimbDepth(clip,159.999,"left").farForearm).toBe("FAR_LIMB");

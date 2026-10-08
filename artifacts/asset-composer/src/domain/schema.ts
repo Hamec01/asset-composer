@@ -474,6 +474,7 @@ const AnimationLayerSchema = z.object({
 });
 
 const AnimationClipSchema = z.object({
+  headOverlap:z.array(z.object({startMs:z.number().finite().nonnegative(),endMs:z.number().finite().nonnegative(),bones:z.array(z.string()).min(1),reason:z.string().trim().min(1)}).refine(p=>p.endMs>p.startMs,"Head-overlap phase must have a positive duration")).optional(),
   limbDepth:z.array(z.object({timeMs:z.number().finite().nonnegative(),facing:z.enum(["left","right"]).optional(),state:z.object({
     nearUpperArm:DepthSlotSchema.optional(),nearForearm:DepthSlotSchema.optional(),nearHand:DepthSlotSchema.optional(),
     farUpperArm:DepthSlotSchema.optional(),farForearm:DepthSlotSchema.optional(),farHand:DepthSlotSchema.optional(),
@@ -487,7 +488,7 @@ const AnimationClipSchema = z.object({
     gripSocket:z.object({x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional()}).optional(),
     target:z.object({objectId:z.string(),socketId:z.string()}).optional(),
     keyframes:z.array(z.object({timeMs:z.number().finite().nonnegative(),x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional(),mix:z.number().finite().min(0).max(1),bend:z.union([z.literal(1),z.literal(-1)]).optional(),easing:z.enum(["linear","smooth"]).optional()}))})).optional(),
-  gripObjects:z.array(z.object({id:z.string(),sockets:z.record(z.string(),z.object({x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional()})),keyframes:z.array(z.object({timeMs:z.number().finite().nonnegative(),x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite()}))})).optional(),
+  gripObjects:z.array(z.object({id:z.string(),sockets:z.record(z.string(),z.object({x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite().optional()})),keyframes:z.array(z.object({timeMs:z.number().finite().nonnegative(),x:z.number().finite(),y:z.number().finite(),rotation:z.number().finite(),easing:z.enum(["linear","smooth","ease_in","ease_out"]).optional()}))})).optional(),
   id: z.string(),
   name: z.string(),
   label: z.string(),

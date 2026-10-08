@@ -18,7 +18,7 @@ export function resolveArmRoles(facing: "left" | "right") {
 export function resolveLimbDepth(clip?: AnimationClip, timeMs = 0, facing: "left" | "right" = "right"): Required<LimbDepthState> {
   const defaults: Required<LimbDepthState> = {
     farUpperArm:"FAR_LIMB",farForearm:"FAR_LIMB",farHand:"FAR_LIMB",
-    nearUpperArm:"NEAR_LIMB",nearForearm:"NEAR_LIMB",nearHand:"HAND_FRONT",
+    nearUpperArm:"NEAR_LIMB",nearForearm:"NEAR_LIMB",nearHand:"NEAR_LIMB",
   };
   const key=clip?.limbDepth?.filter(key => key.timeMs<=timeMs && (!key.facing || key.facing === facing)).sort((a,b)=>a.timeMs-b.timeMs).at(-1);
   return {...defaults,...key?.state};

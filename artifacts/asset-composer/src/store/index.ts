@@ -26,6 +26,7 @@ import { DEFAULT_EXPORT_PROFILES } from "@/data/exportProfiles";
 import { getPresetById } from "@/data/skinPresets";
 import { PRESET_ANIMATIONS, getClipById } from "@/data/presetAnimations";
 import { CHIBI_ANIMATIONS, upgradeChibiActionClip, upgradeBowClip } from "@/data/chibiAnimations";
+import { upgradeTwoHandedSwordClip } from "@/data/twoHandedSwordAnimation";
 import { appearanceItemAllowed, appearancePresetAllowed } from "@/lib/appearanceCompatibility";
 import { PRESET_STATE_MACHINES } from "@/data/presetStateMachines";
 import { animController } from "@/core-v2/AnimationController";
@@ -1543,6 +1544,8 @@ export const useStore = create<AppStore>()(
           if (index < 0) migrated.animationClips.push(clip);
           else if (clip.id === "chibi_front__bow_shoot") {
             migrated.animationClips[index] = upgradeBowClip(migrated.animationClips[index]);
+          } else if (clip.id === "chibi_front__two_handed_sword_strike") {
+            migrated.animationClips[index] = upgradeTwoHandedSwordClip(migrated.animationClips[index]);
           } else if (clip.id === "chibi_front__axe_strike" || clip.id === "chibi_front__pickup") {
             migrated.animationClips[index] = upgradeChibiActionClip(migrated.animationClips[index]);
           } else if (clip.id === "chibi_front__death") {

@@ -10,6 +10,7 @@ import { DEPTH_COLORS } from "@/lib/limbDepth";
 import { transformPoint, worldBoneToMatrix } from "@/lib/matrixUtils";
 import { armDiagnostics } from "@/lib/armDiagnostics";
 import { getAnimationContext } from "@/lib/animationContext";
+import { headClearance, validateAnimationDepth, validateHeadClearance } from "@/lib/headClearance";
 
 export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; panX: number; panY: number } }) {
   const project = useStore(s => s.project);
@@ -36,8 +37,11 @@ export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; p
       evaluate(Math.min(clip.durationMs, i*1000/clip.fps))?.bones.get(joint)).filter(p => !!p);
   }, [enabled, joint, clip, template, entity, items, playback.upperClipId, playback.lowerClipId, playback.upperBlendWeight]);
   const skeleton = (enabled || depthEnabled || stackEnabled) && evaluate(time);
-  const scene = skeleton && entity && template && (depthEnabled || stackEnabled) ? evaluateScene(entity,template,skeleton,items) : null;
+  const scene = skeleton && entity && template ? evaluateScene(entity,template,skeleton,items) : null;
   const context = skeleton ? getAnimationContext(skeleton) : undefined;
+  const depthWarnings = useMemo(()=>clip ? validateAnimationDepth(clip) : [],[clip]);
+  const clearance = scene ? headClearance(scene.visuals) : null;
+  const clearanceWarnings = scene ? validateHeadClearance(scene,context?.clip,context?.timeMs ?? time) : [];
   const rest = useMemo(() => template ? evaluateSkeleton(template.bones,new Map(),entity?.bodyMorphs,entity?.appearance) : null,
     [template,entity?.bodyMorphs,entity?.appearance]);
   const diagnostics = skeleton && rest && context ? armDiagnostics(context.clip,time,skeleton,rest,
@@ -50,10 +54,11 @@ export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; p
       const ms = Math.min(clip.durationMs,i*500/clip.fps);
       const pose = evaluate(ms);
       const context = pose && getAnimationContext(pose);
-      return {frame:i/2,timeMs:ms,arms:pose && context ? armDiagnostics(context.clip,ms,pose,rest,
+      const evaluated=pose && entity && template ? evaluateScene(entity,template,pose,items) : null;
+      return {frame:i/2,timeMs:ms,headClearance:evaluated ? validateHeadClearance(evaluated,context?.clip,context?.timeMs ?? ms) : [],arms:pose && context ? armDiagnostics(context.clip,ms,pose,rest,
         evaluate(Math.max(0,ms-500/clip.fps)) ?? undefined,entity?.appearance?.view === "left") : []};
     });
-    const url = URL.createObjectURL(new Blob([JSON.stringify({clip:clip.id,fps:clip.fps,samples},null,2)],{type:"application/json"}));
+    const url = URL.createObjectURL(new Blob([JSON.stringify({clip:clip.id,fps:clip.fps,depthWarnings,samples},null,2)],{type:"application/json"}));
     const link = document.createElement("a");
     link.href=url; link.download=`${clip.name}-arm-diagnostics.json`; link.click();
     setTimeout(() => URL.revokeObjectURL(url),1000);
@@ -107,6 +112,9 @@ export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; p
           {["elbow_l", "elbow_r", "hand_l", "hand_r"].map(id => <option key={id} value={id}>{id.replace("hand", "wrist")}</option>)}
         </select>
         <button type="button" disabled={!enabled || !clip} aria-label="Export arm diagnostics" title="Export arm diagnostics" onClick={exportDiagnostics} className="flex h-6 w-6 items-center justify-center rounded border border-border"><Download size={14} /></button>
+        {(depthWarnings.length>0 || clearanceWarnings.length>0) && <div aria-label="Animation validation warnings" className="max-h-40 overflow-auto border-t border-border text-amber-400">
+          {[...depthWarnings,...clearanceWarnings.map(w=>w.message)].map(message=><div key={message}>{message}</div>)}
+        </div>}
         {clip && <details className="border-t border-border pt-1">
           <summary className="cursor-pointer">Animation data</summary>
           <textarea aria-label="Animation data" readOnly value={JSON.stringify(clip,null,2)} className="mt-1 h-24 w-full resize-y border border-border bg-background p-1 font-mono text-[10px]" />
@@ -128,6 +136,7 @@ export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; p
     </div>}
     {skeleton && <svg aria-label="Debug skeleton" className="absolute inset-0 h-full w-full pointer-events-none z-10">
       <svg x="50%" y="50%" overflow="visible"><g transform={`translate(${viewport.panX} ${viewport.panY}) scale(${viewport.zoom})`}>
+        {enabled && clearance && <ellipse aria-label="Head forbidden core" cx={clearance.center.x} cy={clearance.center.y} rx={clearance.radiusX} ry={clearance.radiusY} fill={clearanceWarnings.length ? "#FF737D" : "#69D98E"} fillOpacity={.1} stroke={clearanceWarnings.length ? "#FF737D" : "#69D98E"} strokeDasharray="2 2" strokeWidth={1/viewport.zoom}/>}
         {trajectory.length > 0 && <polyline points={trajectory.map(p => `${p!.x},${p!.y}`).join(" ")} fill="none" stroke="#FFE07B" strokeWidth={1/viewport.zoom} />}
         {onion && [-2,-1,1,2].map(offset => <g key={offset}>{draw(Math.max(0, Math.min(clip?.durationMs ?? time, time+offset*1000/(clip?.fps ?? 24))), .18, false)}</g>)}
         {enabled && draw(time, 1, labels)}

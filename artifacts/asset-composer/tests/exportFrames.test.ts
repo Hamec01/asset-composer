@@ -62,11 +62,13 @@ describe("export frames", () => {
         .filter(v => v.itemId && v.itemId !== "bow_25d" && !/sleeve/.test(v.partId ?? ""))
         .sort((a, b) => a.zIndex - b.zIndex).map(v => v.partId);
       expect(garments(.5)).toEqual(garments(0));
-      // Both hands read at full draw, not while the far wrist is still behind the torso.
+      // The near hand uses safe default depth below the head; the bow's authored
+      // far-hand override remains explicit instead of promoting every hand.
       const z = (fraction: number, id: string) => scene(fraction).visuals.find(v => v.id === id)!.zIndex;
       const far = view === "left" ? "l" : "r";
-      expect(z(.64, "part__hero_hand_r")).toBeGreaterThan(z(.64, "part__hero_head"));
-      expect(z(.64, "part__hero_hand_l")).toBeGreaterThan(z(.64, "part__hero_head"));
+      const near = view === "left" ? "r" : "l";
+      expect(z(.64, `part__hero_hand_${near}`)).toBeLessThan(z(.64, "part__hero_head"));
+      expect(z(.64, `part__hero_hand_${far}`)).toBeGreaterThan(z(.64, "part__hero_head"));
       expect(z(.64, `slot__side_slot_torso__trader_tunic_25d__sleeve_lower_${far}`)).toBeLessThan(z(.64, "part__hero_head"));
       expect(z(.64, `slot__side_slot_torso__trader_tunic_25d__sleeve_upper_${far}`)).toBeLessThan(z(.64, "part__hero_head"));
       expect(z(.64, `slot__side_slot_torso__trader_tunic_25d__sleeve_upper_${far}`)).toBeLessThan(z(.64, "slot__side_slot_torso__trader_tunic_25d__shirt_chest"));
