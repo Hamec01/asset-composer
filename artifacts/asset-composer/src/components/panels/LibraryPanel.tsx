@@ -1,3 +1,5 @@
+import { uiLabel } from "@/lib/uiLabels";
+import { beginCreation } from "@/lib/assetNavigation";
 import { VisualThumbnail } from "@/components/VisualThumbnail";
 import { useMemo, useState } from "react";
 import { useStore } from "@/store";
@@ -26,31 +28,31 @@ import {
 export type LibraryTabId = "appearance" | "entities" | "body" | "slots" | "items" | "world";
 
 const CATEGORY_LABELS: Record<ItemCategory, string> = {
-  head_cover: "Helmets",
-  hair: "Hair",
-  eyes: "Eyes",
-  face: "Face",
-  beard: "Beard",
-  neck: "Neck",
-  torso: "Torso",
-  arms: "Arms",
-  hands: "Hands",
-  waist: "Waist",
-  legs: "Legs",
-  feet: "Feet",
-  cloak: "Cloaks",
-  weapon_main: "Main Weapon",
-  weapon_off: "Off-hand",
-  shield: "Shields",
-  ring: "Rings",
-  amulet: "Amulets",
-  creature_horn: "Horns",
-  creature_wing: "Wings",
-  creature_tail: "Tails",
-  creature_saddle: "Saddles",
-  creature_pack: "Packs",
-  creature_shell: "Shells",
-  static_part: "Parts",
+  head_cover: "Головные уборы",
+  hair: "Волосы",
+  eyes: "Глаза",
+  face: "Лицо",
+  beard: "Борода",
+  neck: "Шея",
+  torso: "Туловище",
+  arms: "Руки",
+  hands: "Кисти",
+  waist: "Пояс",
+  legs: "Ноги",
+  feet: "Стопы",
+  cloak: "Плащи",
+  weapon_main: "Основное оружие",
+  weapon_off: "Вторая рука",
+  shield: "Щиты",
+  ring: "Кольца",
+  amulet: "Амулеты",
+  creature_horn: "Рога",
+  creature_wing: "Крылья",
+  creature_tail: "Хвосты",
+  creature_saddle: "Сёдла",
+  creature_pack: "Сумки",
+  creature_shell: "Панцири",
+  static_part: "Части",
 };
 
 const CATEGORY_GROUPS: { label: string; categories: ItemCategory[] }[] = [
@@ -155,10 +157,13 @@ function ItemCard({
   );
 }
 
-export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeTab: LibraryTabId; onTabChange: (tab: LibraryTabId) => void }) {
+export function LibraryPanel({ activeTab: controlledTab, onTabChange, tabs }: { activeTab: LibraryTabId; onTabChange: (tab: LibraryTabId) => void; tabs?: LibraryTabId[] }) {
+  const [localTab, setLocalTab] = useState<LibraryTabId>(controlledTab);
+  const activeTab = tabs ? localTab : controlledTab;
+  const setActiveTab = (tab: LibraryTabId) => { setLocalTab(tab); onTabChange(tab); };
   const project = useStore(s => s.project);
   const editor = useStore(s => s.editor);
-  const openWizard = useStore(s => s.openWizard);
+  const openWizard = () => beginCreation("character");
   const setActiveEntity = useStore(s => s.setActiveEntity);
   const deleteEntity = useStore(s => s.deleteEntity);
   const setSelectedSlot = useStore(s => s.setSelectedSlot);
@@ -276,7 +281,7 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
     >
       <div className="px-2 pt-2 pb-0 flex-shrink-0">
         <div className="grid grid-cols-3 gap-1 w-full bg-background/50 p-1">
-          {(["appearance", "body", "entities", "items", "world", "slots"] as LibraryTabId[]).map(tabId => (
+          {(tabs ?? ["appearance", "body", "entities", "items", "world", "slots"] as LibraryTabId[]).map(tabId => (
             <button
               key={tabId}
               type="button"
@@ -370,18 +375,18 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
         <div className="flex-1 overflow-hidden flex flex-col">
           {!activeEntity ? (
             <div className="p-4 text-center text-xs text-muted-foreground">
-              Select an entity to view its slots.
+              Откройте объект, чтобы увидеть крепления.
             </div>
           ) : (
             <>
               {template && (
                 <div className="px-2 pt-1.5 pb-1 flex-shrink-0 space-y-1">
                   <div className="grid grid-cols-2 gap-1">
-                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => showAllSlotGizmos(template.id)}>Show All Slots</Button>
-                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => hideAllSlotGizmos(template.id)}>Hide All Slots</Button>
+                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => showAllSlotGizmos(template.id)}>Показать все крепления</Button>
+                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => hideAllSlotGizmos(template.id)}>Скрыть все крепления</Button>
                   </div>
                   <Button size="sm" variant="outline" className="h-7 w-full text-[10px]" onClick={() => unlockAllSlotGizmos(template.id)}>
-                    Unlock All Slots
+                    Разблокировать все крепления
                   </Button>
                 </div>
               )}
@@ -424,10 +429,10 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
                             <span className={`slot-chip ${hasItem ? "slot-chip-filled" : "slot-chip-empty"}`}>
                               {hasItem ? "●" : "○"}
                             </span>
-                            <span className="text-xs text-foreground flex-1 truncate">{slot.name}</span>
+                            <span className="text-xs text-foreground flex-1 truncate">{uiLabel(slot.name)}</span>
                             {hasIncompat && <AlertTriangle className="w-3 h-3 text-yellow-500 flex-shrink-0" />}
                             {item && !hasIncompat && <span className="text-[10px] text-primary truncate max-w-[70px]">{item.name}</span>}
-                            {!item && <span className="text-[10px] text-muted-foreground">{slot.required ? "Required" : "Empty"}</span>}
+                            {!item && <span className="text-[10px] text-muted-foreground">{slot.required ? "Обязательное" : "Пусто"}</span>}
                             {template && (
                               <div className="ml-1 flex items-center gap-0.5">
                                 <button
@@ -468,7 +473,7 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
                                   }}
                                   className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                                   data-testid={`slot-reset-${slot.id}`}
-                                  title="Reset slot transform"
+                                  title="Сбросить положение крепления"
                                 >
                                   <RotateCcw className="w-3 h-3" />
                                 </button>
@@ -495,7 +500,7 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
             const outfit: Record<string, string> = { side_slot_torso: "peasant_shirt_25d", side_slot_legs: "peasant_trousers_25d", side_slot_foot_l: "peasant_boots_25d" };
             const equipped = Object.entries(outfit).every(([slotId, id]) => slots.some(slot => slot.slotId === slotId && slot.itemId === id));
             useStore.getState().pushCommand({ type: "SET_SLOT", entityId: activeEntity.id, before: { slots },
-              after: { slots: slots.map(slot => outfit[slot.slotId] ? { ...slot, itemId: equipped ? null : outfit[slot.slotId] } : slot) }, label: "Peasant outfit" });
+              after: { slots: slots.map(slot => outfit[slot.slotId] ? { ...slot, itemId: equipped ? null : outfit[slot.slotId] } : slot) }, label: "Крестьянская одежда" });
           }}><Shirt size={14} className="mr-2" />Крестьянский комплект</Button>}
           <div className="px-2 pt-2 pb-1 space-y-1 flex-shrink-0">
             <Button
@@ -516,7 +521,7 @@ export function LibraryPanel({ activeTab, onTabChange: setActiveTab }: { activeT
             <select aria-label="Место крепления" value={editor.selectedSlotId ?? ""} onChange={event => setSelectedSlot(event.target.value || null)}
               className="w-full min-w-0 h-8 rounded border border-border bg-background px-2 text-xs">
               <option value="">Все крепления (слоты)</option>
-              {slots.map(slot => <option key={slot.id} value={slot.id}>{slot.name}</option>)}
+              {slots.map(slot => <option key={slot.id} value={slot.id}>{uiLabel(slot.name)}</option>)}
             </select>
           </div>
           <div className="px-2 pt-0.5 flex-shrink-0">

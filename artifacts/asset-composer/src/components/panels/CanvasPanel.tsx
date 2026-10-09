@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useStore } from "@/store";
+import { uiLabel } from "@/lib/uiLabels";
 import { CanvasEngine } from "@/engine/canvasEngine";
 import { resolveTemplate } from "@/data/templates";
 import { createDocumentFromFaceOverlay } from "@/lib/spriteEditor";
@@ -28,20 +29,20 @@ const MODE_BUTTONS: Array<{
 }> = [
   {
     mode: "select",
-    label: "Select",
-    title: "Select visuals and slots without transforming them",
+    label: "Выделение",
+    title: "Выбирать рисунки и крепления без изменения положения",
     icon: MousePointer2,
   },
   {
     mode: "edit-attachment",
-    label: "Attachment",
-    title: "Edit the equipped item part for the selected slot",
+    label: "Крепление",
+    title: "Изменить часть предмета на выбранном креплении",
     icon: Move,
   },
   {
     mode: "edit-template-slots",
-    label: "Slots",
-    title: "Edit template slot positions for the active template",
+    label: "Крепления",
+    title: "Редактировать положение креплений текущей основы",
     icon: LayoutGrid,
   },
 ];
@@ -1044,7 +1045,7 @@ export function CanvasPanel() {
           size="icon" variant="secondary"
           className="h-7 w-7 bg-card/80 backdrop-blur border-border hover:bg-card"
           onClick={fitView}
-          title="Fit entity in view"
+          title="Вписать объект в окно"
         ><Maximize2 className="w-3.5 h-3.5" /></Button>
       </div>
 
@@ -1064,8 +1065,8 @@ export function CanvasPanel() {
       {/* No entity placeholder */}
       {!activeEntity && (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <p className="text-sm text-muted-foreground/50">Select or create an entity</p>
-          <p className="text-xs text-muted-foreground/30 mt-1">to preview it here</p>
+          <p className="text-sm text-muted-foreground/50">Откройте или создайте объект</p>
+          <p className="text-xs text-muted-foreground/30 mt-1">для предпросмотра</p>
         </div>
       )}
 
@@ -1073,7 +1074,7 @@ export function CanvasPanel() {
       {editor.selectedSlotId && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
           <div className="bg-primary/90 text-primary-foreground text-xs rounded-full px-3 py-1 shadow-lg animate-bounce">
-            {template?.slots.find(slot => slot.id === editor.selectedSlotId)?.name ?? editor.selectedSlotId}
+            {uiLabel(template?.slots.find(slot => slot.id === editor.selectedSlotId)?.name ?? editor.selectedSlotId)}
           </div>
         </div>
       )}
@@ -1082,7 +1083,7 @@ export function CanvasPanel() {
       {activeEntity && (activeAuthoringMode === "body-morph" || activeAuthoringMode === "face-editor") && (
         <div className="absolute top-14 left-3 z-10 flex flex-col gap-2">
           <div className="rounded-lg border border-border bg-card/85 p-2 backdrop-blur">
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Body Focus</div>
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Область тела</div>
             <div className="grid grid-cols-3 gap-1">
               {(Object.keys(BODY_REGION_LABELS) as BodyMorphRegionId[]).map(region => (
                 <Button
@@ -1114,7 +1115,7 @@ export function CanvasPanel() {
           </div>
 
           <div className="rounded-lg border border-border bg-card/85 p-2 backdrop-blur">
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Face Focus</div>
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Область лица</div>
             <div className="grid grid-cols-3 gap-1">
               {(Object.keys(FACE_FEATURE_LABELS) as FaceFeatureKey[]).map(featureKey => (
                 <Button
@@ -1154,27 +1155,27 @@ export function CanvasPanel() {
             <div className="rounded-lg border border-border bg-card/85 p-2 backdrop-blur">
               <div className="mb-1 flex items-center justify-between gap-2">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Face Local
+                  Координаты лица
                 </div>
                 <div className="text-[10px] text-foreground">
                   {FACE_FEATURE_LABELS[activeFaceFeature]}
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-1">
-                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ x: -1 })}>Left</Button>
-                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ y: -1 })}>Up</Button>
-                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ x: 1 })}>Right</Button>
-                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ rotation: -5 })}>Rot -</Button>
-                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ y: 1 })}>Down</Button>
-                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ rotation: 5 })}>Rot +</Button>
-                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ scaleX: 0.95, scaleY: 0.95 })}>Scale -</Button>
-                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 })}>Reset</Button>
-                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ scaleX: 1.05, scaleY: 1.05 })}>Scale +</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ x: -1 })}>Слева</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ y: -1 })}>Выше</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ x: 1 })}>Справа</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ rotation: -5 })}>Поворот −</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ y: 1 })}>Ниже</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ rotation: 5 })}>Поворот +</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ scaleX: 0.95, scaleY: 0.95 })}>Масштаб −</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 })}>Сбросить</Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceFeature({ scaleX: 1.05, scaleY: 1.05 })}>Масштаб +</Button>
               </div>
               <div className="mt-2 space-y-1">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Overlay Focus</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Область рисунка</div>
                 {visibleFaceOverlays.length === 0 ? (
-                  <div className="text-[10px] text-muted-foreground">No overlays for this feature.</div>
+                  <div className="text-[10px] text-muted-foreground">Для этой черты лица пока нет рисунков.</div>
                 ) : (
                   <div className="space-y-1">
                     {visibleFaceOverlays.map(overlay => (
@@ -1214,7 +1215,7 @@ export function CanvasPanel() {
                 )}
                 {activeFaceOverlay && (
                   <div className="rounded border border-border bg-background/60 px-2 py-1 text-[10px] text-muted-foreground">
-                    selected overlay: <span className="text-foreground">{activeFaceOverlay.name}</span>
+                    выбранный рисунок: <span className="text-foreground">{activeFaceOverlay.name}</span>
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-1">
@@ -1226,7 +1227,7 @@ export function CanvasPanel() {
                     onClick={() => openFaceOverlayEditor(undefined, "select", "document")}
                     disabled={!activeFaceOverlay}
                   >
-                    Open Overlay Editor
+                    Редактировать рисунок лица
                   </Button>
                   <Button
                     type="button"
@@ -1236,7 +1237,7 @@ export function CanvasPanel() {
                     onClick={() => createFaceOverlayDraftFromCanvas("pencil", "head")}
                     disabled={!activeFaceFeature}
                   >
-                    New Overlay Draft
+                    Новый набросок лица
                   </Button>
                 </div>
                 <Button
@@ -1246,7 +1247,7 @@ export function CanvasPanel() {
                   className="h-7 w-full px-2 text-[10px]"
                   onClick={() => activeFaceOverlay ? openFaceOverlayEditor(activeFaceOverlay.id, "pencil", "head") : createFaceOverlayDraftFromCanvas("pencil", "head")}
                 >
-                  Draw On Head
+                  Рисовать на голове
                 </Button>
                 <div className="grid grid-cols-4 gap-1">
                   <Button
@@ -1256,7 +1257,7 @@ export function CanvasPanel() {
                     className="h-7 px-2 text-[10px]"
                       onClick={() => activeFaceOverlay ? openFaceOverlayEditor(activeFaceOverlay.id, "pencil", "head") : createFaceOverlayDraftFromCanvas("pencil", "head")}
                   >
-                    Draw
+                    Рисовать
                   </Button>
                   <Button
                     type="button"
@@ -1265,7 +1266,7 @@ export function CanvasPanel() {
                     className="h-7 px-2 text-[10px]"
                       onClick={() => activeFaceOverlay ? openFaceOverlayEditor(activeFaceOverlay.id, "closed-pencil", "head") : createFaceOverlayDraftFromCanvas("closed-pencil", "head")}
                   >
-                    Shape
+                    Фигура
                   </Button>
                   <Button
                     type="button"
@@ -1274,7 +1275,7 @@ export function CanvasPanel() {
                     className="h-7 px-2 text-[10px]"
                       onClick={() => activeFaceOverlay ? openFaceOverlayEditor(activeFaceOverlay.id, "fill", "head") : createFaceOverlayDraftFromCanvas("fill", "head")}
                   >
-                    Fill
+                    Заливка
                   </Button>
                   <Button
                     type="button"
@@ -1283,22 +1284,22 @@ export function CanvasPanel() {
                     className="h-7 px-2 text-[10px]"
                       onClick={() => activeFaceOverlay ? openFaceOverlayEditor(activeFaceOverlay.id, "eraser", "head") : createFaceOverlayDraftFromCanvas("eraser", "head")}
                   >
-                    Erase
+                    Стереть
                   </Button>
                 </div>
                 {activeFaceOverlay && (
                   <div className="mt-2 space-y-1">
-                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Overlay Local</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Координаты рисунка</div>
                     <div className="grid grid-cols-3 gap-1">
-                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ x: -1 })}>Left</Button>
-                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ y: -1 })}>Up</Button>
-                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ x: 1 })}>Right</Button>
-                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ rotation: -5 })}>Rot -</Button>
-                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ y: 1 })}>Down</Button>
-                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ rotation: 5 })}>Rot +</Button>
-                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ scaleX: activeFaceOverlay.localTransform.scaleX * 0.95, scaleY: activeFaceOverlay.localTransform.scaleY * 0.95 })}>Scale -</Button>
-                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 })}>Reset</Button>
-                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ scaleX: activeFaceOverlay.localTransform.scaleX * 1.05, scaleY: activeFaceOverlay.localTransform.scaleY * 1.05 })}>Scale +</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ x: -1 })}>Слева</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ y: -1 })}>Выше</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ x: 1 })}>Справа</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ rotation: -5 })}>Поворот −</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ y: 1 })}>Ниже</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ rotation: 5 })}>Поворот +</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ scaleX: activeFaceOverlay.localTransform.scaleX * 0.95, scaleY: activeFaceOverlay.localTransform.scaleY * 0.95 })}>Масштаб −</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 })}>Сбросить</Button>
+                      <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-[10px]" onClick={() => nudgeActiveFaceOverlay({ scaleX: activeFaceOverlay.localTransform.scaleX * 1.05, scaleY: activeFaceOverlay.localTransform.scaleY * 1.05 })}>Масштаб +</Button>
                     </div>
                   </div>
                 )}

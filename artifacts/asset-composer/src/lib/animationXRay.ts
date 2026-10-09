@@ -1,6 +1,7 @@
 import type { DepthSlot, Entity, EvaluatedVisual, Item, ItemFitProfile, Template } from "@/domain/types";
 import { evaluateScene, type EvaluatedScene, type EvaluatedSkeleton } from "./evaluationPipeline";
 import { DEPTH_COLORS, resolveArmRoles } from "./limbDepth";
+import type { VisualResources } from "./visualContent";
 
 export type AnimationXRayMode = "normal" | "rig" | "depth" | "skeleton";
 export interface AnimationXRayOptions {
@@ -72,6 +73,11 @@ function bodyVisual(visual: EvaluatedVisual): boolean {
 
 export function supportsAnimationXRay(scene: EvaluatedScene): boolean {
   const bones = new Set(scene.visuals.filter(bodyVisual).map(v => v.boneId));
+  // The token rig has actual head/torso parts and floating prop bones, no limbs.
+  // Do not invent hidden arms merely to satisfy the humanoid diagnostic contract.
+  if (scene.skeleton.bones.has("token_weapon") && scene.skeleton.bones.has("token_offhand")) {
+    return bones.has("head") && bones.has("chest");
+  }
   return bones.has("head") && (bones.has("chest") || bones.has("spine"))
     && ["shoulder_l", "shoulder_r", "elbow_l", "elbow_r", "hand_l", "hand_r"].every(id => bones.has(id));
 }
@@ -99,11 +105,11 @@ export function presentAnimationXRay(scene: EvaluatedScene, items: Item[], optio
 }
 
 export function evaluatePresentedScene(entity: Entity, template: Template, skeleton: EvaluatedSkeleton,
-  items: Item[], fitProfiles: ItemFitProfile[] = [], options: AnimationXRayOptions = DEFAULT_XRAY_OPTIONS): EvaluatedScene {
-  const scene = evaluateScene(entity, template, skeleton, items, fitProfiles, { includeCoveredBody: options.mode !== "normal" });
+  items: Item[], fitProfiles: ItemFitProfile[] = [], options: AnimationXRayOptions = DEFAULT_XRAY_OPTIONS, resources?: VisualResources): EvaluatedScene {
+  const scene = evaluateScene(entity, template, skeleton, items, fitProfiles, { includeCoveredBody: options.mode !== "normal", resources });
   const facing = entity.appearance?.view ?? "front";
   if (options.mode !== "normal" && !supportsAnimationXRay(scene)) {
-    return { ...evaluateScene(entity, template, skeleton, items, fitProfiles), presentation: { options, facing, supported: false } };
+    return { ...evaluateScene(entity, template, skeleton, items, fitProfiles, { resources }), presentation: { options, facing, supported: false } };
   }
   return presentAnimationXRay(scene, items, options, facing);
 }

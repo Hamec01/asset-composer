@@ -368,6 +368,8 @@ export const EntitySchema = z.object({
   }),
   bodyMorphPresetId: z.string().nullable().optional(),
   appearance: z.object({
+    tokenAge: z.enum(["child", "teen", "adult", "elder"]).optional(),
+    tokenFace: z.object({ emotion: z.enum(["auto", "neutral", "happy", "angry", "sad", "surprised"]), blink: z.boolean(), mouthMotion: z.boolean() }).optional(),
     view: z.enum(["front", "right", "left"]).optional(),
     projection: z.enum(["profile", "authored"]).optional(),
     sex: z.enum(["male", "female"]),

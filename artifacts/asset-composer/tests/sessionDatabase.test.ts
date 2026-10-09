@@ -15,6 +15,14 @@ beforeEach(async () => {
   useStore.getState().newProject();
 });
 describe("IndexedDB project transactions", () => {
+  it("does not replace a newer local revision with a late disk snapshot", async () => {
+    const project = structuredClone(useStore.getState().project);
+    await saveDatabaseSession({ ...project, name: "Новая версия", updatedAt: project.updatedAt + 1 });
+    await saveDatabaseSession(project, "C:/art/tree");
+    await initializeSessionDatabase();
+    expect((databaseLast() as Project).name).toBe("Новая версия");
+    expect(databaseEntries()[0].folderPath).toBe("C:/art/tree");
+  });
   it("restores a large raster resource once across layers and revisions", async () => {
     const project = structuredClone(useStore.getState().project);
     project.assets = {

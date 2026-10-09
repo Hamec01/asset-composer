@@ -20,7 +20,7 @@ import type { AnimationClip, Entity, Template, ExportProfile } from "@/domain/ty
 
 function renderFrame(frames: Record<string, ImageBitmap>, key: string, frameSz: number, profile: ExportProfile): ImageBitmap {
   const source = frames[key];
-  if (!source) throw new Error(`Missing rendered export frame: ${key}`);
+  if (!source) throw new Error(`Не подготовлен кадр экспорта: ${key}. Повторите экспорт.`);
   const canvas = new OffscreenCanvas(frameSz, frameSz);
   const ctx    = canvas.getContext("2d")!;
   if (profile.bgColor) {
@@ -98,7 +98,7 @@ async function exportEntity(job: ExportWorkerJob, entity: Entity, template: Temp
   if (profile.formats.includes("jpeg_preview")) files[`${slug}/${slug}_preview.jpg`] = await encodeFrame(rendered[0].bitmap, frameSz, "image/jpeg");
 
   if (needsSheet(profile)) {
-    progress(0, `${entity.name}: packing sheet`);
+    progress(0, `${entity.name}: сборка листа`);
     const { sheet, regions, sheetW, sheetH } = packSprites(rendered, frameSz);
     const atlasJson = buildAtlasJson({
       regions, clips: exportClipsFor(template, job.animationClips, job.selectedClipIds), entity,
@@ -146,7 +146,7 @@ async function exportCombined(job: ExportWorkerJob, progress: Progress): Promise
   }
 
   if (allRendered.length > 0 && needsSheet(profile)) {
-    progress(0, "Packing combined sheet…");
+    progress(0, "Сборка общего листа…");
     const { sheet, regions, sheetW, sheetH } = packSprites(allRendered, frameSz);
     const atlasJson = buildAtlasJson({
       regions, clips: Array.from(allClipsUsed), entity: entities[0],
@@ -187,7 +187,7 @@ self.onmessage = async (e: MessageEvent<WorkerInputMessage>) => {
     } else {
       for (const entity of job.entities) {
         const template = job.templates.find(t => t.id === entity.templateId);
-        if (!template) throw new Error(`Template ${entity.templateId} not found`);
+        if (!template) throw new Error(`Не найдена основа ${entity.templateId}. Откройте объект и проверьте проект.`);
         Object.assign(allFiles, await exportEntity(job, entity, template, progress));
       }
     }
@@ -195,7 +195,7 @@ self.onmessage = async (e: MessageEvent<WorkerInputMessage>) => {
     const svgParts = (job as unknown as { svgPartFiles?: Record<string, Uint8Array> }).svgPartFiles;
     if (svgParts) Object.assign(allFiles, svgParts);
 
-    post({ type: "progress", pct: 0.99, msg: "Assembling ZIP…" });
+    post({ type: "progress", pct: 0.99, msg: "Сборка ZIP…" });
     const zipData   = zipSync(allFiles, { level: 6 });
     const zipBuffer = zipData.buffer.slice(zipData.byteOffset, zipData.byteOffset + zipData.byteLength) as ArrayBuffer;
     const fileCount = Object.keys(allFiles).length;

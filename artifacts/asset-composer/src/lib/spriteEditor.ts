@@ -1,4 +1,5 @@
 import { vectorSource, contentOf, getVisualResources } from "@/lib/visualContent";
+import { contentSvg } from "@/lib/visualRenderer";
 import type {
   EntityVisual,
   FaceOverlay,
@@ -557,6 +558,12 @@ export function spriteEditorDocumentToSvg(document: SpriteEditorDocument, option
 function artworkLayers(value: EntityVisual | ItemPart | FaceOverlay): SpriteEditorLayer[] {
   const content=contentOf(value);
   if(content.kind==="raster") return [{...createEmptySpriteLayer("Imported artwork"),kind:"raster",assetId:content.assetId}];
+  if(content.kind==="composite") {
+    // Keep the cropped source artwork intact; additional editable layers can be
+    // drawn above it. This container still contains PNG pixels, not vector paths.
+    return [{...createEmptySpriteLayer("Растровый модуль атласа"), kind:"vector", locked:true,
+      sourceSvg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${content.width} ${content.height}">${contentSvg(content, content.width, content.height)}</svg>`}];
+  }
   if(content.kind==="document") {
     const doc=getVisualResources().documents.find(d=>d.id===content.documentId);
     if(doc) return structuredClone(doc.layers);

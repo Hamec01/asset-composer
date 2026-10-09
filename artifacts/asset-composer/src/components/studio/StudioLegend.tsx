@@ -33,7 +33,7 @@ export function StudioLegend({
         </span>
       ))}
       {mode === "rig" && template?.skeletonFamily !== "custom_2d_v1" && (
-        <span>Dark = FAR · base = BODY/CROSS · light = NEAR/FRONT</span>
+        <span>Тёмный — сзади · обычный — на теле · светлый — спереди</span>
       )}
     </div>
   ) : null;

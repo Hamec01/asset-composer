@@ -4,11 +4,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button }   from "@/components/ui/button";
 import { useStore } from "@/store";
+import { uiLabel } from "@/lib/uiLabels";
 import { resolveTemplate } from "@/data/templates";
 import { renderFrameToCanvas } from "@/lib/frameRenderer";
 import { DEFAULT_EXPORT_PROFILES } from "@/data/exportProfiles";
 import { exportSlug, formatFrameName } from "@/lib/exportTypes";
 import { triggerDownload } from "@/lib/download";
+import { buildGodotPack, browserRasterizeGodotSvg } from "@/lib/godotPack";
+import { buildGodotTreePack } from "@/lib/godotTrees";
+import { zipSync } from "fflate";
 import { refreshCanonicalBuiltInTypedItems } from "@/lib/canonicalItems";
 import { templateSupportsAnimationClip } from "@/lib/animationCompatibility";
 import type { ExportProfile, Item, ItemFitProfile, Template, Entity, AnimationClip } from "@/domain/types";
@@ -32,12 +36,12 @@ const FORMAT_META: Record<
   string,
   { label: string; desc: string; icon: React.ReactNode }
 > = {
-  png_sheet:      { label: "PNG sprite sheet",  desc: "+ atlas JSON", icon: <FileImage className="w-3.5 h-3.5" /> },
-  webp_sheet:     { label: "WebP sprite sheet", desc: "+ atlas JSON", icon: <FileImage className="w-3.5 h-3.5" /> },
-  svg_parts:      { label: "SVG part pack",     desc: "each slot as .svg", icon: <Code className="w-3.5 h-3.5" /> },
-  frame_sequence: { label: "Frame sequence",    desc: "numbered PNGs per clip", icon: <Package className="w-3.5 h-3.5" /> },
-  entity_json:    { label: "Entity JSON",       desc: "runtime entity record", icon: <FileJson className="w-3.5 h-3.5" /> },
-  jpeg_preview:   { label: "JPEG preview",      desc: "single thumbnail frame", icon: <FileImage className="w-3.5 h-3.5" /> },
+  png_sheet:      { label: "PNG-лист",  desc: "+ JSON атласа", icon: <FileImage className="w-3.5 h-3.5" /> },
+  webp_sheet:     { label: "WebP-лист", desc: "+ JSON атласа", icon: <FileImage className="w-3.5 h-3.5" /> },
+  svg_parts:      { label: "SVG-пакет",     desc: "крепления в отдельных SVG", icon: <Code className="w-3.5 h-3.5" /> },
+  frame_sequence: { label: "Последовательность PNG",    desc: "нумерованные кадры каждого клипа", icon: <Package className="w-3.5 h-3.5" /> },
+  entity_json:    { label: "JSON сущности",       desc: "данные объекта", icon: <FileJson className="w-3.5 h-3.5" /> },
+  jpeg_preview:   { label: "JPEG-превью",      desc: "один кадр", icon: <FileImage className="w-3.5 h-3.5" /> },
 };
 
 const LICENSE_RANK: Record<string, number> = {
@@ -57,9 +61,9 @@ function detectLicenseConflicts(entities: Entity[], items: Item[]): { itemName: 
       if (!item) continue;
       const itemRank = LICENSE_RANK[item.licenseMeta.licenseType] ?? 0;
       if (itemRank > entityRank)
-        conflicts.push({ itemName: item.name, reason: `${item.licenseMeta.licenseType} is more restrictive` });
+        conflicts.push({ itemName: item.name, reason: `условия ${item.licenseMeta.licenseType} строже условий объекта` });
       if (!item.licenseMeta.commercialUseAllowed && entity.licenseMeta.commercialUseAllowed)
-        conflicts.push({ itemName: item.name, reason: "item does not allow commercial use" });
+        conflicts.push({ itemName: item.name, reason: "предмет запрещает коммерческое использование" });
     }
   }
   const seen = new Set<string>();
@@ -81,22 +85,33 @@ async function renderAllExportFrames(
   const needsFrames = profile.formats.some(f => ["png_sheet", "webp_sheet", "frame_sequence", "jpeg_preview"].includes(f));
   if (!needsFrames) return frames;
   const frameSz = parseInt(profile.frameSizeKey, 10);
-  const work = entities.flatMap(entity => {
+  const work: Array<{ entity: Entity; spec: ReturnType<typeof exportFramePlan>[number]; scene: ReturnType<typeof evaluateExportScene>; camera: ReturnType<typeof exportCamera> }> = [];
+  for (const entity of entities) {
     const template = findTemplate(entity.templateId);
-    if (!template) return [];
-    const scenes = exportFramePlan(entity, template, clips, selectedClipIds)
-      .map(spec => ({ entity, spec, scene: evaluateExportScene(entity, template, clips, items, fitProfiles, spec) }));
+    if (!template) continue;
+    const plan = exportFramePlan(entity, template, clips, selectedClipIds);
+    const scenes: Array<{ entity: Entity; spec: typeof plan[number]; scene: ReturnType<typeof evaluateExportScene> }> = [];
+    for (let index = 0; index < plan.length; index++) {
+      if (index > 0 && index % 4 === 0) {
+        onStep(0, plan.length, `Подготовка сцены: ${entity.name} · ${index}/${plan.length}`);
+        await new Promise<void>(resolve => setTimeout(resolve, 0));
+      }
+      if (isCancelled()) return frames;
+      const spec = plan[index];
+      scenes.push({ entity, spec, scene: evaluateExportScene(entity, template, clips, items, fitProfiles, spec) });
+    }
     const camera = exportCamera(scenes.map(entry => entry.scene));
-    return scenes.map(entry => ({ ...entry, camera }));
-  });
-  // Image decoding is asynchronous; keep a few frames in flight.
-  const batch = 8;
+    work.push(...scenes.map(entry => ({ ...entry, camera })));
+  }
+  // Keep SVG composition and image decoding small enough for cancellation input.
+  const batch = 2;
   for (let start = 0; start < work.length && !isCancelled(); start += batch) {
     const { entity, spec } = work[start];
-    onStep(start, work.length, `Rendering ${entity.name} · ${spec.clip?.name ?? "idle"} ${spec.frame + 1}`);
+    onStep(start, work.length, `Отрисовка: ${entity.name} · ${uiLabel(spec.clip?.label ?? "исходная поза")} ${spec.frame + 1}`);
     await Promise.all(work.slice(start, start + batch).map(async ({ spec, scene, camera }) => {
       frames[spec.key] = await rasterizeScene(scene, camera, frameSz);
     }));
+    if (start + batch < work.length) await new Promise<void>(resolve => setTimeout(resolve, 0));
   }
   return frames;
 }
@@ -106,7 +121,7 @@ function previewNamingTemplate(tmpl: string, entityName: string): string {
 }
 
 function fmtMs(ms: number): string {
-  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)} с` : `${ms} мс`;
 }
 
 function clipFrameCount(clip: AnimationClip): number {
@@ -120,7 +135,7 @@ function ExportProgress({ pct, msg, onCancel }: { pct: number; msg: string; onCa
     <div className="space-y-4 py-4" data-testid="export-progress">
       <div className="flex items-center gap-3">
         <Loader2 className="w-5 h-5 text-primary animate-spin flex-shrink-0" />
-        <p className="text-sm font-medium text-foreground">Exporting…</p>
+        <p className="text-sm font-medium text-foreground">Экспортируем…</p>
       </div>
       <div className="h-2 rounded-full bg-accent overflow-hidden">
         <div
@@ -129,9 +144,9 @@ function ExportProgress({ pct, msg, onCancel }: { pct: number; msg: string; onCa
         />
       </div>
       <p className="text-xs text-muted-foreground truncate">{msg}</p>
-      <p className="text-[10px] text-muted-foreground">{Math.round(pct * 100)}% complete</p>
+      <p className="text-[10px] text-muted-foreground">{Math.round(pct * 100)}% готово</p>
       <Button variant="ghost" size="sm" className="text-xs w-full" onClick={onCancel}>
-        Cancel export
+        Отменить экспорт
       </Button>
     </div>
   );
@@ -139,13 +154,13 @@ function ExportProgress({ pct, msg, onCancel }: { pct: number; msg: string; onCa
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function ExportDialog() {
+export function ExportDialog({ entityId, objectName }: { entityId?: string; objectName?: string } = {}) {
   const editor          = useStore(s => s.editor);
   const project         = useStore(s => s.project);
   const closeExport     = useStore(s => s.closeExport);
   const getActiveEntity = useStore(s => s.getActiveEntity);
 
-  const activeEntity = getActiveEntity();
+  const activeEntity = entityId ? project.entities.find(e => e.id === entityId) ?? null : getActiveEntity();
 
   const [profile, setProfile]                         = useState<ExportProfile>({ ...DEFAULT_EXPORT_PROFILES[0] });
   const [selectedProfileId, setSelectedProfileId]     = useState(DEFAULT_EXPORT_PROFILES[0].id);
@@ -163,7 +178,26 @@ export function ExportDialog() {
 
   const workerRef    = useRef<InstanceType<typeof ExportWorker> | null>(null);
   const cancelledRef = useRef(false);
+  const exportRunRef = useRef(0);
   const canvasRef    = useRef<HTMLCanvasElement>(null);
+  async function exportGodot() {
+    cancelledRef.current = false;
+    setExportState('running'); setErrorMsg(null); setProgress({pct:.05,msg:'Готовим модульный пакет Godot…'});
+    try {
+      const trees = selectedEntities.length > 0 && selectedEntities.every(e=>e.templateId.startsWith('composer_tree_'));
+      const files = trees ? await buildGodotTreePack() : await buildGodotPack(selectedEntities,{assets:project.assets ?? {},documents:project.editorMeta.spriteEditorDocuments},async svg=>{
+        if(cancelledRef.current) throw new Error('Экспорт отменён.');
+        return browserRasterizeGodotSvg(svg);
+      },msg=>{if(cancelledRef.current) throw new Error('Экспорт отменён.');setProgress({pct:.4,msg});});
+      if(cancelledRef.current) return;
+      const bytes=zipSync(files,{level:1}), blob=new Blob([bytes as BlobPart],{type:'application/zip'}), filename=trees?'planetki-trees.zip':'planetki-chibi.zip';
+      setCompletedDownload({blob,filename}); setDownloadedFilename(filename); setFileCount(Object.keys(files).length);
+      triggerDownload(blob,filename); setExportState('done');
+    } catch(e) {
+      if(cancelledRef.current) setExportState('idle');
+      else {setErrorMsg(e instanceof Error?e.message:'Ошибка экспорта Godot.');setExportState('error');}
+    } finally {setProgress(null);}
+  }
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedEntities = useMemo(() => {
@@ -237,7 +271,7 @@ export function ExportDialog() {
       setProgress(null);
       setFileCount(0);
     }
-  }, [editor.isExportOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editor.isExportOpen, activeEntity?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Live preview
   const schedulePreview = useCallback(() => {
@@ -310,9 +344,11 @@ export function ExportDialog() {
     }
     if (templateMap.size === 0) return;
 
+    const run = ++exportRunRef.current;
+    const isCancelled = () => cancelledRef.current || run !== exportRunRef.current;
     setCompletedDownload(null);
     setExportState("running");
-    setProgress({ pct: 0, msg: "Preparing textures…" });
+    setProgress({ pct: 0, msg: "Подготавливаем изображения…" });
     setErrorMsg(null);
 
     try {
@@ -321,10 +357,10 @@ export function ExportDialog() {
       const clipSelection = effectiveClipIds.length < availableClips.length ? effectiveClipIds : undefined;
       const frames = await renderAllExportFrames(
         entities, effectiveItems, project.animationClips, project.itemFitProfiles, profile, clipSelection, findTemplate,
-        () => cancelledRef.current,
+        isCancelled,
         (done, total, msg) => setProgress({ pct: 0.6 * done / Math.max(1, total), msg }),
       );
-      if (cancelledRef.current) {
+      if (isCancelled()) {
         for (const bitmap of Object.values(frames)) bitmap.close();
         return;
       }
@@ -336,6 +372,10 @@ export function ExportDialog() {
         profile,
         findTemplate,
       );
+      if (isCancelled()) {
+        for (const bitmap of Object.values(frames)) bitmap.close();
+        return;
+      }
 
       const job: ExportWorkerJob & { svgPartFiles?: Record<string, Uint8Array> } = {
         entities,
@@ -349,12 +389,13 @@ export function ExportDialog() {
         svgPartFiles: Object.keys(svgPartFiles).length > 0 ? svgPartFiles : undefined,
       };
 
-      setProgress({ pct: 0.6, msg: "Packing frames…" });
+      setProgress({ pct: 0.6, msg: "Упаковываем кадры…" });
 
       const worker = new ExportWorker();
       workerRef.current = worker;
 
       worker.onmessage = (e: MessageEvent<WorkerOutputMessage>) => {
+        if (isCancelled()) return;
         const msg = e.data;
         if (msg.type === "progress") {
           setProgress({ pct: 0.6 + msg.pct * 0.4, msg: msg.msg });
@@ -390,7 +431,8 @@ export function ExportDialog() {
       };
 
       worker.onerror = (ev) => {
-        setErrorMsg(ev.message ?? "Worker failed. Check browser console.");
+        if (isCancelled()) return;
+        setErrorMsg(ev.message ?? "Ошибка подготовки экспорта. Повторите экспорт или уменьшите размер кадра.");
         setExportState("error");
         setProgress(null);
         workerRef.current = null;
@@ -398,6 +440,7 @@ export function ExportDialog() {
 
       worker.postMessage({ type: "start", job }, Object.values(frames));
     } catch (err) {
+      if (isCancelled()) return;
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setExportState("error");
       setProgress(null);
@@ -405,6 +448,7 @@ export function ExportDialog() {
   }
 
   function handleCancel() {
+    exportRunRef.current++;
     cancelledRef.current = true;
     if (workerRef.current) { workerRef.current.terminate(); workerRef.current = null; }
     setExportState("idle");
@@ -434,16 +478,16 @@ export function ExportDialog() {
         <DialogHeader>
           <DialogTitle className="text-base font-semibold flex items-center gap-2">
             <Package className="w-4 h-4 text-primary" />
-            Export Studio
+            Экспорт: {objectName ? `${objectName} вместе с персонажем ${activeEntity?.name ?? ""}` : activeEntity?.name ?? "Объект"}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            Configure and export sprite sheets, atlases, and SVG packs for your entities.
+            Выберите формат и параметры экспорта открытого объекта.
           </DialogDescription>
         </DialogHeader>
 
         {!activeEntity && (
           <p className="text-sm text-muted-foreground py-6 text-center">
-            No entity selected. Select an entity to export.
+            Откройте объект для экспорта.
           </p>
         )}
 
@@ -459,7 +503,7 @@ export function ExportDialog() {
               <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 flex gap-2.5">
                 <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-xs font-medium text-yellow-300 mb-1">License conflicts detected</p>
+                  <p className="text-xs font-medium text-yellow-300 mb-1">Обнаружены различия лицензий</p>
                   {licenseConflicts.map(c => (
                     <p key={c.itemName} className="text-xs text-yellow-200/80">
                       <span className="font-medium">{c.itemName}</span> — {c.reason}
@@ -475,10 +519,10 @@ export function ExportDialog() {
                 <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
                 <p className="text-xs text-primary">
                   {downloadedFilename
-                    ? `Export ready — ${downloadedFilename}`
-                    : `Export complete — ${fileCount} file${fileCount !== 1 ? "s" : ""} in ZIP.`}
+                    ? `Экспорт готов — ${downloadedFilename}`
+                    : `Экспорт готов — файлов в ZIP: ${fileCount}.`}
                 </p>
-                {completedDownload && <button className="text-xs underline ml-auto" onClick={() => triggerDownload(completedDownload.blob, completedDownload.filename)}>Download export</button>}
+                {completedDownload && <button className="text-xs underline ml-auto" onClick={() => triggerDownload(completedDownload.blob, completedDownload.filename)}>Скачать результат ещё раз</button>}
               </div>
             )}
 
@@ -486,12 +530,17 @@ export function ExportDialog() {
             {exportState === "error" && errorMsg && (
               <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 flex gap-2.5">
                 <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-red-300">{errorMsg}</p>
+                <p role="alert" className="text-xs text-red-300">Не удалось подготовить экспорт. {errorMsg} Уменьшите размер кадра или число клипов и повторите.</p>
               </div>
             )}
 
             {/* Two-column: settings + preview */}
-            <div className="grid grid-cols-[1fr_auto] gap-5">
+            {(activeEntity.templateId.startsWith('chibi_token_skin_') || activeEntity.templateId.startsWith('composer_tree_')) && <section className="rounded-lg border border-primary/40 p-3 space-y-2">
+              <p className="text-sm">{activeEntity.templateId.startsWith('composer_tree_')?'Godot / Planetki: дуб, сосна и берёза со стадиями рубки, щепками, пнями и брёвнами. Экспортируется весь набор из трёх деревьев.':'Godot / Planetki: модульная внешность, сменная экипировка и 123 действия. Выбранные чиби дополнят базовый каталог жителей обоих полов.'}</p>
+              <Button variant="outline" onClick={()=>void exportGodot()}>Экспортировать для Godot / Planetki</Button>
+              <p className="text-xs text-muted-foreground">Распакуйте ZIP в Assets/composer/{activeEntity.templateId.startsWith('composer_tree_')?'trees':'planetki-chibi'} проекта игры и перезапустите игру. Сохраните копию прежнего пака. Игровые характеристики предметов задаются в игре.</p>
+            </section>}
+            <div className="export-layout grid grid-cols-[1fr_auto] gap-5">
 
               {/* LEFT — settings */}
               <div className="space-y-4">
@@ -499,13 +548,13 @@ export function ExportDialog() {
                 {/* Profile preset picker */}
                 <section>
                   <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Profile</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Профиль</p>
                     <button
                       onClick={() => setShowProfilePicker(v => !v)}
                       className="text-xs text-primary hover:underline flex items-center gap-1"
                     >
                       {selectedProfileId === "custom"
-                        ? "Custom"
+                        ? "Свои настройки"
                         : DEFAULT_EXPORT_PROFILES.find(p => p.id === selectedProfileId)?.name ?? "Pick…"}
                       {showProfilePicker ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                     </button>
@@ -521,7 +570,7 @@ export function ExportDialog() {
                           <div className="flex-1">
                             <p className="text-xs font-medium text-foreground">{preset.name}</p>
                             <p className="text-[11px] text-muted-foreground">
-                              {preset.frameSizeKey}px · {preset.formats.join(", ")} · pivot: {preset.pivotPolicy}
+                              {preset.frameSizeKey}пикс. · {preset.formats.join(", ")} · опора: {preset.pivotPolicy}
                             </p>
                           </div>
                           {selectedProfileId === preset.id && (
@@ -536,7 +585,7 @@ export function ExportDialog() {
                 {/* Output formats */}
                 <section>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">
-                    Output Formats
+                    Форматы экспорта
                   </p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {Object.entries(FORMAT_META).map(([fmt, meta]) => {
@@ -566,7 +615,7 @@ export function ExportDialog() {
 
                 {/* Frame size */}
                 <section>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Frame Size (px)</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Размер кадра, пиксели</p>
                   <div className="flex flex-wrap gap-1.5">
                     {FRAME_SIZES.map(sz => (
                       <button
@@ -592,7 +641,7 @@ export function ExportDialog() {
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-full mb-1"
                     >
                       <Film className="w-3 h-3 flex-shrink-0" />
-                      <span className="uppercase tracking-wider">Animation Clips</span>
+                      <span className="uppercase tracking-wider">Клипы анимации</span>
                       {showClipPicker ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
                       <span className="ml-auto font-mono text-primary text-xs">
                         {effectiveClipIds.length}/{availableClips.length}
@@ -607,14 +656,14 @@ export function ExportDialog() {
                             onClick={() => setSelectedClipIds(null)}
                             className="text-[10px] text-primary hover:underline"
                           >
-                            All
+                            Все
                           </button>
                           <span className="text-[10px] text-muted-foreground">/</span>
                           <button
                             onClick={() => setSelectedClipIds([])}
                             className="text-[10px] text-muted-foreground hover:text-foreground hover:underline"
                           >
-                            None
+                            Нет
                           </button>
                         </div>
 
@@ -637,7 +686,7 @@ export function ExportDialog() {
                                   {selected && <div className="w-1.5 h-1.5 rounded-sm bg-primary" />}
                                 </div>
                                 <p className="text-xs text-foreground flex-1 truncate">
-                                  {clip.label ?? clip.name}
+                                  {uiLabel(clip.label ?? clip.name)}
                                 </p>
                                 <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0">
                                   {fmtMs(clip.durationMs)} · {frames}f
@@ -654,7 +703,7 @@ export function ExportDialog() {
                 {/* Pivot + Atlas mode (inline row) */}
                 <section className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5">Pivot</p>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5">Точка опоры</p>
                     <div className="flex gap-1 flex-wrap">
                       {(["center", "feet", "per_animation"] as const).map(pol => (
                         <button
@@ -666,13 +715,13 @@ export function ExportDialog() {
                               : "border-border bg-accent/20 text-muted-foreground hover:border-primary/30"
                           }`}
                         >
-                          {pol === "per_animation" ? "per anim" : pol}
+                          {pol === "per_animation" ? "на клип" : pol === "center" ? "центр" : "у ног"}
                         </button>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5">Atlas Mode</p>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5">Компоновка атласа</p>
                     <div className="flex gap-1">
                       {(["per_entity", "combined"] as const).map(mode => (
                         <button
@@ -684,7 +733,7 @@ export function ExportDialog() {
                               : "border-border bg-accent/20 text-muted-foreground hover:border-primary/30"
                           }`}
                         >
-                          {mode === "per_entity" ? "per entity" : "combined"}
+                          {mode === "per_entity" ? "на объект" : "общий"}
                         </button>
                       ))}
                     </div>
@@ -694,7 +743,7 @@ export function ExportDialog() {
                 {/* Fine-tuning */}
                 <section className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="text-[11px] text-muted-foreground block mb-1">Outline px</label>
+                    <label className="text-[11px] text-muted-foreground block mb-1">Обводка, пиксели</label>
                     <input
                       type="number" min={0} max={16}
                       value={profile.outlinePadding}
@@ -703,7 +752,7 @@ export function ExportDialog() {
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-muted-foreground block mb-1">Background</label>
+                    <label className="text-[11px] text-muted-foreground block mb-1">Фон</label>
                     <div className="flex gap-1 items-center">
                       <input
                         type="color"
@@ -722,21 +771,21 @@ export function ExportDialog() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-[11px] text-muted-foreground block mb-1">Anti-alias</label>
+                    <label className="text-[11px] text-muted-foreground block mb-1">Сглаживание</label>
                     <button
                       onClick={() => updateProfile({ antiAlias: !profile.antiAlias })}
                       className={`px-3 py-1 rounded-md text-xs border transition-colors ${
                         profile.antiAlias ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-accent/20 text-muted-foreground hover:border-primary/30"
                       }`}
                     >
-                      {profile.antiAlias ? "on" : "off"}
+                      {profile.antiAlias ? "вкл." : "выкл."}
                     </button>
                   </div>
                 </section>
 
                 {/* Naming template */}
                 <section>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Naming Template</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Шаблон имени файла</p>
                   <input
                     type="text"
                     value={profile.namingTemplate}
@@ -745,10 +794,10 @@ export function ExportDialog() {
                     placeholder="{entity}_{animation}_{frame:03d}"
                   />
                   <p className="text-[10px] text-muted-foreground mt-1">
-                    Preview: <span className="font-mono text-foreground/80">{namingPreview}</span>
+                    Предпросмотр: <span className="font-mono text-foreground/80">{namingPreview}</span>
                   </p>
                   <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                    Tokens: {"{entity}"} {"{animation}"} {"{frame:03d}"} {"{slot}"}
+                    Подстановки: {"{entity}"} {"{animation}"} {"{frame:03d}"} {"{slot}"}
                   </p>
                 </section>
 
@@ -757,27 +806,27 @@ export function ExportDialog() {
                   <section className="rounded-lg border border-border/60 bg-accent/5 px-3 py-2.5">
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <Layers className="w-3 h-3 text-muted-foreground" />
-                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Export Summary</p>
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Состав экспорта</p>
                     </div>
                     <div className="space-y-0.5">
                       <div className="flex justify-between">
-                        <span className="text-[11px] text-muted-foreground">Clips</span>
+                        <span className="text-[11px] text-muted-foreground">Клипы</span>
                         <span className="text-[11px] font-mono text-foreground">
-                          {effectiveClipIds.length} of {availableClips.length}
+                          {effectiveClipIds.length} из {availableClips.length}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[11px] text-muted-foreground">Frames</span>
+                        <span className="text-[11px] text-muted-foreground">Кадры</span>
                         <span className="text-[11px] font-mono text-foreground">
                           {totalFrames.toLocaleString()}
-                          {selectedEntities.length > 1 ? ` (×${selectedEntities.length} entities)` : ""}
+                          {selectedEntities.length > 1 ? ` (×${selectedEntities.length} объектов)` : ""}
                         </span>
                       </div>
                       {sheetEstimate && (
                         <div className="flex justify-between">
-                          <span className="text-[11px] text-muted-foreground">Sheet per entity</span>
+                          <span className="text-[11px] text-muted-foreground">Отдельный лист для каждого объекта</span>
                           <span className="text-[11px] font-mono text-foreground">
-                            {sheetEstimate.w}×{sheetEstimate.h}px
+                            {sheetEstimate.w}×{sheetEstimate.h}пикс.
                           </span>
                         </div>
                       )}
@@ -792,7 +841,7 @@ export function ExportDialog() {
 
                 <section>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">
-                    Preview ({frameSz}px)
+                    Предпросмотр ({frameSz}пикс.)
                   </p>
                   <div
                     className="border border-border rounded-lg bg-accent/10 overflow-hidden flex items-center justify-center"
@@ -811,7 +860,7 @@ export function ExportDialog() {
                     />
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-1 text-center">
-                    Rest pose · {frameSz}×{frameSz}
+                    Исходная поза · {frameSz}×{frameSz}
                   </p>
                 </section>
 
@@ -820,7 +869,7 @@ export function ExportDialog() {
                     onClick={() => setShowEntityPicker(v => !v)}
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
                   >
-                    <span className="uppercase tracking-wider">Entities</span>
+                    <span className="uppercase tracking-wider">Объекты</span>
                     {showEntityPicker ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                     <span className="ml-auto font-mono text-primary text-xs">{selectedEntities.length}</span>
                   </button>
@@ -851,14 +900,14 @@ export function ExportDialog() {
             {/* Action buttons */}
             <div className="flex items-center gap-2 pt-2 border-t border-border">
               <Button variant="ghost" size="sm" className="text-xs" onClick={handleClose}>
-                Close
+                Закрыть
               </Button>
               {profile.formats.length === 0 && (
-                <p className="text-xs text-muted-foreground">Select at least one format.</p>
+                <p className="text-xs text-muted-foreground">Выберите хотя бы один формат.</p>
               )}
               {effectiveClipIds.length === 0 && profile.formats.some(f =>
                 ["png_sheet", "webp_sheet", "frame_sequence"].includes(f)) && (
-                <p className="text-xs text-yellow-400/80">No clips selected — only rest pose will be exported.</p>
+                <p className="text-xs text-yellow-400/80">Клипы не выбраны — экспортируется только исходная поза.</p>
               )}
               <Button
                 data-testid="export-download-btn"
@@ -868,8 +917,8 @@ export function ExportDialog() {
                 disabled={selectedEntities.length === 0 || profile.formats.length === 0}
               >
                 <Download className="w-3.5 h-3.5 mr-1.5" />
-                Export{selectedEntities.length > 1 ? ` ${selectedEntities.length} entities` : ""}
-                {totalFrames > 0 && ` · ${totalFrames}f`}
+                Экспортировать{selectedEntities.length > 1 ? ` ${selectedEntities.length} объектов` : ""}
+                {totalFrames > 0 && ` · ${totalFrames} кадров`}
               </Button>
             </div>
 

@@ -50,6 +50,6 @@ describe("biped profile base template", () => {
     expect(contract.facingPolicy).toBe("profile_mirror");
     expect(clips.every(clip => clip.skeletonFamily === "humanoid_side_v1")).toBe(true);
     expect(stateMachine).toBeNull();
-    expect(getTemplatePresentationSummary(template!)).toBe("Biped Profile · Profile Mirror · East");
+    expect(getTemplatePresentationSummary(template!)).toBe("Двуногий в профиль · Зеркальный профиль · Восток");
   });
 });

@@ -1,0 +1,1 @@
+artifacts/asset-composer/public/asset-packs/chibi-tokens-v1/chibi-tokens-v1.zip filter=lfs diff=lfs merge=lfs -text

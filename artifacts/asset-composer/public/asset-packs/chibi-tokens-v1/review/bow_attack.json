@@ -1,0 +1,6822 @@
+{
+  "formatVersion": 1,
+  "paletteVersion": 1,
+  "anatomyColors": {
+    "leftArm": "#E53935",
+    "rightArm": "#27AE60",
+    "leftLeg": "#F28C28",
+    "rightLeg": "#2878E0",
+    "torso": "#17191D",
+    "pelvis": "#9356C7",
+    "head": "#A3A7AE"
+  },
+  "depthColors": {
+    "FAR_BACK": "#6385C4",
+    "FAR_LIMB": "#4CA6FF",
+    "BODY_BACK": "#8D929C",
+    "BODY": "#A3A7AE",
+    "CROSS_BODY": "#FFCE5C",
+    "BODY_FRONT": "#B5B9C2",
+    "NEAR_LIMB": "#69D98E",
+    "HAND_FRONT": "#FF737D",
+    "EQUIPMENT_FRONT": "#DFA3FF"
+  },
+  "entityId": "dd5e3440-429b-4090-97c5-ff8137943df0",
+  "templateId": "chibi_token_skin_0",
+  "clip": {
+    "id": "chibi_token_skin_0__bow_attack",
+    "name": "bow_attack",
+    "durationMs": 1400,
+    "fps": 24
+  },
+  "markers": [
+    {
+      "label": "Исходная",
+      "timeMs": 0
+    },
+    {
+      "label": "Замах",
+      "timeMs": 280
+    },
+    {
+      "label": "Вершина",
+      "timeMs": 532
+    },
+    {
+      "label": "Контакт",
+      "timeMs": 728
+    },
+    {
+      "label": "Доводка",
+      "timeMs": 1008
+    },
+    {
+      "label": "Возврат",
+      "timeMs": 1400
+    }
+  ],
+  "options": {
+    "mode": "rig",
+    "depthShading": true,
+    "markers": true,
+    "showEquipment": true
+  },
+  "columns": [
+    {
+      "mode": "normal",
+      "label": "NORMAL"
+    },
+    {
+      "mode": "rig",
+      "label": "RIG COLORS"
+    },
+    {
+      "mode": "depth",
+      "label": "DEPTH COLORS"
+    },
+    {
+      "mode": "skeleton",
+      "label": "SKELETON"
+    }
+  ],
+  "camera": {
+    "x": -469.19999999999993,
+    "y": -759.2592280904648,
+    "size": 938.3999999999999
+  },
+  "warnings": [],
+  "samples": [
+    {
+      "label": "Исходная",
+      "timeMs": 0,
+      "frame": 0,
+      "facing": "right",
+      "joints": {
+        "root": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "chest": {
+          "x": 0,
+          "y": -42,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "head": {
+          "x": 0,
+          "y": -72,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_weapon": {
+          "x": 85,
+          "y": -63,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_offhand": {
+          "x": -54,
+          "y": -58,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_arrow": {
+          "x": 85,
+          "y": -63,
+          "rotation": 0,
+          "scaleX": 0,
+          "scaleY": 0
+        },
+        "token_cover": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_hook": {
+          "x": 105,
+          "y": -153,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_base": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_support": {
+          "x": -75,
+          "y": -70,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_station": {
+          "x": 140,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      "shoulders": {
+        "left": null,
+        "right": null,
+        "distance": null
+      },
+      "normalVisuals": [
+        {
+          "id": "slot__token_torso__token_item_clothes_0__part_clothes_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_clothes_0",
+          "partId": "part_clothes_0",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            -65,
+            -87.5
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 130,
+            "maxY": 91
+          },
+          "worldBounds": {
+            "minX": -65,
+            "minY": -87.5,
+            "maxX": 65,
+            "maxY": 3.5
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            -142
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -67,
+            "minY": -220,
+            "maxX": 67,
+            "maxY": -64
+          },
+          "zIndex": 1,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_eyes__token_item_face_0__part_face_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_0",
+          "partId": "part_face_0",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            -22.5,
+            -150.5
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 65,
+            "maxY": 25
+          },
+          "worldBounds": {
+            "minX": -22.5,
+            "minY": -150.5,
+            "maxX": 42.5,
+            "maxY": -125.5
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_nose__token_item_face_8__part_face_8",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_8",
+          "partId": "part_face_8",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            7,
+            -128
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 14,
+            "maxY": 20
+          },
+          "worldBounds": {
+            "minX": 7,
+            "minY": -128,
+            "maxX": 21,
+            "maxY": -108
+          },
+          "zIndex": 3,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_brows__token_item_brows_extra_0__part_brows_extra_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_brows_extra_0",
+          "partId": "part_brows_extra_0",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1.12,
+            -23.5,
+            -165.96
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 67,
+            "maxY": 16
+          },
+          "worldBounds": {
+            "minX": -23.5,
+            "minY": -165.96,
+            "maxX": 43.5,
+            "maxY": -148.04000000000002
+          },
+          "zIndex": 4,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_mouth__token_item_face_plus_16__part_face_plus_16",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_plus_16",
+          "partId": "part_face_plus_16",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            -1.5,
+            -105
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 27,
+            "maxY": 8
+          },
+          "worldBounds": {
+            "minX": -1.5,
+            "minY": -105,
+            "maxX": 25.5,
+            "maxY": -97
+          },
+          "zIndex": 5,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_hair__token_item_hair_0__part_hair_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_hair_0",
+          "partId": "part_hair_0",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            -74.5,
+            -226.5
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 149,
+            "maxY": 139
+          },
+          "worldBounds": {
+            "minX": -74.5,
+            "minY": -226.5,
+            "maxX": 74.5,
+            "maxY": -87.5
+          },
+          "zIndex": 6,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            65.5,
+            -156
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": 65.5,
+            "minY": -156,
+            "maxX": 104.5,
+            "maxY": -26
+          },
+          "zIndex": 7,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            0,
+            0,
+            0,
+            0,
+            85,
+            -63
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": 85,
+            "minY": -63,
+            "maxX": 85,
+            "maxY": -63
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "anatomyVisuals": [
+        {
+          "id": "part__token_body",
+          "boneId": "chest",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            -42
+          ],
+          "localBounds": {
+            "minX": -62,
+            "minY": -46,
+            "maxX": 62,
+            "maxY": 46
+          },
+          "worldBounds": {
+            "minX": -62,
+            "minY": -88,
+            "maxX": 62,
+            "maxY": 4
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            -142
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -67,
+            "minY": -220,
+            "maxX": 67,
+            "maxY": -64
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            65.5,
+            -156
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": 65.5,
+            "minY": -156,
+            "maxX": 104.5,
+            "maxY": -26
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            0,
+            0,
+            0,
+            0,
+            85,
+            -63
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": 85,
+            "minY": -63,
+            "maxX": 85,
+            "maxY": -63
+          },
+          "zIndex": 9,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "headClearance": [],
+      "arms": []
+    },
+    {
+      "label": "Замах",
+      "timeMs": 280,
+      "frame": 6.72,
+      "facing": "right",
+      "joints": {
+        "root": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "chest": {
+          "x": 0,
+          "y": -42,
+          "rotation": -3,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "head": {
+          "x": -1.5700786872883148,
+          "y": -71.95888604263722,
+          "rotation": -3,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_weapon": {
+          "x": 93,
+          "y": -98,
+          "rotation": 0,
+          "scaleX": 0.92,
+          "scaleY": 1
+        },
+        "token_offhand": {
+          "x": -54.76337017663408,
+          "y": -55.151930918954214,
+          "rotation": -3,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_arrow": {
+          "x": 85,
+          "y": -98,
+          "rotation": 90,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_cover": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_hook": {
+          "x": 105,
+          "y": -153,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_base": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_support": {
+          "x": -75,
+          "y": -70,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_station": {
+          "x": 140,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      "shoulders": {
+        "left": null,
+        "right": null,
+        "distance": null
+      },
+      "normalVisuals": [
+        {
+          "id": "slot__token_torso__token_item_clothes_0__part_clothes_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_clothes_0",
+          "partId": "part_clothes_0",
+          "worldMatrix": [
+            0.9986295347545738,
+            -0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            -67.29220576810124,
+            -84.03580667554176
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 130,
+            "maxY": 91
+          },
+          "worldBounds": {
+            "minX": -67.29220576810124,
+            "minY": -90.83948098712446,
+            "maxX": 67.29220576810124,
+            "maxY": 6.83948098712446
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            0.9986295347545738,
+            -0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            -5.233595624294383,
+            -141.8629534754574
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -76.22397903980044,
+            "minY": -223.2625662545914,
+            "maxX": 65.75678779121168,
+            "maxY": -60.4633406963234
+          },
+          "zIndex": 1,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_eyes__token_item_face_0__part_face_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_0",
+          "partId": "part_face_0",
+          "worldMatrix": [
+            0.9986295347545738,
+            -0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            -28.147615784337315,
+            -149.17374550540504
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 65,
+            "maxY": 25
+          },
+          "worldBounds": {
+            "minX": -28.147615784337315,
+            "minY": -152.5755826611964,
+            "maxX": 38.071702880783576,
+            "maxY": -124.20800713654069
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_nose__token_item_face_8__part_face_8",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_8",
+          "partId": "part_face_8",
+          "worldMatrix": [
+            0.9986295347545738,
+            -0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            2.489514506388848,
+            -128.24849168259396
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 14,
+            "maxY": 20
+          },
+          "worldBounds": {
+            "minX": 2.489514506388848,
+            "minY": -128.98119506999518,
+            "maxX": 17.517047117811757,
+            "maxY": -108.2759009875025
+          },
+          "zIndex": 3,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_brows__token_item_brows_extra_0__part_brows_extra_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_brows_extra_0",
+          "partId": "part_brows_extra_0",
+          "worldMatrix": [
+            0.9986295347545738,
+            -0.05233595624294383,
+            0.05861627099209709,
+            1.1184650789251227,
+            -29.90546015605267,
+            -163.608091628562
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 67,
+            "maxY": 16
+          },
+          "worldBounds": {
+            "minX": -29.90546015605267,
+            "minY": -167.11460069683923,
+            "maxX": 37.94057900837733,
+            "maxY": -145.71265036576003
+          },
+          "zIndex": 4,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_mouth__token_item_face_plus_16__part_face_plus_16",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_plus_16",
+          "partId": "part_face_plus_16",
+          "worldMatrix": [
+            0.9986295347545738,
+            -0.05233595624294383,
+            0.09724509814256337,
+            1.8555470098697966,
+            -4.9747461130358,
+            -108.26282665563463
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 27,
+            "maxY": 8
+          },
+          "worldBounds": {
+            "minX": -4.9747461130358,
+            "minY": -109.67589747419412,
+            "maxX": 22.7662121104782,
+            "maxY": -93.41845057667625
+          },
+          "zIndex": 5,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_hair__token_item_hair_0__part_hair_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_hair_0",
+          "partId": "part_hair_0",
+          "worldMatrix": [
+            0.9986295347545738,
+            -0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            -84.05388426603889,
+            -222.34812042211956
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 149,
+            "maxY": 139
+          },
+          "worldBounds": {
+            "minX": -84.05388426603889,
+            "minY": -230.1461779023182,
+            "maxX": 72.01661433016181,
+            "maxY": -83.5386150912338
+          },
+          "zIndex": 6,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            0.92,
+            0,
+            0,
+            1,
+            75.06,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": 75.06,
+            "minY": -191,
+            "maxX": 110.94,
+            "maxY": -61
+          },
+          "zIndex": 7,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            6.123233995736766e-17,
+            1,
+            -1,
+            6.123233995736766e-17,
+            125,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": 45,
+            "minY": -104,
+            "maxX": 125,
+            "maxY": -92
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "anatomyVisuals": [
+        {
+          "id": "part__token_body",
+          "boneId": "chest",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            0.9986295347545738,
+            -0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            0,
+            -42
+          ],
+          "localBounds": {
+            "minX": -62,
+            "minY": -46,
+            "maxX": 62,
+            "maxY": 46
+          },
+          "worldBounds": {
+            "minX": -64.32248514195899,
+            "minY": -91.1817878857729,
+            "maxX": 64.32248514195899,
+            "maxY": 7.181787885772913
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            0.9986295347545738,
+            -0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            -5.233595624294383,
+            -141.8629534754574
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -76.22397903980044,
+            "minY": -223.2625662545914,
+            "maxX": 65.75678779121168,
+            "maxY": -60.4633406963234
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            0.92,
+            0,
+            0,
+            1,
+            75.06,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": 75.06,
+            "minY": -191,
+            "maxX": 110.94,
+            "maxY": -61
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            6.123233995736766e-17,
+            1,
+            -1,
+            6.123233995736766e-17,
+            125,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": 45,
+            "minY": -104,
+            "maxX": 125,
+            "maxY": -92
+          },
+          "zIndex": 9,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "headClearance": [],
+      "arms": []
+    },
+    {
+      "label": "Вершина",
+      "timeMs": 532,
+      "frame": 12.768,
+      "facing": "right",
+      "joints": {
+        "root": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "chest": {
+          "x": 0,
+          "y": -42,
+          "rotation": -5,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "head": {
+          "x": -2.614672282429745,
+          "y": -71.88584094275237,
+          "rotation": -5,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_weapon": {
+          "x": 97,
+          "y": -98,
+          "rotation": 0,
+          "scaleX": 0.85,
+          "scaleY": 1
+        },
+        "token_offhand": {
+          "x": -55.18900558091679,
+          "y": -53.232705061094386,
+          "rotation": -5,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_arrow": {
+          "x": 73,
+          "y": -98,
+          "rotation": 90,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_cover": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_hook": {
+          "x": 105,
+          "y": -153,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_base": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_support": {
+          "x": -75,
+          "y": -70,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_station": {
+          "x": 140,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      "shoulders": {
+        "left": null,
+        "right": null,
+        "distance": null
+      },
+      "normalVisuals": [
+        {
+          "id": "slot__token_torso__token_item_clothes_0__part_clothes_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_clothes_0",
+          "partId": "part_clothes_0",
+          "worldMatrix": [
+            0.9961946980917455,
+            -0.08715574274765817,
+            0.08715574274765817,
+            0.9961946980917455,
+            -68.7182416709819,
+            -81.66173548457664
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 130,
+            "maxY": 91
+          },
+          "worldBounds": {
+            "minX": -68.7182416709819,
+            "minY": -92.9919820417722,
+            "maxX": 68.7182416709819,
+            "maxY": 8.991982041772204
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            0.9961946980917455,
+            -0.08715574274765817,
+            0.08715574274765817,
+            0.9961946980917455,
+            -8.715574274765817,
+            -141.61946980917457
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -82.25876698123011,
+            "minY": -225.16209102442383,
+            "maxX": 64.82761843169848,
+            "maxY": -58.07684859392532
+          },
+          "zIndex": 1,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_eyes__token_item_face_0__part_face_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_0",
+          "partId": "part_face_0",
+          "worldMatrix": [
+            0.9961946980917455,
+            -0.08715574274765817,
+            0.08715574274765817,
+            0.9961946980917455,
+            -31.870778795185185,
+            -148.12612053113207
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 65,
+            "maxY": 25
+          },
+          "worldBounds": {
+            "minX": -31.870778795185185,
+            "minY": -153.79124380972985,
+            "maxX": 35.06077014946972,
+            "maxY": -123.22125307883843
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_nose__token_item_face_8__part_face_8",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_8",
+          "partId": "part_face_8",
+          "worldMatrix": [
+            0.9961946980917455,
+            -0.08715574274765817,
+            0.08715574274765817,
+            0.9961946980917455,
+            -0.5220309896563835,
+            -128.28283423512374
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 14,
+            "maxY": 20
+          },
+          "worldBounds": {
+            "minX": -0.5220309896563835,
+            "minY": -129.50301463359096,
+            "maxX": 15.167809638581218,
+            "maxY": -108.35894027328884
+          },
+          "zIndex": 3,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_brows__token_item_brows_extra_0__part_brows_extra_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_brows_extra_0",
+          "partId": "part_brows_extra_0",
+          "worldMatrix": [
+            0.9961946980917455,
+            -0.08715574274765817,
+            0.09761443187737716,
+            1.115738061862755,
+            -34.18899594714617,
+            -163.1497505815347
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 67,
+            "maxY": 16
+          },
+          "worldBounds": {
+            "minX": -34.18899594714617,
+            "minY": -168.9891853456278,
+            "maxX": 34.11787973503883,
+            "maxY": -145.29794159173062
+          },
+          "zIndex": 4,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_mouth__token_item_face_plus_16__part_face_plus_16",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_plus_16",
+          "partId": "part_face_plus_16",
+          "worldMatrix": [
+            0.9961946980917455,
+            -0.08715574274765817,
+            0.11002053885625986,
+            1.257540513505037,
+            -7.07656302467449,
+            -105.67491562731166
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 27,
+            "maxY": 8
+          },
+          "worldBounds": {
+            "minX": -7.07656302467449,
+            "minY": -108.02812068149844,
+            "maxX": 20.70085813465272,
+            "maxY": -95.61459151927137
+          },
+          "zIndex": 5,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_hair__token_item_hair_0__part_hair_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_hair_0",
+          "partId": "part_hair_0",
+          "worldMatrix": [
+            0.9961946980917455,
+            -0.08715574274765817,
+            0.08715574274765817,
+            0.9961946980917455,
+            -90.29673954477798,
+            -219.30481896322652
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 149,
+            "maxY": 139
+          },
+          "worldBounds": {
+            "minX": -90.29673954477798,
+            "minY": -232.2910246326276,
+            "maxX": 70.25091871281657,
+            "maxY": -80.83375592847389
+          },
+          "zIndex": 6,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            0.85,
+            0,
+            0,
+            1,
+            80.425,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": 80.425,
+            "minY": -191,
+            "maxX": 113.57499999999999,
+            "maxY": -61
+          },
+          "zIndex": 7,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            6.123233995736766e-17,
+            1,
+            -1,
+            6.123233995736766e-17,
+            113,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": 33,
+            "minY": -104,
+            "maxX": 113,
+            "maxY": -92
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "anatomyVisuals": [
+        {
+          "id": "part__token_body",
+          "boneId": "chest",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            0.9961946980917455,
+            -0.08715574274765817,
+            0.08715574274765817,
+            0.9961946980917455,
+            0,
+            -42
+          ],
+          "localBounds": {
+            "minX": -62,
+            "minY": -46,
+            "maxX": 62,
+            "maxY": 46
+          },
+          "worldBounds": {
+            "minX": -65.7732354480805,
+            "minY": -93.2286121625751,
+            "maxX": 65.7732354480805,
+            "maxY": 9.228612162575097
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            0.9961946980917455,
+            -0.08715574274765817,
+            0.08715574274765817,
+            0.9961946980917455,
+            -8.715574274765817,
+            -141.61946980917457
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -82.25876698123011,
+            "minY": -225.16209102442383,
+            "maxX": 64.82761843169848,
+            "maxY": -58.07684859392532
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            0.85,
+            0,
+            0,
+            1,
+            80.425,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": 80.425,
+            "minY": -191,
+            "maxX": 113.57499999999999,
+            "maxY": -61
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            6.123233995736766e-17,
+            1,
+            -1,
+            6.123233995736766e-17,
+            113,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": 33,
+            "minY": -104,
+            "maxX": 113,
+            "maxY": -92
+          },
+          "zIndex": 9,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "headClearance": [],
+      "arms": []
+    },
+    {
+      "label": "Контакт",
+      "timeMs": 728,
+      "frame": 17.472,
+      "facing": "right",
+      "joints": {
+        "root": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "chest": {
+          "x": 0,
+          "y": -42,
+          "rotation": -6,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "head": {
+          "x": -3.1358538980296036,
+          "y": -71.8356568610482,
+          "rotation": -6,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_weapon": {
+          "x": 97,
+          "y": -98,
+          "rotation": 0,
+          "scaleX": 0.82,
+          "scaleY": 1
+        },
+        "token_offhand": {
+          "x": -55.37663776216921,
+          "y": -52.267813309439084,
+          "rotation": -6,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_arrow": {
+          "x": 70,
+          "y": -98,
+          "rotation": 90,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_cover": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_hook": {
+          "x": 105,
+          "y": -153,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_base": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_support": {
+          "x": -75,
+          "y": -70,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_station": {
+          "x": 140,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      "shoulders": {
+        "left": null,
+        "right": null,
+        "distance": null
+      },
+      "normalVisuals": [
+        {
+          "id": "slot__token_torso__token_item_clothes_0__part_clothes_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_clothes_0",
+          "partId": "part_clothes_0",
+          "worldMatrix": [
+            0.9945218953682733,
+            -0.10452846326765346,
+            0.10452846326765346,
+            0.9945218953682733,
+            -69.399968277616,
+            -80.45639612685896
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 130,
+            "maxY": 91
+          },
+          "worldBounds": {
+            "minX": -69.399968277616,
+            "minY": -94.04509635165391,
+            "maxX": 69.399968277616,
+            "maxY": 10.04509635165391
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            0.9945218953682733,
+            -0.10452846326765346,
+            0.10452846326765346,
+            0.9945218953682733,
+            -10.452846326765346,
+            -141.45218953682732
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -85.23903345131663,
+            "minY": -226.02830441448543,
+            "maxX": 64.33334079778595,
+            "maxY": -56.87607465916922
+          },
+          "zIndex": 1,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_eyes__token_item_face_0__part_face_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_0",
+          "partId": "part_face_0",
+          "worldMatrix": [
+            0.9945218953682733,
+            -0.10452846326765346,
+            0.10452846326765346,
+            0.9945218953682733,
+            -33.71808091032655,
+            -147.55373522393543
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 65,
+            "maxY": 25
+          },
+          "worldBounds": {
+            "minX": -33.71808091032655,
+            "minY": -154.3480853363329,
+            "maxX": 33.53905387030255,
+            "maxY": -122.6906878397286
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_nose__token_item_face_8__part_face_8",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_8",
+          "partId": "part_face_8",
+          "worldMatrix": [
+            0.9945218953682733,
+            -0.10452846326765346,
+            0.10452846326765346,
+            0.9945218953682733,
+            -2.0277945734402847,
+            -128.26058224454508
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 14,
+            "maxY": 20
+          },
+          "worldBounds": {
+            "minX": -2.0277945734402847,
+            "minY": -129.72398073029223,
+            "maxX": 13.98608122706861,
+            "maxY": -108.37014433717961
+          },
+          "zIndex": 3,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_brows__token_item_brows_extra_0__part_brows_extra_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_brows_extra_0",
+          "partId": "part_brows_extra_0",
+          "worldMatrix": [
+            0.9945218953682733,
+            -0.10452846326765346,
+            0.11707187885977188,
+            1.1138645228124662,
+            -36.31444760137626,
+            -162.6897419458807
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 67,
+            "maxY": 16
+          },
+          "worldBounds": {
+            "minX": -36.31444760137626,
+            "minY": -169.6931489848135,
+            "maxX": 32.191669450054405,
+            "maxY": -144.86790958088125
+          },
+          "zIndex": 4,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_mouth__token_item_face_plus_16__part_face_plus_16",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_plus_16",
+          "partId": "part_face_plus_16",
+          "worldMatrix": [
+            0.9945218953682733,
+            -0.10452846326765346,
+            0.11727718506048666,
+            1.1158178808307784,
+            -8.12807091608591,
+            -104.98327065514975
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 27,
+            "maxY": 8
+          },
+          "worldBounds": {
+            "minX": -8.12807091608591,
+            "minY": -107.8055391633764,
+            "maxX": 19.66223773934136,
+            "maxY": -96.05672760850352
+          },
+          "zIndex": 5,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_hair__token_item_hair_0__part_hair_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_hair_0",
+          "partId": "part_hair_0",
+          "worldMatrix": [
+            0.9945218953682733,
+            -0.10452846326765346,
+            0.10452846326765346,
+            0.9945218953682733,
+            -93.37738267781842,
+            -217.70191918200624
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 149,
+            "maxY": 139
+          },
+          "worldBounds": {
+            "minX": -93.37738267781842,
+            "minY": -233.2766602088866,
+            "maxX": 69.33583612625813,
+            "maxY": -79.46337572581623
+          },
+          "zIndex": 6,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            0.82,
+            0,
+            0,
+            1,
+            81.01,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": 81.01,
+            "minY": -191,
+            "maxX": 112.99000000000001,
+            "maxY": -61
+          },
+          "zIndex": 7,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            6.123233995736766e-17,
+            1,
+            -1,
+            6.123233995736766e-17,
+            110,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": 30,
+            "minY": -104,
+            "maxX": 110,
+            "maxY": -92
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "anatomyVisuals": [
+        {
+          "id": "part__token_body",
+          "boneId": "chest",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            0.9945218953682733,
+            -0.10452846326765346,
+            0.10452846326765346,
+            0.9945218953682733,
+            0,
+            -42
+          ],
+          "localBounds": {
+            "minX": -62,
+            "minY": -46,
+            "maxX": 62,
+            "maxY": 46
+          },
+          "worldBounds": {
+            "minX": -66.468666823145,
+            "minY": -94.22877190953508,
+            "maxX": 66.468666823145,
+            "maxY": 10.228771909535084
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            0.9945218953682733,
+            -0.10452846326765346,
+            0.10452846326765346,
+            0.9945218953682733,
+            -10.452846326765346,
+            -141.45218953682732
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -85.23903345131663,
+            "minY": -226.02830441448543,
+            "maxX": 64.33334079778595,
+            "maxY": -56.87607465916922
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            0.82,
+            0,
+            0,
+            1,
+            81.01,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": 81.01,
+            "minY": -191,
+            "maxX": 112.99000000000001,
+            "maxY": -61
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            6.123233995736766e-17,
+            1,
+            -1,
+            6.123233995736766e-17,
+            110,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": 30,
+            "minY": -104,
+            "maxX": 110,
+            "maxY": -92
+          },
+          "zIndex": 9,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "headClearance": [],
+      "arms": []
+    },
+    {
+      "label": "Доводка",
+      "timeMs": 1008,
+      "frame": 24.192,
+      "facing": "right",
+      "joints": {
+        "root": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "chest": {
+          "x": 0,
+          "y": -42,
+          "rotation": 3,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "head": {
+          "x": 1.5700786872883148,
+          "y": -71.95888604263722,
+          "rotation": 3,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_weapon": {
+          "x": 90,
+          "y": -98,
+          "rotation": 0,
+          "scaleX": 1.08,
+          "scaleY": 1
+        },
+        "token_offhand": {
+          "x": -53.088619576859884,
+          "y": -60.80421419319215,
+          "rotation": 3,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_arrow": {
+          "x": 235,
+          "y": -98,
+          "rotation": 90,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_cover": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_hook": {
+          "x": 105,
+          "y": -153,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_base": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_support": {
+          "x": -75,
+          "y": -70,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_station": {
+          "x": 140,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      "shoulders": {
+        "left": null,
+        "right": null,
+        "distance": null
+      },
+      "normalVisuals": [
+        {
+          "id": "slot__token_torso__token_item_clothes_0__part_clothes_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_clothes_0",
+          "partId": "part_clothes_0",
+          "worldMatrix": [
+            0.9986295347545738,
+            0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            -62.52963374999336,
+            -90.83948098712446
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 130,
+            "maxY": 91
+          },
+          "worldBounds": {
+            "minX": -67.29220576810124,
+            "minY": -90.83948098712446,
+            "maxX": 67.29220576810124,
+            "maxY": 6.83948098712446
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            0.9986295347545738,
+            0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            5.233595624294383,
+            -141.8629534754574
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -65.75678779121168,
+            "minY": -223.2625662545914,
+            "maxX": 76.22397903980044,
+            "maxY": -60.4633406963234
+          },
+          "zIndex": 1,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_eyes__token_item_face_0__part_face_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_0",
+          "partId": "part_face_0",
+          "worldMatrix": [
+            0.9986295347545738,
+            0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            -16.790713279618505,
+            -151.5288635363375
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 65,
+            "maxY": 25
+          },
+          "worldBounds": {
+            "minX": -18.0991121856921,
+            "minY": -151.5288635363375,
+            "maxX": 48.1202064794288,
+            "maxY": -123.1612880116818
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_nose__token_item_face_8__part_face_8",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_8",
+          "partId": "part_face_8",
+          "worldMatrix": [
+            0.9986295347545738,
+            0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            11.491298980175184,
+            -127.51578829519275
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 14,
+            "maxY": 20
+          },
+          "worldBounds": {
+            "minX": 10.444579855316308,
+            "minY": -127.51578829519275,
+            "maxX": 25.47211246673922,
+            "maxY": -106.81049421270006
+          },
+          "zIndex": 3,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_brows__token_item_brows_extra_0__part_brows_extra_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_brows_extra_0",
+          "partId": "part_brows_extra_0",
+          "worldMatrix": [
+            0.9986295347545738,
+            0.05233595624294383,
+            -0.05861627099209709,
+            1.1184650789251227,
+            -17.031244761455145,
+            -166.04657206300814
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 67,
+            "maxY": 16
+          },
+          "worldBounds": {
+            "minX": -17.969105097328697,
+            "minY": -166.04657206300814,
+            "maxX": 49.8769340671013,
+            "maxY": -144.64462173192894
+          },
+          "zIndex": 4,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_mouth__token_item_face_plus_16__part_face_plus_16",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_plus_16",
+          "partId": "part_face_plus_16",
+          "worldMatrix": [
+            0.9986295347545738,
+            0.05233595624294383,
+            -0.09825020378112541,
+            1.8747255679448052,
+            1.9828779313263265,
+            -108.49654875666349
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 27,
+            "maxY": 8
+          },
+          "worldBounds": {
+            "minX": 1.1968763010773231,
+            "minY": -108.49654875666349,
+            "maxX": 28.94587536969982,
+            "maxY": -92.08567339454557
+          },
+          "zIndex": 5,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_hair__token_item_hair_0__part_hair_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_hair_0",
+          "partId": "part_hair_0",
+          "worldMatrix": [
+            0.9986295347545738,
+            0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            -64.74191641239261,
+            -230.1461779023182
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 149,
+            "maxY": 139
+          },
+          "worldBounds": {
+            "minX": -72.0166143301618,
+            "minY": -230.1461779023182,
+            "maxX": 84.05388426603889,
+            "maxY": -83.5386150912338
+          },
+          "zIndex": 6,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            1.08,
+            0,
+            0,
+            1,
+            68.94,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": 68.94,
+            "minY": -191,
+            "maxX": 111.06,
+            "maxY": -61
+          },
+          "zIndex": 7,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            6.123233995736766e-17,
+            1,
+            -1,
+            6.123233995736766e-17,
+            275,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": 195,
+            "minY": -104,
+            "maxX": 275,
+            "maxY": -92
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "anatomyVisuals": [
+        {
+          "id": "part__token_body",
+          "boneId": "chest",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            0.9986295347545738,
+            0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            0,
+            -42
+          ],
+          "localBounds": {
+            "minX": -62,
+            "minY": -46,
+            "maxX": 62,
+            "maxY": 46
+          },
+          "worldBounds": {
+            "minX": -64.32248514195899,
+            "minY": -91.1817878857729,
+            "maxX": 64.32248514195899,
+            "maxY": 7.181787885772913
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            0.9986295347545738,
+            0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            5.233595624294383,
+            -141.8629534754574
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -65.75678779121168,
+            "minY": -223.2625662545914,
+            "maxX": 76.22397903980044,
+            "maxY": -60.4633406963234
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            1.08,
+            0,
+            0,
+            1,
+            68.94,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": 68.94,
+            "minY": -191,
+            "maxX": 111.06,
+            "maxY": -61
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            6.123233995736766e-17,
+            1,
+            -1,
+            6.123233995736766e-17,
+            275,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": 195,
+            "minY": -104,
+            "maxX": 275,
+            "maxY": -92
+          },
+          "zIndex": 9,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "headClearance": [],
+      "arms": []
+    },
+    {
+      "label": "Возврат",
+      "timeMs": 1400,
+      "frame": 33.6,
+      "facing": "right",
+      "joints": {
+        "root": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "chest": {
+          "x": 0,
+          "y": -42,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "head": {
+          "x": 0,
+          "y": -72,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_weapon": {
+          "x": 85,
+          "y": -63,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_offhand": {
+          "x": -54,
+          "y": -58,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_arrow": {
+          "x": 345,
+          "y": -98,
+          "rotation": 90,
+          "scaleX": 0,
+          "scaleY": 0
+        },
+        "token_cover": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_hook": {
+          "x": 105,
+          "y": -153,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_base": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_support": {
+          "x": -75,
+          "y": -70,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        },
+        "token_station": {
+          "x": 140,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      "shoulders": {
+        "left": null,
+        "right": null,
+        "distance": null
+      },
+      "normalVisuals": [
+        {
+          "id": "slot__token_torso__token_item_clothes_0__part_clothes_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_clothes_0",
+          "partId": "part_clothes_0",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            -65,
+            -87.5
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 130,
+            "maxY": 91
+          },
+          "worldBounds": {
+            "minX": -65,
+            "minY": -87.5,
+            "maxX": 65,
+            "maxY": 3.5
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            -142
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -67,
+            "minY": -220,
+            "maxX": 67,
+            "maxY": -64
+          },
+          "zIndex": 1,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_eyes__token_item_face_0__part_face_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_0",
+          "partId": "part_face_0",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            -22.5,
+            -150.5
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 65,
+            "maxY": 25
+          },
+          "worldBounds": {
+            "minX": -22.5,
+            "minY": -150.5,
+            "maxX": 42.5,
+            "maxY": -125.5
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_nose__token_item_face_8__part_face_8",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_8",
+          "partId": "part_face_8",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            7,
+            -128
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 14,
+            "maxY": 20
+          },
+          "worldBounds": {
+            "minX": 7,
+            "minY": -128,
+            "maxX": 21,
+            "maxY": -108
+          },
+          "zIndex": 3,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_brows__token_item_brows_extra_0__part_brows_extra_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_brows_extra_0",
+          "partId": "part_brows_extra_0",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1.12,
+            -23.5,
+            -165.74403237336557
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 67,
+            "maxY": 16
+          },
+          "worldBounds": {
+            "minX": -23.5,
+            "minY": -165.74403237336557,
+            "maxX": 43.5,
+            "maxY": -147.82403237336558
+          },
+          "zIndex": 4,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_mouth__token_item_face_plus_16__part_face_plus_16",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_plus_16",
+          "partId": "part_face_plus_16",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1.1943708639709794,
+            -1.5,
+            -105.77748345588392
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 27,
+            "maxY": 8
+          },
+          "worldBounds": {
+            "minX": -1.5,
+            "minY": -105.77748345588392,
+            "maxX": 25.5,
+            "maxY": -96.22251654411609
+          },
+          "zIndex": 5,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_hair__token_item_hair_0__part_hair_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_hair_0",
+          "partId": "part_hair_0",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            -74.5,
+            -226.5
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 149,
+            "maxY": 139
+          },
+          "worldBounds": {
+            "minX": -74.5,
+            "minY": -226.5,
+            "maxX": 74.5,
+            "maxY": -87.5
+          },
+          "zIndex": 6,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            65.5,
+            -156
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": 65.5,
+            "minY": -156,
+            "maxX": 104.5,
+            "maxY": -26
+          },
+          "zIndex": 7,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            0,
+            0,
+            0,
+            0,
+            345,
+            -98
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": 345,
+            "minY": -98,
+            "maxX": 345,
+            "maxY": -98
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "anatomyVisuals": [
+        {
+          "id": "part__token_body",
+          "boneId": "chest",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            -42
+          ],
+          "localBounds": {
+            "minX": -62,
+            "minY": -46,
+            "maxX": 62,
+            "maxY": 46
+          },
+          "worldBounds": {
+            "minX": -62,
+            "minY": -88,
+            "maxX": 62,
+            "maxY": 4
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            -142
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -67,
+            "minY": -220,
+            "maxX": 67,
+            "maxY": -64
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            1,
+            0,
+            0,
+            1,
+            65.5,
+            -156
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": 65.5,
+            "minY": -156,
+            "maxX": 104.5,
+            "maxY": -26
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            0,
+            0,
+            0,
+            0,
+            345,
+            -98
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": 345,
+            "minY": -98,
+            "maxX": 345,
+            "maxY": -98
+          },
+          "zIndex": 9,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "headClearance": [],
+      "arms": []
+    },
+    {
+      "label": "Исходная",
+      "timeMs": 0,
+      "frame": 0,
+      "facing": "left",
+      "joints": {
+        "root": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "chest": {
+          "x": 0,
+          "y": -42,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "head": {
+          "x": 0,
+          "y": -72,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_weapon": {
+          "x": -85,
+          "y": -63,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_offhand": {
+          "x": 54,
+          "y": -58,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_arrow": {
+          "x": -85,
+          "y": -63,
+          "rotation": 0,
+          "scaleX": 0,
+          "scaleY": 0
+        },
+        "token_cover": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_hook": {
+          "x": -105,
+          "y": -153,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_base": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_support": {
+          "x": 75,
+          "y": -70,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_station": {
+          "x": -140,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        }
+      },
+      "shoulders": {
+        "left": null,
+        "right": null,
+        "distance": null
+      },
+      "normalVisuals": [
+        {
+          "id": "slot__token_torso__token_item_clothes_0__part_clothes_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_clothes_0",
+          "partId": "part_clothes_0",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            65,
+            -87.5
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 130,
+            "maxY": 91
+          },
+          "worldBounds": {
+            "minX": -65,
+            "minY": -87.5,
+            "maxX": 65,
+            "maxY": 3.5
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            0,
+            -142
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -67,
+            "minY": -220,
+            "maxX": 67,
+            "maxY": -64
+          },
+          "zIndex": 1,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_eyes__token_item_face_0__part_face_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_0",
+          "partId": "part_face_0",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            22.5,
+            -150.5
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 65,
+            "maxY": 25
+          },
+          "worldBounds": {
+            "minX": -42.5,
+            "minY": -150.5,
+            "maxX": 22.5,
+            "maxY": -125.5
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_nose__token_item_face_8__part_face_8",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_8",
+          "partId": "part_face_8",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            -7,
+            -128
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 14,
+            "maxY": 20
+          },
+          "worldBounds": {
+            "minX": -21,
+            "minY": -128,
+            "maxX": -7,
+            "maxY": -108
+          },
+          "zIndex": 3,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_brows__token_item_brows_extra_0__part_brows_extra_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_brows_extra_0",
+          "partId": "part_brows_extra_0",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1.12,
+            23.5,
+            -165.96
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 67,
+            "maxY": 16
+          },
+          "worldBounds": {
+            "minX": -43.5,
+            "minY": -165.96,
+            "maxX": 23.5,
+            "maxY": -148.04000000000002
+          },
+          "zIndex": 4,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_mouth__token_item_face_plus_16__part_face_plus_16",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_plus_16",
+          "partId": "part_face_plus_16",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            1.5,
+            -105
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 27,
+            "maxY": 8
+          },
+          "worldBounds": {
+            "minX": -25.5,
+            "minY": -105,
+            "maxX": 1.5,
+            "maxY": -97
+          },
+          "zIndex": 5,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_hair__token_item_hair_0__part_hair_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_hair_0",
+          "partId": "part_hair_0",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            74.5,
+            -226.5
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 149,
+            "maxY": 139
+          },
+          "worldBounds": {
+            "minX": -74.5,
+            "minY": -226.5,
+            "maxX": 74.5,
+            "maxY": -87.5
+          },
+          "zIndex": 6,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            -65.5,
+            -156
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": -104.5,
+            "minY": -156,
+            "maxX": -65.5,
+            "maxY": -26
+          },
+          "zIndex": 7,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            0,
+            0,
+            0,
+            0,
+            -85,
+            -63
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": -85,
+            "minY": -63,
+            "maxX": -85,
+            "maxY": -63
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "anatomyVisuals": [
+        {
+          "id": "part__token_body",
+          "boneId": "chest",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            0,
+            -42
+          ],
+          "localBounds": {
+            "minX": -62,
+            "minY": -46,
+            "maxX": 62,
+            "maxY": 46
+          },
+          "worldBounds": {
+            "minX": -62,
+            "minY": -88,
+            "maxX": 62,
+            "maxY": 4
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            0,
+            -142
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -67,
+            "minY": -220,
+            "maxX": 67,
+            "maxY": -64
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            -65.5,
+            -156
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": -104.5,
+            "minY": -156,
+            "maxX": -65.5,
+            "maxY": -26
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            0,
+            0,
+            0,
+            0,
+            -85,
+            -63
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": -85,
+            "minY": -63,
+            "maxX": -85,
+            "maxY": -63
+          },
+          "zIndex": 9,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "headClearance": [],
+      "arms": []
+    },
+    {
+      "label": "Замах",
+      "timeMs": 280,
+      "frame": 6.72,
+      "facing": "left",
+      "joints": {
+        "root": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "chest": {
+          "x": 0,
+          "y": -42,
+          "rotation": 3,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "head": {
+          "x": 1.5700786872883148,
+          "y": -71.95888604263722,
+          "rotation": 3,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_weapon": {
+          "x": -93,
+          "y": -98,
+          "rotation": 0,
+          "scaleX": -0.92,
+          "scaleY": 1
+        },
+        "token_offhand": {
+          "x": 54.76337017663408,
+          "y": -55.151930918954214,
+          "rotation": 3,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_arrow": {
+          "x": -85,
+          "y": -98,
+          "rotation": -90,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_cover": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_hook": {
+          "x": -105,
+          "y": -153,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_base": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_support": {
+          "x": 75,
+          "y": -70,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_station": {
+          "x": -140,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        }
+      },
+      "shoulders": {
+        "left": null,
+        "right": null,
+        "distance": null
+      },
+      "normalVisuals": [
+        {
+          "id": "slot__token_torso__token_item_clothes_0__part_clothes_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_clothes_0",
+          "partId": "part_clothes_0",
+          "worldMatrix": [
+            -0.9986295347545738,
+            -0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            67.29220576810124,
+            -84.03580667554176
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 130,
+            "maxY": 91
+          },
+          "worldBounds": {
+            "minX": -67.29220576810124,
+            "minY": -90.83948098712446,
+            "maxX": 67.29220576810124,
+            "maxY": 6.83948098712446
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -0.9986295347545738,
+            -0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            5.233595624294383,
+            -141.8629534754574
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -65.75678779121168,
+            "minY": -223.2625662545914,
+            "maxX": 76.22397903980044,
+            "maxY": -60.4633406963234
+          },
+          "zIndex": 1,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_eyes__token_item_face_0__part_face_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_0",
+          "partId": "part_face_0",
+          "worldMatrix": [
+            -0.9986295347545738,
+            -0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            28.147615784337315,
+            -149.17374550540504
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 65,
+            "maxY": 25
+          },
+          "worldBounds": {
+            "minX": -38.071702880783576,
+            "minY": -152.5755826611964,
+            "maxX": 28.147615784337315,
+            "maxY": -124.20800713654069
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_nose__token_item_face_8__part_face_8",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_8",
+          "partId": "part_face_8",
+          "worldMatrix": [
+            -0.9986295347545738,
+            -0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            -2.489514506388848,
+            -128.24849168259396
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 14,
+            "maxY": 20
+          },
+          "worldBounds": {
+            "minX": -17.517047117811757,
+            "minY": -128.98119506999518,
+            "maxX": -2.489514506388848,
+            "maxY": -108.2759009875025
+          },
+          "zIndex": 3,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_brows__token_item_brows_extra_0__part_brows_extra_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_brows_extra_0",
+          "partId": "part_brows_extra_0",
+          "worldMatrix": [
+            -0.9986295347545738,
+            -0.05233595624294383,
+            -0.05861627099209709,
+            1.1184650789251227,
+            29.90546015605267,
+            -163.608091628562
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 67,
+            "maxY": 16
+          },
+          "worldBounds": {
+            "minX": -37.94057900837733,
+            "minY": -167.11460069683923,
+            "maxX": 29.90546015605267,
+            "maxY": -145.71265036576003
+          },
+          "zIndex": 4,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_mouth__token_item_face_plus_16__part_face_plus_16",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_plus_16",
+          "partId": "part_face_plus_16",
+          "worldMatrix": [
+            -0.9986295347545738,
+            -0.05233595624294383,
+            -0.09724509814256337,
+            1.8555470098697966,
+            4.9747461130358,
+            -108.26282665563463
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 27,
+            "maxY": 8
+          },
+          "worldBounds": {
+            "minX": -22.7662121104782,
+            "minY": -109.67589747419412,
+            "maxX": 4.9747461130358,
+            "maxY": -93.41845057667625
+          },
+          "zIndex": 5,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_hair__token_item_hair_0__part_hair_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_hair_0",
+          "partId": "part_hair_0",
+          "worldMatrix": [
+            -0.9986295347545738,
+            -0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            84.05388426603889,
+            -222.34812042211956
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 149,
+            "maxY": 139
+          },
+          "worldBounds": {
+            "minX": -72.01661433016181,
+            "minY": -230.1461779023182,
+            "maxX": 84.05388426603889,
+            "maxY": -83.5386150912338
+          },
+          "zIndex": 6,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            -0.92,
+            0,
+            0,
+            1,
+            -75.06,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": -110.94,
+            "minY": -191,
+            "maxX": -75.06,
+            "maxY": -61
+          },
+          "zIndex": 7,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            -6.123233995736766e-17,
+            1,
+            1,
+            6.123233995736766e-17,
+            -125,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": -125,
+            "minY": -104,
+            "maxX": -45,
+            "maxY": -92
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "anatomyVisuals": [
+        {
+          "id": "part__token_body",
+          "boneId": "chest",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -0.9986295347545738,
+            -0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            0,
+            -42
+          ],
+          "localBounds": {
+            "minX": -62,
+            "minY": -46,
+            "maxX": 62,
+            "maxY": 46
+          },
+          "worldBounds": {
+            "minX": -64.32248514195899,
+            "minY": -91.1817878857729,
+            "maxX": 64.32248514195899,
+            "maxY": 7.181787885772913
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -0.9986295347545738,
+            -0.05233595624294383,
+            -0.05233595624294383,
+            0.9986295347545738,
+            5.233595624294383,
+            -141.8629534754574
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -65.75678779121168,
+            "minY": -223.2625662545914,
+            "maxX": 76.22397903980044,
+            "maxY": -60.4633406963234
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            -0.92,
+            0,
+            0,
+            1,
+            -75.06,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": -110.94,
+            "minY": -191,
+            "maxX": -75.06,
+            "maxY": -61
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            -6.123233995736766e-17,
+            1,
+            1,
+            6.123233995736766e-17,
+            -125,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": -125,
+            "minY": -104,
+            "maxX": -45,
+            "maxY": -92
+          },
+          "zIndex": 9,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "headClearance": [],
+      "arms": []
+    },
+    {
+      "label": "Вершина",
+      "timeMs": 532,
+      "frame": 12.768,
+      "facing": "left",
+      "joints": {
+        "root": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "chest": {
+          "x": 0,
+          "y": -42,
+          "rotation": 5,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "head": {
+          "x": 2.614672282429745,
+          "y": -71.88584094275237,
+          "rotation": 5,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_weapon": {
+          "x": -97,
+          "y": -98,
+          "rotation": 0,
+          "scaleX": -0.85,
+          "scaleY": 1
+        },
+        "token_offhand": {
+          "x": 55.18900558091679,
+          "y": -53.232705061094386,
+          "rotation": 5,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_arrow": {
+          "x": -73,
+          "y": -98,
+          "rotation": -90,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_cover": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_hook": {
+          "x": -105,
+          "y": -153,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_base": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_support": {
+          "x": 75,
+          "y": -70,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_station": {
+          "x": -140,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        }
+      },
+      "shoulders": {
+        "left": null,
+        "right": null,
+        "distance": null
+      },
+      "normalVisuals": [
+        {
+          "id": "slot__token_torso__token_item_clothes_0__part_clothes_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_clothes_0",
+          "partId": "part_clothes_0",
+          "worldMatrix": [
+            -0.9961946980917455,
+            -0.08715574274765817,
+            -0.08715574274765817,
+            0.9961946980917455,
+            68.7182416709819,
+            -81.66173548457664
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 130,
+            "maxY": 91
+          },
+          "worldBounds": {
+            "minX": -68.7182416709819,
+            "minY": -92.9919820417722,
+            "maxX": 68.7182416709819,
+            "maxY": 8.991982041772204
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -0.9961946980917455,
+            -0.08715574274765817,
+            -0.08715574274765817,
+            0.9961946980917455,
+            8.715574274765817,
+            -141.61946980917457
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -64.82761843169848,
+            "minY": -225.16209102442383,
+            "maxX": 82.25876698123011,
+            "maxY": -58.07684859392532
+          },
+          "zIndex": 1,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_eyes__token_item_face_0__part_face_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_0",
+          "partId": "part_face_0",
+          "worldMatrix": [
+            -0.9961946980917455,
+            -0.08715574274765817,
+            -0.08715574274765817,
+            0.9961946980917455,
+            31.870778795185185,
+            -148.12612053113207
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 65,
+            "maxY": 25
+          },
+          "worldBounds": {
+            "minX": -35.06077014946972,
+            "minY": -153.79124380972985,
+            "maxX": 31.870778795185185,
+            "maxY": -123.22125307883843
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_nose__token_item_face_8__part_face_8",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_8",
+          "partId": "part_face_8",
+          "worldMatrix": [
+            -0.9961946980917455,
+            -0.08715574274765817,
+            -0.08715574274765817,
+            0.9961946980917455,
+            0.5220309896563835,
+            -128.28283423512374
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 14,
+            "maxY": 20
+          },
+          "worldBounds": {
+            "minX": -15.167809638581218,
+            "minY": -129.50301463359096,
+            "maxX": 0.5220309896563835,
+            "maxY": -108.35894027328884
+          },
+          "zIndex": 3,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_brows__token_item_brows_extra_0__part_brows_extra_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_brows_extra_0",
+          "partId": "part_brows_extra_0",
+          "worldMatrix": [
+            -0.9961946980917455,
+            -0.08715574274765817,
+            -0.09761443187737716,
+            1.115738061862755,
+            34.18899594714617,
+            -163.1497505815347
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 67,
+            "maxY": 16
+          },
+          "worldBounds": {
+            "minX": -34.11787973503883,
+            "minY": -168.9891853456278,
+            "maxX": 34.18899594714617,
+            "maxY": -145.29794159173062
+          },
+          "zIndex": 4,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_mouth__token_item_face_plus_16__part_face_plus_16",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_plus_16",
+          "partId": "part_face_plus_16",
+          "worldMatrix": [
+            -0.9961946980917455,
+            -0.08715574274765817,
+            -0.11002053885625986,
+            1.257540513505037,
+            7.07656302467449,
+            -105.67491562731166
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 27,
+            "maxY": 8
+          },
+          "worldBounds": {
+            "minX": -20.70085813465272,
+            "minY": -108.02812068149844,
+            "maxX": 7.07656302467449,
+            "maxY": -95.61459151927137
+          },
+          "zIndex": 5,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_hair__token_item_hair_0__part_hair_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_hair_0",
+          "partId": "part_hair_0",
+          "worldMatrix": [
+            -0.9961946980917455,
+            -0.08715574274765817,
+            -0.08715574274765817,
+            0.9961946980917455,
+            90.29673954477798,
+            -219.30481896322652
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 149,
+            "maxY": 139
+          },
+          "worldBounds": {
+            "minX": -70.25091871281657,
+            "minY": -232.2910246326276,
+            "maxX": 90.29673954477798,
+            "maxY": -80.83375592847389
+          },
+          "zIndex": 6,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            -0.85,
+            0,
+            0,
+            1,
+            -80.425,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": -113.57499999999999,
+            "minY": -191,
+            "maxX": -80.425,
+            "maxY": -61
+          },
+          "zIndex": 7,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            -6.123233995736766e-17,
+            1,
+            1,
+            6.123233995736766e-17,
+            -113,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": -113,
+            "minY": -104,
+            "maxX": -33,
+            "maxY": -92
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "anatomyVisuals": [
+        {
+          "id": "part__token_body",
+          "boneId": "chest",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -0.9961946980917455,
+            -0.08715574274765817,
+            -0.08715574274765817,
+            0.9961946980917455,
+            0,
+            -42
+          ],
+          "localBounds": {
+            "minX": -62,
+            "minY": -46,
+            "maxX": 62,
+            "maxY": 46
+          },
+          "worldBounds": {
+            "minX": -65.7732354480805,
+            "minY": -93.2286121625751,
+            "maxX": 65.7732354480805,
+            "maxY": 9.228612162575097
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -0.9961946980917455,
+            -0.08715574274765817,
+            -0.08715574274765817,
+            0.9961946980917455,
+            8.715574274765817,
+            -141.61946980917457
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -64.82761843169848,
+            "minY": -225.16209102442383,
+            "maxX": 82.25876698123011,
+            "maxY": -58.07684859392532
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            -0.85,
+            0,
+            0,
+            1,
+            -80.425,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": -113.57499999999999,
+            "minY": -191,
+            "maxX": -80.425,
+            "maxY": -61
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            -6.123233995736766e-17,
+            1,
+            1,
+            6.123233995736766e-17,
+            -113,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": -113,
+            "minY": -104,
+            "maxX": -33,
+            "maxY": -92
+          },
+          "zIndex": 9,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "headClearance": [],
+      "arms": []
+    },
+    {
+      "label": "Контакт",
+      "timeMs": 728,
+      "frame": 17.472,
+      "facing": "left",
+      "joints": {
+        "root": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "chest": {
+          "x": 0,
+          "y": -42,
+          "rotation": 6,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "head": {
+          "x": 3.1358538980296036,
+          "y": -71.8356568610482,
+          "rotation": 6,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_weapon": {
+          "x": -97,
+          "y": -98,
+          "rotation": 0,
+          "scaleX": -0.82,
+          "scaleY": 1
+        },
+        "token_offhand": {
+          "x": 55.37663776216921,
+          "y": -52.267813309439084,
+          "rotation": 6,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_arrow": {
+          "x": -70,
+          "y": -98,
+          "rotation": -90,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_cover": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_hook": {
+          "x": -105,
+          "y": -153,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_base": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_support": {
+          "x": 75,
+          "y": -70,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_station": {
+          "x": -140,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        }
+      },
+      "shoulders": {
+        "left": null,
+        "right": null,
+        "distance": null
+      },
+      "normalVisuals": [
+        {
+          "id": "slot__token_torso__token_item_clothes_0__part_clothes_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_clothes_0",
+          "partId": "part_clothes_0",
+          "worldMatrix": [
+            -0.9945218953682733,
+            -0.10452846326765346,
+            -0.10452846326765346,
+            0.9945218953682733,
+            69.399968277616,
+            -80.45639612685896
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 130,
+            "maxY": 91
+          },
+          "worldBounds": {
+            "minX": -69.399968277616,
+            "minY": -94.04509635165391,
+            "maxX": 69.399968277616,
+            "maxY": 10.04509635165391
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -0.9945218953682733,
+            -0.10452846326765346,
+            -0.10452846326765346,
+            0.9945218953682733,
+            10.452846326765346,
+            -141.45218953682732
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -64.33334079778595,
+            "minY": -226.02830441448543,
+            "maxX": 85.23903345131663,
+            "maxY": -56.87607465916922
+          },
+          "zIndex": 1,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_eyes__token_item_face_0__part_face_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_0",
+          "partId": "part_face_0",
+          "worldMatrix": [
+            -0.9945218953682733,
+            -0.10452846326765346,
+            -0.10452846326765346,
+            0.9945218953682733,
+            33.71808091032655,
+            -147.55373522393543
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 65,
+            "maxY": 25
+          },
+          "worldBounds": {
+            "minX": -33.53905387030255,
+            "minY": -154.3480853363329,
+            "maxX": 33.71808091032655,
+            "maxY": -122.6906878397286
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_nose__token_item_face_8__part_face_8",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_8",
+          "partId": "part_face_8",
+          "worldMatrix": [
+            -0.9945218953682733,
+            -0.10452846326765346,
+            -0.10452846326765346,
+            0.9945218953682733,
+            2.0277945734402847,
+            -128.26058224454508
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 14,
+            "maxY": 20
+          },
+          "worldBounds": {
+            "minX": -13.98608122706861,
+            "minY": -129.72398073029223,
+            "maxX": 2.0277945734402847,
+            "maxY": -108.37014433717961
+          },
+          "zIndex": 3,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_brows__token_item_brows_extra_0__part_brows_extra_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_brows_extra_0",
+          "partId": "part_brows_extra_0",
+          "worldMatrix": [
+            -0.9945218953682733,
+            -0.10452846326765346,
+            -0.11707187885977188,
+            1.1138645228124662,
+            36.31444760137626,
+            -162.6897419458807
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 67,
+            "maxY": 16
+          },
+          "worldBounds": {
+            "minX": -32.191669450054405,
+            "minY": -169.6931489848135,
+            "maxX": 36.31444760137626,
+            "maxY": -144.86790958088125
+          },
+          "zIndex": 4,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_mouth__token_item_face_plus_16__part_face_plus_16",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_plus_16",
+          "partId": "part_face_plus_16",
+          "worldMatrix": [
+            -0.9945218953682733,
+            -0.10452846326765346,
+            -0.11727718506048666,
+            1.1158178808307784,
+            8.12807091608591,
+            -104.98327065514975
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 27,
+            "maxY": 8
+          },
+          "worldBounds": {
+            "minX": -19.66223773934136,
+            "minY": -107.8055391633764,
+            "maxX": 8.12807091608591,
+            "maxY": -96.05672760850352
+          },
+          "zIndex": 5,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_hair__token_item_hair_0__part_hair_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_hair_0",
+          "partId": "part_hair_0",
+          "worldMatrix": [
+            -0.9945218953682733,
+            -0.10452846326765346,
+            -0.10452846326765346,
+            0.9945218953682733,
+            93.37738267781842,
+            -217.70191918200624
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 149,
+            "maxY": 139
+          },
+          "worldBounds": {
+            "minX": -69.33583612625813,
+            "minY": -233.2766602088866,
+            "maxX": 93.37738267781842,
+            "maxY": -79.46337572581623
+          },
+          "zIndex": 6,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            -0.82,
+            0,
+            0,
+            1,
+            -81.01,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": -112.99000000000001,
+            "minY": -191,
+            "maxX": -81.01,
+            "maxY": -61
+          },
+          "zIndex": 7,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            -6.123233995736766e-17,
+            1,
+            1,
+            6.123233995736766e-17,
+            -110,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": -110,
+            "minY": -104,
+            "maxX": -30,
+            "maxY": -92
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "anatomyVisuals": [
+        {
+          "id": "part__token_body",
+          "boneId": "chest",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -0.9945218953682733,
+            -0.10452846326765346,
+            -0.10452846326765346,
+            0.9945218953682733,
+            0,
+            -42
+          ],
+          "localBounds": {
+            "minX": -62,
+            "minY": -46,
+            "maxX": 62,
+            "maxY": 46
+          },
+          "worldBounds": {
+            "minX": -66.468666823145,
+            "minY": -94.22877190953508,
+            "maxX": 66.468666823145,
+            "maxY": 10.228771909535084
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -0.9945218953682733,
+            -0.10452846326765346,
+            -0.10452846326765346,
+            0.9945218953682733,
+            10.452846326765346,
+            -141.45218953682732
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -64.33334079778595,
+            "minY": -226.02830441448543,
+            "maxX": 85.23903345131663,
+            "maxY": -56.87607465916922
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            -0.82,
+            0,
+            0,
+            1,
+            -81.01,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": -112.99000000000001,
+            "minY": -191,
+            "maxX": -81.01,
+            "maxY": -61
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            -6.123233995736766e-17,
+            1,
+            1,
+            6.123233995736766e-17,
+            -110,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": -110,
+            "minY": -104,
+            "maxX": -30,
+            "maxY": -92
+          },
+          "zIndex": 9,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "headClearance": [],
+      "arms": []
+    },
+    {
+      "label": "Доводка",
+      "timeMs": 1008,
+      "frame": 24.192,
+      "facing": "left",
+      "joints": {
+        "root": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "chest": {
+          "x": 0,
+          "y": -42,
+          "rotation": -3,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "head": {
+          "x": -1.5700786872883148,
+          "y": -71.95888604263722,
+          "rotation": -3,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_weapon": {
+          "x": -90,
+          "y": -98,
+          "rotation": 0,
+          "scaleX": -1.08,
+          "scaleY": 1
+        },
+        "token_offhand": {
+          "x": 53.088619576859884,
+          "y": -60.80421419319215,
+          "rotation": -3,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_arrow": {
+          "x": -235,
+          "y": -98,
+          "rotation": -90,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_cover": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_hook": {
+          "x": -105,
+          "y": -153,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_base": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_support": {
+          "x": 75,
+          "y": -70,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_station": {
+          "x": -140,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        }
+      },
+      "shoulders": {
+        "left": null,
+        "right": null,
+        "distance": null
+      },
+      "normalVisuals": [
+        {
+          "id": "slot__token_torso__token_item_clothes_0__part_clothes_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_clothes_0",
+          "partId": "part_clothes_0",
+          "worldMatrix": [
+            -0.9986295347545738,
+            0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            62.52963374999336,
+            -90.83948098712446
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 130,
+            "maxY": 91
+          },
+          "worldBounds": {
+            "minX": -67.29220576810124,
+            "minY": -90.83948098712446,
+            "maxX": 67.29220576810124,
+            "maxY": 6.83948098712446
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -0.9986295347545738,
+            0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            -5.233595624294383,
+            -141.8629534754574
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -76.22397903980044,
+            "minY": -223.2625662545914,
+            "maxX": 65.75678779121168,
+            "maxY": -60.4633406963234
+          },
+          "zIndex": 1,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_eyes__token_item_face_0__part_face_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_0",
+          "partId": "part_face_0",
+          "worldMatrix": [
+            -0.9986295347545738,
+            0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            16.790713279618505,
+            -151.5288635363375
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 65,
+            "maxY": 25
+          },
+          "worldBounds": {
+            "minX": -48.1202064794288,
+            "minY": -151.5288635363375,
+            "maxX": 18.0991121856921,
+            "maxY": -123.1612880116818
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_nose__token_item_face_8__part_face_8",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_8",
+          "partId": "part_face_8",
+          "worldMatrix": [
+            -0.9986295347545738,
+            0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            -11.491298980175184,
+            -127.51578829519275
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 14,
+            "maxY": 20
+          },
+          "worldBounds": {
+            "minX": -25.47211246673922,
+            "minY": -127.51578829519275,
+            "maxX": -10.444579855316308,
+            "maxY": -106.81049421270006
+          },
+          "zIndex": 3,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_brows__token_item_brows_extra_0__part_brows_extra_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_brows_extra_0",
+          "partId": "part_brows_extra_0",
+          "worldMatrix": [
+            -0.9986295347545738,
+            0.05233595624294383,
+            0.05861627099209709,
+            1.1184650789251227,
+            17.031244761455145,
+            -166.04657206300814
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 67,
+            "maxY": 16
+          },
+          "worldBounds": {
+            "minX": -49.8769340671013,
+            "minY": -166.04657206300814,
+            "maxX": 17.969105097328697,
+            "maxY": -144.64462173192894
+          },
+          "zIndex": 4,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_mouth__token_item_face_plus_16__part_face_plus_16",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_plus_16",
+          "partId": "part_face_plus_16",
+          "worldMatrix": [
+            -0.9986295347545738,
+            0.05233595624294383,
+            0.09825020378112541,
+            1.8747255679448052,
+            -1.9828779313263265,
+            -108.49654875666349
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 27,
+            "maxY": 8
+          },
+          "worldBounds": {
+            "minX": -28.94587536969982,
+            "minY": -108.49654875666349,
+            "maxX": -1.1968763010773231,
+            "maxY": -92.08567339454557
+          },
+          "zIndex": 5,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_hair__token_item_hair_0__part_hair_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_hair_0",
+          "partId": "part_hair_0",
+          "worldMatrix": [
+            -0.9986295347545738,
+            0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            64.74191641239261,
+            -230.1461779023182
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 149,
+            "maxY": 139
+          },
+          "worldBounds": {
+            "minX": -84.05388426603889,
+            "minY": -230.1461779023182,
+            "maxX": 72.0166143301618,
+            "maxY": -83.5386150912338
+          },
+          "zIndex": 6,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            -1.08,
+            0,
+            0,
+            1,
+            -68.94,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": -111.06,
+            "minY": -191,
+            "maxX": -68.94,
+            "maxY": -61
+          },
+          "zIndex": 7,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            -6.123233995736766e-17,
+            1,
+            1,
+            6.123233995736766e-17,
+            -275,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": -275,
+            "minY": -104,
+            "maxX": -195,
+            "maxY": -92
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "anatomyVisuals": [
+        {
+          "id": "part__token_body",
+          "boneId": "chest",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -0.9986295347545738,
+            0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            0,
+            -42
+          ],
+          "localBounds": {
+            "minX": -62,
+            "minY": -46,
+            "maxX": 62,
+            "maxY": 46
+          },
+          "worldBounds": {
+            "minX": -64.32248514195899,
+            "minY": -91.1817878857729,
+            "maxX": 64.32248514195899,
+            "maxY": 7.181787885772913
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -0.9986295347545738,
+            0.05233595624294383,
+            0.05233595624294383,
+            0.9986295347545738,
+            -5.233595624294383,
+            -141.8629534754574
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -76.22397903980044,
+            "minY": -223.2625662545914,
+            "maxX": 65.75678779121168,
+            "maxY": -60.4633406963234
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            -1.08,
+            0,
+            0,
+            1,
+            -68.94,
+            -191
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": -111.06,
+            "minY": -191,
+            "maxX": -68.94,
+            "maxY": -61
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            -6.123233995736766e-17,
+            1,
+            1,
+            6.123233995736766e-17,
+            -275,
+            -104
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": -275,
+            "minY": -104,
+            "maxX": -195,
+            "maxY": -92
+          },
+          "zIndex": 9,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "headClearance": [],
+      "arms": []
+    },
+    {
+      "label": "Возврат",
+      "timeMs": 1400,
+      "frame": 33.6,
+      "facing": "left",
+      "joints": {
+        "root": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "chest": {
+          "x": 0,
+          "y": -42,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "head": {
+          "x": 0,
+          "y": -72,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_weapon": {
+          "x": -85,
+          "y": -63,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_offhand": {
+          "x": 54,
+          "y": -58,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_arrow": {
+          "x": -345,
+          "y": -98,
+          "rotation": -90,
+          "scaleX": 0,
+          "scaleY": 0
+        },
+        "token_cover": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_hook": {
+          "x": -105,
+          "y": -153,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_base": {
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_support": {
+          "x": 75,
+          "y": -70,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        },
+        "token_station": {
+          "x": -140,
+          "y": 0,
+          "rotation": 0,
+          "scaleX": -1,
+          "scaleY": 1
+        }
+      },
+      "shoulders": {
+        "left": null,
+        "right": null,
+        "distance": null
+      },
+      "normalVisuals": [
+        {
+          "id": "slot__token_torso__token_item_clothes_0__part_clothes_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_clothes_0",
+          "partId": "part_clothes_0",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            65,
+            -87.5
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 130,
+            "maxY": 91
+          },
+          "worldBounds": {
+            "minX": -65,
+            "minY": -87.5,
+            "maxX": 65,
+            "maxY": 3.5
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            0,
+            -142
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -67,
+            "minY": -220,
+            "maxX": 67,
+            "maxY": -64
+          },
+          "zIndex": 1,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_eyes__token_item_face_0__part_face_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_0",
+          "partId": "part_face_0",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            22.5,
+            -150.5
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 65,
+            "maxY": 25
+          },
+          "worldBounds": {
+            "minX": -42.5,
+            "minY": -150.5,
+            "maxX": 22.5,
+            "maxY": -125.5
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_nose__token_item_face_8__part_face_8",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_8",
+          "partId": "part_face_8",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            -7,
+            -128
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 14,
+            "maxY": 20
+          },
+          "worldBounds": {
+            "minX": -21,
+            "minY": -128,
+            "maxX": -7,
+            "maxY": -108
+          },
+          "zIndex": 3,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_brows__token_item_brows_extra_0__part_brows_extra_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_brows_extra_0",
+          "partId": "part_brows_extra_0",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1.12,
+            23.5,
+            -165.74403237336557
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 67,
+            "maxY": 16
+          },
+          "worldBounds": {
+            "minX": -43.5,
+            "minY": -165.74403237336557,
+            "maxX": 23.5,
+            "maxY": -147.82403237336558
+          },
+          "zIndex": 4,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_mouth__token_item_face_plus_16__part_face_plus_16",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_face_plus_16",
+          "partId": "part_face_plus_16",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1.1943708639709794,
+            1.5,
+            -105.77748345588392
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 27,
+            "maxY": 8
+          },
+          "worldBounds": {
+            "minX": -25.5,
+            "minY": -105.77748345588392,
+            "maxX": 1.5,
+            "maxY": -96.22251654411609
+          },
+          "zIndex": 5,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_hair__token_item_hair_0__part_hair_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_hair_0",
+          "partId": "part_hair_0",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            74.5,
+            -226.5
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 149,
+            "maxY": 139
+          },
+          "worldBounds": {
+            "minX": -74.5,
+            "minY": -226.5,
+            "maxX": 74.5,
+            "maxY": -87.5
+          },
+          "zIndex": 6,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            -65.5,
+            -156
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": -104.5,
+            "minY": -156,
+            "maxX": -65.5,
+            "maxY": -26
+          },
+          "zIndex": 7,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            0,
+            0,
+            0,
+            0,
+            -345,
+            -98
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": -345,
+            "minY": -98,
+            "maxX": -345,
+            "maxY": -98
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "anatomyVisuals": [
+        {
+          "id": "part__token_body",
+          "boneId": "chest",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            0,
+            -42
+          ],
+          "localBounds": {
+            "minX": -62,
+            "minY": -46,
+            "maxX": 62,
+            "maxY": 46
+          },
+          "worldBounds": {
+            "minX": -62,
+            "minY": -88,
+            "maxX": 62,
+            "maxY": 4
+          },
+          "zIndex": 0,
+          "depth": {
+            "slot": "BODY",
+            "boneId": "chest",
+            "depthBoneId": "chest",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "part__token_head",
+          "boneId": "head",
+          "sourceKind": "bone-part",
+          "anatomicalBody": true,
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            0,
+            -142
+          ],
+          "localBounds": {
+            "minX": -67,
+            "minY": -78,
+            "maxX": 67,
+            "maxY": 78
+          },
+          "worldBounds": {
+            "minX": -67,
+            "minY": -220,
+            "maxX": 67,
+            "maxY": -64
+          },
+          "zIndex": 2,
+          "depth": {
+            "slot": "BODY_FRONT",
+            "boneId": "head",
+            "depthBoneId": "head",
+            "source": "default",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_main__token_item_weapons_0__part_weapons_0",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_0",
+          "partId": "part_weapons_0",
+          "worldMatrix": [
+            -1,
+            0,
+            0,
+            1,
+            -65.5,
+            -156
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 39,
+            "maxY": 130
+          },
+          "worldBounds": {
+            "minX": -104.5,
+            "minY": -156,
+            "maxX": -65.5,
+            "maxY": -26
+          },
+          "zIndex": 8,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_weapon",
+            "depthBoneId": "token_weapon",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        },
+        {
+          "id": "slot__token_projectile__token_item_weapons_7__part_weapons_7",
+          "sourceKind": "item-part",
+          "anatomicalBody": false,
+          "itemId": "token_item_weapons_7",
+          "partId": "part_weapons_7",
+          "worldMatrix": [
+            0,
+            0,
+            0,
+            0,
+            -345,
+            -98
+          ],
+          "localBounds": {
+            "minX": 0,
+            "minY": 0,
+            "maxX": 12,
+            "maxY": 80
+          },
+          "worldBounds": {
+            "minX": -345,
+            "minY": -98,
+            "maxX": -345,
+            "maxY": -98
+          },
+          "zIndex": 9,
+          "depth": {
+            "slot": "EQUIPMENT_FRONT",
+            "boneId": "token_arrow",
+            "depthBoneId": "token_arrow",
+            "source": "clip",
+            "occlusion": "none"
+          },
+          "occludedBy": []
+        }
+      ],
+      "headClearance": [],
+      "arms": []
+    }
+  ]
+}

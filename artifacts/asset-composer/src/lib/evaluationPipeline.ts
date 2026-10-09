@@ -1,4 +1,6 @@
 import { contentOf, getVisualResources, type VisualResources } from "./visualContent";
+import { tokenSlotVisible } from "./chibiEquipment";
+import { applyTokenFace } from "./chibiFace";
 import { evaluateArtDocument } from "./artDocument";
 import { vectorSource } from "@/lib/visualContent";
 /**
@@ -26,6 +28,7 @@ import { resolveClipPose, blendPoses } from "./animationRuntime";
 import { getCharacterBodyParts } from "@/data/chibiBody";
 import { chibiFeatureSvg, DEFAULT_APPEARANCE } from "@/data/characterAppearance";
 import type { CharacterAppearance } from "@/domain/types";
+import { tokenAgeRestPose } from "./chibiAge";
 import type { AnimationXRayPresentation } from "./animationXRay";
 import { getSideGaitClip, upgradeBowClip } from "@/data/chibiAnimations";
 import type { BoneTransformMap } from "./animationRuntime";
@@ -206,9 +209,10 @@ function evaluateWorldBones(
   const world = new Map<string, WorldBone>();
   const inherit = getAnimationContext(localPose)?.clip.inherit;
   const fixedArms = new Set(armChains(bones,localPose).flat());
+  const tokenRig = bones.some(b => b.id === "token_weapon") && bones.some(b => b.id === "head" && b.parentId === "chest");
 
   for (const bone of bones) {
-    const restPose = { ...applyBodyMorphToRestPose(bone, bodyMorphs) };
+    const restPose = tokenAgeRestPose({ ...bone, restPose: applyBodyMorphToRestPose(bone, bodyMorphs) }, appearance, tokenRig);
     if (appearance?.view && appearance.view !== "front" && appearance.projection !== "authored") {
       const near = appearance.view === "left" ? "r" : "l";
       const far = near === "l" ? "r" : "l";
@@ -655,6 +659,7 @@ function getCoveredBodyBoneIds(entity: Entity, template: Template, items: Item[]
     if (!slotAssign.itemId) continue;
     const item = items.find(i => i.id === slotAssign.itemId);
     if (!item || !appearanceItemAllowed(item, entity.appearance?.sex)) continue;
+    if (template.skeletonFamily === "chibi_token_v1" && item.tags.includes("token-closed-headgear")) covered.add("head");
 
     const hasV2Parts = item.parts?.some(part => part.coordinateMode === "bone_local") ?? false;
     if (hasV2Parts) {
@@ -784,6 +789,10 @@ export function evaluateScene(
 ): EvaluatedScene {
   const effectiveItems = refreshCanonicalBuiltInTypedItems(items);
   const coveredBodyBoneIds = getCoveredBodyBoneIds(entity, template, effectiveItems);
+  const tokenHeadShape = template.skeletonFamily === "chibi_token_v1" && entity.slots.some(s => s.slotId === "token_headshape" && s.itemId && effectiveItems.some(i => i.id === s.itemId));
+  const tokenHeadAssignment = tokenHeadShape ? entity.slots.find(s => s.slotId === "token_headshape") : undefined;
+  const tokenHeadPart = effectiveItems.find(i => i.id === tokenHeadAssignment?.itemId)?.parts?.[0];
+  const tokenHeadWidthScale = tokenHeadPart ? tokenHeadPart.metrics.viewBoxWidth / 134 * (tokenHeadAssignment?.attachmentOverride.scaleX ?? 1) : 1;
   const visuals: EvaluatedVisual[] = [];
   const layers:  SceneLayer[]      = [];
 
@@ -794,6 +803,7 @@ export function evaluateScene(
 
   // ── 1. Entity visuals (full-vector body, v2.0) ─────────────────────────────
   for (const visual of getRenderableEntityVisuals(entity, template)) {
+    if (tokenHeadShape && visual.bodyPartId === "token_head") continue;
     if (visual.bodyPartId && (visual.bodyView ?? "front") !== (entity.appearance?.view && entity.appearance.view !== "front" ? "side" : "front")) continue;
     if (!options.includeCoveredBody && visual.bodyPartId && coveredBodyBoneIds.has(visual.boneId)) continue;
     if(visual.content?.kind==="document") {
@@ -854,6 +864,7 @@ export function evaluateScene(
   if (template.boneParts && template.boneParts.length > 0) {
     // Stage 3: per-bone SVG parts
     for (const part of bodyParts) {
+      if (tokenHeadShape && part.id === "token_head") continue;
       if (entity.visuals?.some(visual => visual.bodyPartId === part.id && (visual.bodyView ?? "front") === (entity.appearance?.view && entity.appearance.view !== "front" ? "side" : "front"))) continue;
       if (!options.includeCoveredBody && coveredBodyBoneIds.has(part.boneId)) continue;
       // Spine-style slot: an attachment key swaps the drawing, not the bone binding.
@@ -923,6 +934,7 @@ export function evaluateScene(
 
   for (const slotAssign of entity.slots) {
     if (!slotAssign.itemId) continue;
+    if (!tokenSlotVisible(entity, slotAssign.slotId) && !(options.includeCoveredBody && slotAssign.slotId === "token_headshape")) continue;
     const item    = effectiveItems.find(i => i.id === slotAssign.itemId);
     const slotDef = template.slots.find(s => s.id === slotAssign.slotId);
     if (!item || !slotDef || !appearanceItemAllowed(item, entity.appearance?.sex)) continue;
@@ -1003,6 +1015,9 @@ export function evaluateScene(
             piv.x,
             piv.y,
           );
+          // Scalp and jaw modules follow the chosen head width before manual fitting.
+          const tokenHeadFit = template.skeletonFamily === "chibi_token_v1" && ["token_hair", "token_beard", "token_headgear"].includes(slotAssign.slotId)
+            ? [tokenHeadWidthScale, 0, 0, 1, 0, 0] as Matrix2D : identity();
           const partBinding = binding ?? resolveItemPartBinding(entity, template, skeleton, item, slotAssign, slotDef, part, fitProfiles);
           const handPart = heldItem ? bodyParts.find(body => body.boneId === partBinding.boneId) : undefined;
           const palm = handPart?.gripSocket ?? handPart?.grip;
@@ -1012,7 +1027,7 @@ export function evaluateScene(
               partBinding.anchorMatrix,
               multiply(
                 partBinding.defaultTransformMatrix,
-                multiply(partBinding.attachmentOverrideMatrix, resolvedPartLocalM),
+                multiply(tokenHeadFit, multiply(partBinding.attachmentOverrideMatrix, resolvedPartLocalM)),
               ),
             ),
           );
@@ -1089,6 +1104,7 @@ export function evaluateScene(
 
   // Resolve source content after legacy fitting/palette calculations.
   for(const v of visuals) {
+    if (template.skeletonFamily === "chibi_token_v1" && v.slotId === "token_headshape") { v.anatomicalBody = true; v.boneId = "head"; }
     if(v.content)continue;
     const source=v.sourceKind==="entity-visual" ? entity.visuals?.find(x=>x.id===v.entityVisualId)
       : v.sourceKind==="bone-part" ? bodyParts.find(x=>"part__"+x.id===v.id)
@@ -1112,6 +1128,8 @@ export function evaluateScene(
     applyLimbDepth(visuals,effectiveItems,entity.appearance?.view === "left" ? "left" : "right",context?.clip,context?.timeMs);
   }
   for(const layer of layers) { const visual=visuals.find(v=>v.id===layer.id); if(visual)layer.zIndex=visual.zIndex; }
+  const tokenHeadBone = skeleton.bones.get("head");
+  applyTokenFace(visuals, entity, effectiveItems, tokenHeadBone ? worldBoneToMatrix(tokenHeadBone) : identity(), context, options.includeCoveredBody);
   for(const v of visuals) {
     v.assetResources=(options.resources??getVisualResources()).assets;
     for (const mask of v.occlusionMasks ?? []) mask.assetResources = v.assetResources;

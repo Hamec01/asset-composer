@@ -1,0 +1,1061 @@
+[
+  {
+    "name": "chop",
+    "label": "Рубит дерево",
+    "task": "hero",
+    "motion": "strike",
+    "duration": 1350,
+    "loop": false,
+    "props": [
+      "weapons_4"
+    ],
+    "source": "axe_chop",
+    "combat": false
+  },
+  {
+    "name": "mine",
+    "label": "Добывает руду",
+    "task": "hero",
+    "motion": "strike",
+    "duration": 1500,
+    "loop": true,
+    "props": [
+      "work_tools_0"
+    ],
+    "combat": false
+  },
+  {
+    "name": "gather",
+    "label": "Собирает ягоды и травы",
+    "task": "hero",
+    "motion": "bend",
+    "duration": 1600,
+    "loop": true,
+    "props": [
+      "work_tools_4"
+    ],
+    "combat": false
+  },
+  {
+    "name": "pick_flowers",
+    "label": "Срывает цветы",
+    "task": "hero",
+    "motion": "bend",
+    "duration": 1800,
+    "loop": false,
+    "props": [
+      "work_stations_8"
+    ],
+    "combat": false
+  },
+  {
+    "name": "fish",
+    "label": "Рыбачит · заброс, ожидание, подсечка",
+    "task": "hero",
+    "motion": "cast",
+    "duration": 3200,
+    "loop": true,
+    "props": [
+      "work_tools_1"
+    ],
+    "combat": false
+  },
+  {
+    "name": "butcher",
+    "label": "Разделывает добычу",
+    "task": "hero",
+    "motion": "strike",
+    "duration": 1400,
+    "loop": true,
+    "props": [
+      "work_tools_2"
+    ],
+    "combat": false
+  },
+  {
+    "name": "build",
+    "label": "Строит",
+    "task": "hero",
+    "motion": "strike",
+    "duration": 1100,
+    "loop": true,
+    "props": [
+      "work_tools_3"
+    ],
+    "station": "work_stations_14",
+    "combat": false
+  },
+  {
+    "name": "deposit",
+    "label": "Складывает груз",
+    "task": "hero",
+    "motion": "offer",
+    "duration": 1500,
+    "loop": false,
+    "props": [
+      "props_0"
+    ],
+    "combat": false
+  },
+  {
+    "name": "punch",
+    "label": "Рукопашный выпад корпусом",
+    "task": "hero",
+    "motion": "recoil",
+    "duration": 650,
+    "loop": false,
+    "props": [],
+    "combat": true
+  },
+  {
+    "name": "attack",
+    "label": "Удар мечом",
+    "task": "hero",
+    "motion": "strike",
+    "duration": 850,
+    "loop": false,
+    "props": [
+      "weapons_2"
+    ],
+    "source": "sword_attack",
+    "combat": true
+  },
+  {
+    "name": "hit",
+    "label": "Получает урон",
+    "task": "hero",
+    "motion": "recoil",
+    "duration": 750,
+    "loop": false,
+    "props": [],
+    "combat": false
+  },
+  {
+    "name": "eat",
+    "label": "Ест",
+    "task": "hero",
+    "motion": "read",
+    "duration": 1800,
+    "loop": true,
+    "props": [
+      "work_stations_23"
+    ],
+    "combat": false
+  },
+  {
+    "name": "drink",
+    "label": "Пьёт",
+    "task": "hero",
+    "motion": "read",
+    "duration": 2100,
+    "loop": true,
+    "props": [
+      "work_tools_11"
+    ],
+    "combat": false
+  },
+  {
+    "name": "rest",
+    "label": "Отдыхает",
+    "task": "hero",
+    "motion": "sit",
+    "duration": 2600,
+    "loop": true,
+    "props": [],
+    "combat": false
+  },
+  {
+    "name": "sit",
+    "label": "Садится",
+    "task": "hero",
+    "motion": "sit",
+    "duration": 1300,
+    "loop": false,
+    "props": [],
+    "combat": false
+  },
+  {
+    "name": "talk",
+    "label": "Разговаривает",
+    "task": "hero",
+    "motion": "talk",
+    "duration": 2100,
+    "loop": true,
+    "props": [],
+    "combat": false
+  },
+  {
+    "name": "give",
+    "label": "Передаёт подарок",
+    "task": "hero",
+    "motion": "offer",
+    "duration": 1700,
+    "loop": false,
+    "props": [
+      "work_stations_17"
+    ],
+    "combat": false
+  },
+  {
+    "name": "idle_hunter",
+    "label": "Охотник · настороженный покой",
+    "task": "food",
+    "motion": "wait",
+    "duration": 2200,
+    "loop": true,
+    "props": [
+      "weapons_0"
+    ],
+    "combat": false
+  },
+  {
+    "name": "walk_hunter",
+    "label": "Охотник · крадётся",
+    "task": "food",
+    "motion": "carry",
+    "duration": 1300,
+    "loop": true,
+    "props": [
+      "weapons_1"
+    ],
+    "combat": false
+  },
+  {
+    "name": "bow_aim_shoot",
+    "label": "Охотник · целится и стреляет",
+    "task": "military",
+    "motion": "cast",
+    "duration": 1600,
+    "loop": false,
+    "props": [
+      "weapons_0",
+      "weapons_7"
+    ],
+    "source": "bow_attack",
+    "combat": true
+  },
+  {
+    "name": "spear_throw",
+    "label": "Охотник · бросает копьё",
+    "task": "military",
+    "motion": "throw",
+    "duration": 1300,
+    "loop": false,
+    "props": [
+      "weapons_1"
+    ],
+    "combat": true
+  },
+  {
+    "name": "carcass_carry",
+    "label": "Охотник · несёт добычу",
+    "task": "food",
+    "motion": "carry",
+    "duration": 1400,
+    "loop": true,
+    "props": [
+      "work_extra_0"
+    ],
+    "combat": false
+  },
+  {
+    "name": "butcher_knife",
+    "label": "Охотник · разделывает ножом",
+    "task": "food",
+    "motion": "strike",
+    "duration": 1000,
+    "loop": true,
+    "props": [
+      "work_tools_2"
+    ],
+    "combat": false
+  },
+  {
+    "name": "forage_search",
+    "label": "Собиратель · ищет",
+    "task": "food",
+    "motion": "carry",
+    "duration": 1700,
+    "loop": true,
+    "props": [
+      "work_tools_4"
+    ],
+    "combat": false
+  },
+  {
+    "name": "forage_pick",
+    "label": "Собиратель · собирает",
+    "task": "food",
+    "motion": "bend",
+    "duration": 1700,
+    "loop": true,
+    "props": [
+      "work_tools_4"
+    ],
+    "combat": false
+  },
+  {
+    "name": "cast_rod",
+    "label": "Рыбак · забрасывает удочку",
+    "task": "food",
+    "motion": "cast",
+    "duration": 1800,
+    "loop": false,
+    "props": [
+      "work_tools_1"
+    ],
+    "combat": false
+  },
+  {
+    "name": "wait_fish",
+    "label": "Рыбак · ждёт поклёвки",
+    "task": "food",
+    "motion": "wait",
+    "duration": 2800,
+    "loop": true,
+    "props": [
+      "work_tools_1"
+    ],
+    "combat": false
+  },
+  {
+    "name": "pull_fish",
+    "label": "Рыбак · вытягивает улов",
+    "task": "food",
+    "motion": "pull",
+    "duration": 1400,
+    "loop": false,
+    "props": [
+      "work_tools_1"
+    ],
+    "combat": false
+  },
+  {
+    "name": "carry_fish_basket",
+    "label": "Рыбак · несёт улов",
+    "task": "food",
+    "motion": "carry",
+    "duration": 1200,
+    "loop": true,
+    "props": [
+      "work_stations_9"
+    ],
+    "combat": false
+  },
+  {
+    "name": "hoe_till",
+    "label": "Фермер · рыхлит грядку",
+    "task": "food",
+    "motion": "sweep",
+    "duration": 1500,
+    "loop": true,
+    "props": [
+      "props_3"
+    ],
+    "source": "plough",
+    "combat": false
+  },
+  {
+    "name": "sow_seeds",
+    "label": "Фермер · сеет",
+    "task": "food",
+    "motion": "offer",
+    "duration": 1600,
+    "loop": true,
+    "props": [
+      "work_tools_5"
+    ],
+    "combat": false
+  },
+  {
+    "name": "scythe_harvest",
+    "label": "Фермер · косит",
+    "task": "food",
+    "motion": "sweep",
+    "duration": 1500,
+    "loop": true,
+    "props": [
+      "work_tools_6"
+    ],
+    "combat": false
+  },
+  {
+    "name": "carry_sheaves",
+    "label": "Фермер · несёт снопы",
+    "task": "food",
+    "motion": "carry",
+    "duration": 1300,
+    "loop": true,
+    "props": [
+      "work_tools_7"
+    ],
+    "combat": false
+  },
+  {
+    "name": "quern_grind",
+    "label": "Мельник · вращает жернов",
+    "task": "food",
+    "motion": "turn",
+    "duration": 1600,
+    "loop": true,
+    "props": [],
+    "station": "work_stations_4",
+    "combat": false
+  },
+  {
+    "name": "knead_dough",
+    "label": "Пекарь · месит тесто",
+    "task": "food",
+    "motion": "pump",
+    "duration": 1500,
+    "loop": true,
+    "props": [],
+    "station": "work_stations_5",
+    "combat": false
+  },
+  {
+    "name": "oven_paddle",
+    "label": "Пекарь · сажает хлеб в печь",
+    "task": "food",
+    "motion": "offer",
+    "duration": 1900,
+    "loop": true,
+    "props": [
+      "work_tools_8"
+    ],
+    "station": "work_stations_3",
+    "combat": false
+  },
+  {
+    "name": "log_carry",
+    "label": "Дровосек · несёт брёвна",
+    "task": "building",
+    "motion": "carry",
+    "duration": 1400,
+    "loop": true,
+    "props": [
+      "work_stations_12"
+    ],
+    "combat": false
+  },
+  {
+    "name": "carry_logs",
+    "label": "Несёт брёвна на плече",
+    "task": "building",
+    "motion": "carry",
+    "duration": 1600,
+    "loop": true,
+    "props": [
+      "work_stations_12"
+    ],
+    "combat": false
+  },
+  {
+    "name": "axe_walk",
+    "label": "Дровосек · идёт с топором",
+    "task": "building",
+    "motion": "carry",
+    "duration": 1000,
+    "loop": true,
+    "props": [
+      "weapons_4"
+    ],
+    "combat": false
+  },
+  {
+    "name": "pickaxe_swing",
+    "label": "Рудокоп · удар киркой",
+    "task": "building",
+    "motion": "strike",
+    "duration": 1600,
+    "loop": true,
+    "props": [
+      "work_tools_0"
+    ],
+    "combat": false
+  },
+  {
+    "name": "chisel_stone",
+    "label": "Каменотёс · тесает камень",
+    "task": "building",
+    "motion": "strike",
+    "duration": 900,
+    "loop": true,
+    "props": [
+      "work_tools_3",
+      "work_extra_1"
+    ],
+    "station": "work_stations_14",
+    "combat": false
+  },
+  {
+    "name": "carry_ore_bucket",
+    "label": "Рудокоп · несёт руду",
+    "task": "building",
+    "motion": "carry",
+    "duration": 1600,
+    "loop": true,
+    "props": [
+      "work_stations_10"
+    ],
+    "combat": false
+  },
+  {
+    "name": "hammer_strike",
+    "label": "Строитель · стучит молотком",
+    "task": "building",
+    "motion": "strike",
+    "duration": 950,
+    "loop": true,
+    "props": [
+      "work_tools_3"
+    ],
+    "combat": false
+  },
+  {
+    "name": "lay_bricks",
+    "label": "Строитель · укладывает кирпичи",
+    "task": "building",
+    "motion": "bend",
+    "duration": 1900,
+    "loop": true,
+    "props": [],
+    "station": "work_stations_14",
+    "combat": false
+  },
+  {
+    "name": "carry_planks",
+    "label": "Строитель · несёт доски",
+    "task": "building",
+    "motion": "carry",
+    "duration": 1400,
+    "loop": true,
+    "props": [
+      "work_stations_11"
+    ],
+    "combat": false
+  },
+  {
+    "name": "bellows_pump",
+    "label": "Кузнец · качает меха",
+    "task": "craft",
+    "motion": "pump",
+    "duration": 1400,
+    "loop": true,
+    "props": [
+      "work_tools_10"
+    ],
+    "combat": false
+  },
+  {
+    "name": "anvil_hammer",
+    "label": "Кузнец · куёт",
+    "task": "craft",
+    "motion": "strike",
+    "duration": 1100,
+    "loop": true,
+    "props": [
+      "work_tools_3",
+      "work_tools_9"
+    ],
+    "station": "work_stations_0",
+    "combat": false
+  },
+  {
+    "name": "quench_water",
+    "label": "Кузнец · закаляет в воде",
+    "task": "craft",
+    "motion": "bend",
+    "duration": 1800,
+    "loop": true,
+    "props": [
+      "work_tools_9"
+    ],
+    "station": "work_stations_1",
+    "combat": false
+  },
+  {
+    "name": "pottery_wheel",
+    "label": "Гончар · формует кувшин",
+    "task": "craft",
+    "motion": "turn",
+    "duration": 2200,
+    "loop": true,
+    "props": [],
+    "station": "work_stations_2",
+    "combat": false
+  },
+  {
+    "name": "kiln_load",
+    "label": "Гончар · загружает печь",
+    "task": "craft",
+    "motion": "offer",
+    "duration": 1900,
+    "loop": true,
+    "props": [
+      "work_tools_11"
+    ],
+    "station": "work_stations_3",
+    "combat": false
+  },
+  {
+    "name": "loom_weave",
+    "label": "Ткач · работает за станком",
+    "task": "craft",
+    "motion": "sew",
+    "duration": 1900,
+    "loop": true,
+    "props": [
+      "work_tools_13"
+    ],
+    "combat": false
+  },
+  {
+    "name": "tailor_sew",
+    "label": "Швея · шьёт",
+    "task": "craft",
+    "motion": "sew",
+    "duration": 1400,
+    "loop": true,
+    "props": [
+      "work_tools_12"
+    ],
+    "combat": false
+  },
+  {
+    "name": "scrape_hide",
+    "label": "Кожевник · скоблит шкуру",
+    "task": "craft",
+    "motion": "sweep",
+    "duration": 1400,
+    "loop": true,
+    "props": [
+      "work_tools_14"
+    ],
+    "station": "work_stations_15",
+    "combat": false
+  },
+  {
+    "name": "stretch_frame",
+    "label": "Кожевник · натягивает шкуру",
+    "task": "craft",
+    "motion": "pull",
+    "duration": 2000,
+    "loop": true,
+    "props": [],
+    "station": "work_stations_15",
+    "combat": false
+  },
+  {
+    "name": "sword_walk",
+    "label": "Воин · боевая поступь",
+    "task": "military",
+    "motion": "guard",
+    "duration": 1000,
+    "loop": true,
+    "props": [
+      "weapons_2",
+      "weapons_6"
+    ],
+    "combat": false
+  },
+  {
+    "name": "slash_combo",
+    "label": "Воин · три рубящих удара",
+    "task": "military",
+    "motion": "combo",
+    "duration": 2400,
+    "loop": false,
+    "props": [
+      "weapons_2"
+    ],
+    "combat": true
+  },
+  {
+    "name": "shield_block",
+    "label": "Воин · блок щитом",
+    "task": "military",
+    "motion": "guard",
+    "duration": 1000,
+    "loop": false,
+    "props": [
+      "weapons_2",
+      "weapons_6"
+    ],
+    "combat": true
+  },
+  {
+    "name": "draw_quiver",
+    "label": "Лучник · достаёт стрелу",
+    "task": "military",
+    "motion": "raise",
+    "duration": 1000,
+    "loop": false,
+    "props": [
+      "weapons_0",
+      "weapons_7"
+    ],
+    "combat": true
+  },
+  {
+    "name": "full_draw_shot",
+    "label": "Лучник · полный натяг и выстрел",
+    "task": "military",
+    "motion": "cast",
+    "duration": 1900,
+    "loop": false,
+    "props": [
+      "weapons_0",
+      "weapons_7"
+    ],
+    "source": "bow_attack",
+    "combat": true
+  },
+  {
+    "name": "spear_thrust",
+    "label": "Копейщик · выпад",
+    "task": "military",
+    "motion": "strike",
+    "duration": 1000,
+    "loop": false,
+    "props": [
+      "weapons_1"
+    ],
+    "source": "spear_attack",
+    "combat": true
+  },
+  {
+    "name": "spear_brace",
+    "label": "Копейщик · оборонительный упор",
+    "task": "military",
+    "motion": "guard",
+    "duration": 1700,
+    "loop": true,
+    "props": [
+      "weapons_1"
+    ],
+    "combat": true
+  },
+  {
+    "name": "guard_patrol",
+    "label": "Стражник · патрулирует",
+    "task": "military",
+    "motion": "carry",
+    "duration": 1400,
+    "loop": true,
+    "props": [
+      "weapons_1"
+    ],
+    "combat": false
+  },
+  {
+    "name": "alarm_horn",
+    "label": "Стражник · трубит тревогу",
+    "task": "military",
+    "motion": "read",
+    "duration": 2200,
+    "loop": true,
+    "props": [
+      "work_tools_18"
+    ],
+    "combat": false
+  },
+  {
+    "name": "command_signal",
+    "label": "Полководец · подаёт сигнал",
+    "task": "military",
+    "motion": "raise",
+    "duration": 1700,
+    "loop": false,
+    "props": [
+      "work_tools_19"
+    ],
+    "combat": false
+  },
+  {
+    "name": "rally_shout",
+    "label": "Полководец · воодушевляет",
+    "task": "military",
+    "motion": "raise",
+    "duration": 2200,
+    "loop": true,
+    "props": [
+      "weapons_2"
+    ],
+    "combat": false
+  },
+  {
+    "name": "drill_training",
+    "label": "Ветеран · показывает стойки",
+    "task": "military",
+    "motion": "guard",
+    "duration": 2200,
+    "loop": true,
+    "props": [
+      "weapons_1"
+    ],
+    "combat": true
+  },
+  {
+    "name": "ritual_prayer",
+    "label": "Жрец · молится и кланяется",
+    "task": "spiritual",
+    "motion": "raise",
+    "duration": 2600,
+    "loop": true,
+    "props": [],
+    "combat": false
+  },
+  {
+    "name": "incense_offering",
+    "label": "Жрец · подносит благовония",
+    "task": "spiritual",
+    "motion": "offer",
+    "duration": 2300,
+    "loop": true,
+    "props": [
+      "work_tools_20"
+    ],
+    "combat": false
+  },
+  {
+    "name": "inspect_scroll",
+    "label": "Мудрец · читает свиток",
+    "task": "spiritual",
+    "motion": "read",
+    "duration": 2600,
+    "loop": true,
+    "props": [
+      "work_stations_16"
+    ],
+    "combat": false
+  },
+  {
+    "name": "brew_medicine",
+    "label": "Знахарь · растирает травы",
+    "task": "spiritual",
+    "motion": "turn",
+    "duration": 1700,
+    "loop": true,
+    "props": [
+      "work_tools_21"
+    ],
+    "combat": false
+  },
+  {
+    "name": "teach_youth",
+    "label": "Наставник · объясняет",
+    "task": "spiritual",
+    "motion": "talk",
+    "duration": 2400,
+    "loop": true,
+    "props": [],
+    "combat": false
+  },
+  {
+    "name": "council_talk",
+    "label": "Старейшина · говорит на совете",
+    "task": "spiritual",
+    "motion": "sit",
+    "duration": 2700,
+    "loop": true,
+    "props": [],
+    "combat": false
+  },
+  {
+    "name": "arbitrate_dispute",
+    "label": "Старейшина · примиряет",
+    "task": "spiritual",
+    "motion": "talk",
+    "duration": 2400,
+    "loop": true,
+    "props": [],
+    "combat": false
+  },
+  {
+    "name": "carry_sack",
+    "label": "Житель · несёт мешок",
+    "task": "life",
+    "motion": "carry",
+    "duration": 1300,
+    "loop": true,
+    "props": [
+      "props_0"
+    ],
+    "combat": false
+  },
+  {
+    "name": "carry_box",
+    "label": "Житель · несёт ящик",
+    "task": "life",
+    "motion": "carry",
+    "duration": 1500,
+    "loop": true,
+    "props": [
+      "props_1"
+    ],
+    "combat": false
+  },
+  {
+    "name": "sweep_clean",
+    "label": "Житель · подметает",
+    "task": "life",
+    "motion": "sweep",
+    "duration": 1400,
+    "loop": true,
+    "props": [
+      "work_tools_16"
+    ],
+    "combat": false
+  },
+  {
+    "name": "eat_at_hearth",
+    "label": "Житель · ест у очага",
+    "task": "life",
+    "motion": "sit",
+    "duration": 2400,
+    "loop": true,
+    "props": [
+      "work_stations_7"
+    ],
+    "station": "work_stations_6",
+    "combat": false
+  },
+  {
+    "name": "child_run_play",
+    "label": "Ребёнок · бежит вприпрыжку",
+    "task": "life",
+    "motion": "play",
+    "duration": 900,
+    "loop": true,
+    "props": [],
+    "combat": false
+  },
+  {
+    "name": "child_hide_cower",
+    "label": "Ребёнок · съёживается",
+    "task": "life",
+    "motion": "cower",
+    "duration": 1800,
+    "loop": true,
+    "props": [],
+    "combat": false
+  },
+  {
+    "name": "child_help_light",
+    "label": "Ребёнок · несёт лёгкий груз",
+    "task": "life",
+    "motion": "carry",
+    "duration": 1100,
+    "loop": true,
+    "props": [
+      "work_stations_20"
+    ],
+    "combat": false
+  },
+  {
+    "name": "teen_apprentice",
+    "label": "Подросток · подаёт инструмент",
+    "task": "life",
+    "motion": "offer",
+    "duration": 1800,
+    "loop": true,
+    "props": [
+      "work_tools_3"
+    ],
+    "combat": false
+  },
+  {
+    "name": "walk_with_staff",
+    "label": "Пожилой · идёт с посохом",
+    "task": "life",
+    "motion": "carry",
+    "duration": 2000,
+    "loop": true,
+    "props": [
+      "work_tools_17"
+    ],
+    "combat": false
+  },
+  {
+    "name": "tell_stories",
+    "label": "Пожилой · рассказывает истории",
+    "task": "life",
+    "motion": "sit",
+    "duration": 2800,
+    "loop": true,
+    "props": [],
+    "combat": false
+  },
+  {
+    "name": "rock_baby",
+    "label": "Родитель · укачивает младенца",
+    "task": "life",
+    "motion": "rock",
+    "duration": 2400,
+    "loop": true,
+    "props": [
+      "work_tools_22"
+    ],
+    "combat": false
+  },
+  {
+    "name": "care_gathering",
+    "label": "Опекун · зовёт детей и угощает",
+    "task": "life",
+    "motion": "offer",
+    "duration": 2400,
+    "loop": true,
+    "props": [
+      "work_stations_23"
+    ],
+    "combat": false
+  },
+  {
+    "name": "carry_stretcher",
+    "label": "Несёт носилки",
+    "task": "life",
+    "motion": "carry",
+    "duration": 1700,
+    "loop": true,
+    "props": [
+      "work_stations_18"
+    ],
+    "combat": false
+  },
+  {
+    "name": "dig_grave",
+    "label": "Могильщик · копает",
+    "task": "life",
+    "motion": "sweep",
+    "duration": 1800,
+    "loop": true,
+    "props": [
+      "work_tools_23"
+    ],
+    "station": "work_stations_19",
+    "combat": false
+  },
+  {
+    "name": "mourn_kneel",
+    "label": "Скорбит · склоняется",
+    "task": "life",
+    "motion": "cower",
+    "duration": 2800,
+    "loop": true,
+    "props": [],
+    "station": "work_stations_19",
+    "combat": false
+  },
+  {
+    "name": "defile_grave",
+    "label": "Вандал · толкает насыпь корпусом",
+    "task": "life",
+    "motion": "kick",
+    "duration": 1400,
+    "loop": true,
+    "props": [],
+    "station": "work_stations_19",
+    "combat": false
+  }
+]

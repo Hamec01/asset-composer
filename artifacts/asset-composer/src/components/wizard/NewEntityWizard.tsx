@@ -1,3 +1,4 @@
+import { uiLabel } from "@/lib/uiLabels";
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,14 +9,16 @@ import { sanitizeSvg } from "@/lib/sanitize";
 import { getTemplatePresentationSummary } from "@/lib/templatePresentation";
 import type { EntityType } from "@/domain/types";
 import { User, Ghost, Bird, Sword, Box, Music } from "lucide-react";
+import { openAsset } from "@/lib/assetNavigation";
+import { useWorkbench } from "@/store/workbench";
 
 const LEGACY_ENTITY_TYPES: { type: EntityType; label: string; icon: React.ReactNode; description: string }[] = [
-  { type: "character", label: "Character", icon: <User className="w-5 h-5" />, description: "Playable hero or NPC humanoid" },
-  { type: "monster", label: "Monster", icon: <Ghost className="w-5 h-5" />, description: "Enemy creature or boss" },
-  { type: "animal", label: "Animal / Mount", icon: <Bird className="w-5 h-5" />, description: "Quadruped, bird, or mount" },
-  { type: "item", label: "Item", icon: <Sword className="w-5 h-5" />, description: "Weapon, armor, or accessory" },
-  { type: "static_object", label: "Static Object", icon: <Box className="w-5 h-5" />, description: "Chest, barrel, tree, catapult" },
-  { type: "animation_pack", label: "Animation Pack", icon: <Music className="w-5 h-5" />, description: "Reusable animation set" },
+  { type: "character", label: "Персонаж", icon: <User className="w-5 h-5" />, description: "Playable hero or NPC humanoid" },
+  { type: "monster", label: "Существо", icon: <Ghost className="w-5 h-5" />, description: "Enemy creature or boss" },
+  { type: "animal", label: "Животное / ездовое", icon: <Bird className="w-5 h-5" />, description: "Quadruped, bird, or mount" },
+  { type: "item", label: "Предмет", icon: <Sword className="w-5 h-5" />, description: "Weapon, armor, or accessory" },
+  { type: "static_object", label: "Объект окружения", icon: <Box className="w-5 h-5" />, description: "Chest, barrel, tree, catapult" },
+  { type: "animation_pack", label: "Набор анимаций", icon: <Music className="w-5 h-5" />, description: "Reusable animation set" },
 ];
 const ENTITY_TYPES = LEGACY_ENTITY_TYPES.filter(entry => entry.type === "character");
 
@@ -50,6 +53,8 @@ export function NewEntityWizard() {
   function handleCreate() {
     if (!selectedType || !selectedTemplateId || !name.trim()) return;
     createEntity(selectedType, selectedTemplateId, name.trim());
+    const id = useStore.getState().project.activeEntityId;
+    if (id) openAsset({ kind: "entity", id });
     handleClose();
   }
 
@@ -65,7 +70,7 @@ export function NewEntityWizard() {
             {step === "name" && "Имя персонажа"}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            Create a new entity by choosing its type, template, and name.
+            Выберите телосложение и имя. Внешность и экипировку можно настроить после создания.
           </DialogDescription>
         </DialogHeader>
 
@@ -93,7 +98,7 @@ export function NewEntityWizard() {
         {step === "template" && (
           <div className="space-y-3">
             {compatibleTemplates.length === 0 && (
-              <p className="text-sm text-muted-foreground">No templates for this entity type yet.</p>
+              <p className="text-sm text-muted-foreground">Пока нет основ для этого типа объекта.</p>
             )}
             <div className="grid grid-cols-1 gap-2">
               {compatibleTemplates.map(t => (
@@ -117,6 +122,7 @@ export function NewEntityWizard() {
               <Button variant="ghost" size="sm" onClick={handleClose} className="text-xs">
                 Отмена
               </Button>
+              <Button variant="ghost" size="sm" onClick={() => useWorkbench.setState({ createCategory: null })}>Другой тип объекта</Button>
             </div>
           </div>
         )}
@@ -131,14 +137,14 @@ export function NewEntityWizard() {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") handleCreate(); }}
-                placeholder="e.g. Dark Knight, Fluffy Wolf…"
+                placeholder="Например, Рыцарь"
                 className="bg-background border-border text-foreground"
                 autoFocus
               />
             </div>
             <div className="flex gap-2 pt-2 border-t border-border">
               <Button variant="ghost" size="sm" onClick={() => setStep("template")} className="text-xs">
-                ← Back
+                ← Назад
               </Button>
               <Button
                 data-testid="wizard-create-btn"

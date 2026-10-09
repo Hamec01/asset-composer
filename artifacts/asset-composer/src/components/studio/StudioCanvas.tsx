@@ -434,7 +434,7 @@ export function StudioCanvas(props: StudioCanvasProps) {
       return;
     }
     if (!layer || layer.locked) {
-      props.onError("Select an unlocked layer");
+      props.onError("Выберите слой и снимите его блокировку в панели слоёв.");
       return;
     }
     const g = {
@@ -495,7 +495,7 @@ export function StudioCanvas(props: StudioCanvasProps) {
     if (["brush", "pencil", "eraser", "fill", "picker"].includes(tool)) {
       if (layer.kind !== "raster") {
         gesture.current = null;
-        props.onError("Choose a Raster Layer for pixel tools");
+        props.onError("Для кисти выберите растровый слой. Для векторного слоя используйте перо или фигуры.");
         return;
       }
       working.current = null;
@@ -682,7 +682,7 @@ export function StudioCanvas(props: StudioCanvasProps) {
       setDraftLayer(null);
     } else if (["pen", "rectangle", "ellipse"].includes(tool)) {
       if (layer?.kind !== "vector") {
-        props.onError("Choose a Vector Layer");
+        props.onError("Для фигур и пера выберите векторный слой.");
         return;
       }
       const a = local(g.start),

@@ -49,6 +49,8 @@ export function saveDatabaseSession(
 ): Promise<void> {
   const task = async () => {
     if (!db) throw new Error("Project database is unavailable");
+    const newer = entries.find(e => e.id === project.id && e.updatedAt > project.updatedAt);
+    if (newer) project = newer.snapshot as Project;
     const assets = project.assets ?? {},
       snapshot = {
         ...project,

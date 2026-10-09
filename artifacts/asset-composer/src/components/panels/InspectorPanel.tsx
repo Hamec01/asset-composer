@@ -1,3 +1,4 @@
+import { uiLabel } from "@/lib/uiLabels";
 import { VisualThumbnail } from "@/components/VisualThumbnail";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/store";
@@ -40,37 +41,37 @@ const COMMON_SPECIES = [
 
 
 const PALETTE_LABELS: Record<keyof PaletteTokens, string> = {
-  skin: "Skin",
-  hair: "Hair",
-  primaryCloth: "Primary Cloth",
-  secondaryCloth: "Secondary Cloth",
-  metal: "Metal",
-  accent: "Accent",
-  outline: "Outline",
-  shadow: "Shadow",
+  skin: "Кожа",
+  hair: "Волосы",
+  primaryCloth: "Основная ткань",
+  secondaryCloth: "Дополнительная ткань",
+  metal: "Металл",
+  accent: "Акцент",
+  outline: "Обводка",
+  shadow: "Тень",
 };
 
 const BODY_MORPH_LABELS: Record<keyof BodyMorphValues, string> = {
-  headSize: "Head Size",
-  neckLength: "Neck Length",
-  torsoHeight: "Torso Height",
-  torsoWidth: "Torso Width",
-  armLength: "Arm Length",
-  forearmLength: "Forearm Length",
-  handSize: "Hand Size",
-  legLength: "Leg Length",
-  shinLength: "Shin Length",
-  footSize: "Foot Size",
-  pelvisWidth: "Pelvis Width",
-  overallHeightScale: "Overall Height",
+  headSize: "Размер головы",
+  neckLength: "Длина шеи",
+  torsoHeight: "Высота туловища",
+  torsoWidth: "Ширина туловища",
+  armLength: "Длина плеча",
+  forearmLength: "Длина предплечья",
+  handSize: "Размер кисти",
+  legLength: "Длина бедра",
+  shinLength: "Длина голени",
+  footSize: "Размер стопы",
+  pelvisWidth: "Ширина таза",
+  overallHeightScale: "Общий рост",
 };
 
 const BODY_REGION_LABELS: Record<BodyMorphRegionId, string> = {
-  head: "Head",
-  torso: "Torso",
-  arms: "Arms",
-  legs: "Legs",
-  global: "Global",
+  head: "Голова",
+  torso: "Туловище",
+  arms: "Руки",
+  legs: "Ноги",
+  global: "Общие",
 };
 
 const BODY_REGION_KEYS: Record<BodyMorphRegionId, Array<keyof BodyMorphValues>> = {
@@ -82,11 +83,11 @@ const BODY_REGION_KEYS: Record<BodyMorphRegionId, Array<keyof BodyMorphValues>> 
 };
 
 const FACE_FEATURE_LABELS: Record<FaceFeatureKey, string> = {
-  eyes: "Eyes",
-  mouth: "Mouth",
-  brows: "Brows",
-  beard: "Beard",
-  hair: "Hair",
+  eyes: "Глаза",
+  mouth: "Рот",
+  brows: "Брови",
+  beard: "Борода",
+  hair: "Волосы",
 };
 
 const FACE_FEATURE_TO_SLOT: Partial<Record<FaceFeatureKey, string>> = {
@@ -115,37 +116,37 @@ function getPaintTargetLabel(target?: SpriteEditorPaintTarget) {
 
 const FACE_PRESETS: Record<keyof Omit<FaceCustomization, "overlays">, Array<{ id: string; label: string }>> = {
   eyes: [
-    { id: "dot_cute", label: "Dot Cute" },
-    { id: "round_kawaii", label: "Round Kawaii" },
-    { id: "wide_shine", label: "Wide Shine" },
-    { id: "sleepy", label: "Sleepy" },
-    { id: "none", label: "None" },
+    { id: "dot_cute", label: "Точки" },
+    { id: "round_kawaii", label: "Круглые" },
+    { id: "wide_shine", label: "Широкие с бликом" },
+    { id: "sleepy", label: "Сонный" },
+    { id: "none", label: "Нет" },
   ],
   mouth: [
-    { id: "tiny_smile", label: "Tiny Smile" },
-    { id: "soft_smile", label: "Soft Smile" },
-    { id: "neutral", label: "Neutral" },
-    { id: "open_smile", label: "Open Smile" },
-    { id: "frown", label: "Frown" },
-    { id: "none", label: "None" },
+    { id: "tiny_smile", label: "Маленькая улыбка" },
+    { id: "soft_smile", label: "Лёгкая улыбка" },
+    { id: "neutral", label: "Нейтральный" },
+    { id: "open_smile", label: "Открытая улыбка" },
+    { id: "frown", label: "Нахмуренный" },
+    { id: "none", label: "Нет" },
   ],
   brows: [
-    { id: "soft_arc", label: "Soft Arc" },
-    { id: "stern", label: "Stern" },
-    { id: "worried", label: "Worried" },
-    { id: "none", label: "None" },
+    { id: "soft_arc", label: "Мягкая дуга" },
+    { id: "stern", label: "Строгий" },
+    { id: "worried", label: "Обеспокоенный" },
+    { id: "none", label: "Нет" },
   ],
   beard: [
-    { id: "short_goatee", label: "Short Goatee" },
-    { id: "full_short", label: "Full Short" },
-    { id: "none", label: "None" },
+    { id: "short_goatee", label: "Короткая эспаньолка" },
+    { id: "full_short", label: "Короткая борода" },
+    { id: "none", label: "Нет" },
   ],
   hair: [
-    { id: "messy_short", label: "Messy Short" },
-    { id: "fringe_short", label: "Fringe Short" },
-    { id: "fringe_long", label: "Fringe Long" },
-    { id: "tuft", label: "Tuft" },
-    { id: "none", label: "None" },
+    { id: "messy_short", label: "Короткие взъерошенные" },
+    { id: "fringe_short", label: "Короткая чёлка" },
+    { id: "fringe_long", label: "Длинная чёлка" },
+    { id: "tuft", label: "Хохолок" },
+    { id: "none", label: "Нет" },
   ],
 };
 
@@ -323,7 +324,7 @@ function openAuthoringWorkflow(
   setCanvasMode("select");
 }
 
-export function InspectorPanel() {
+export function InspectorPanel({ contextual = false }: { contextual?: boolean } = {}) {
   const project              = useStore(s => s.project);
   const editor               = useStore(s => s.editor);
   const renameEntity         = useStore(s => s.renameEntity);
@@ -518,11 +519,11 @@ export function InspectorPanel() {
         className="flex flex-col h-full bg-sidebar border-l border-sidebar-border"
       >
         <div className="px-3 py-2 border-b border-border flex-shrink-0">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inspector</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Свойства</span>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <p className="text-xs text-muted-foreground text-center px-4">
-            Select an entity to inspect its properties.
+            Откройте объект, чтобы увидеть свойства.
           </p>
         </div>
       </aside>
@@ -855,14 +856,15 @@ export function InspectorPanel() {
     >
       {/* Header */}
       <div className="px-3 py-2 border-b border-border flex-shrink-0">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inspector</span>
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Свойства</span>
       </div>
 
       <ScrollArea className="flex-1 ide-scroll">
         <div className="p-3 space-y-4">
+          <details open={contextual ? undefined : true} className="space-y-3"><summary>Дополнительно: объект и диагностика</summary>
           {/* Entity name */}
           <div className="space-y-1">
-            <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Name</Label>
+            <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Название</Label>
             {editingName ? (
               <Input
                 data-testid="inspector-name-input"
@@ -888,17 +890,17 @@ export function InspectorPanel() {
           </div>
 
           <div className="space-y-1 text-[10px] text-muted-foreground">
-            <div className="flex justify-between"><span>Entity Type</span><span className="text-foreground">{activeEntity.entityType}</span></div>
-            <div className="flex justify-between"><span>Active Animation</span><span className="text-foreground">{activeClip?.label ?? activeClip?.name ?? "none"}</span></div>
-            <div className="flex justify-between"><span>State Machine</span><span className="text-foreground">{activeStateMachine?.name ?? "none"}</span></div>
-            <div className="flex justify-between"><span>Root Transform</span><span className="text-foreground">{activeEntity.rootTransform ? "custom" : "identity"}</span></div>
+            <div className="flex justify-between"><span>Тип объекта</span><span className="text-foreground">{activeEntity.entityType}</span></div>
+            <div className="flex justify-between"><span>Текущая анимация</span><span className="text-foreground">{activeClip?.label ?? activeClip?.name ?? "none"}</span></div>
+            <div className="flex justify-between"><span>Просмотр состояний</span><span className="text-foreground">{activeStateMachine?.name ?? "none"}</span></div>
+            <div className="flex justify-between"><span>Положение объекта</span><span className="text-foreground">{activeEntity.rootTransform ? "свой" : "без изменений"}</span></div>
           </div>
 
           <Separator className="bg-border" />
 
           {/* Template info */}
           <div className="space-y-1.5">
-            <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Template</Label>
+            <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Основа</Label>
             <div className="flex items-center gap-2">
               {template && (
                 <div
@@ -918,8 +920,8 @@ export function InspectorPanel() {
           {/* Species */}
           <div className="space-y-1">
             <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Species
-              <span className="ml-1 text-muted-foreground/50 normal-case font-normal">(affects item filtering)</span>
+              Вид
+              <span className="ml-1 text-muted-foreground/50 normal-case font-normal">(влияет на подбор предметов)</span>
             </Label>
             {editingSpecies ? (
               <div className="space-y-1">
@@ -935,7 +937,7 @@ export function InspectorPanel() {
                     if (e.key === "Enter") { setEntitySpecies(activeEntity.id, speciesValue.trim().toLowerCase()); setEditingSpecies(false); }
                     if (e.key === "Escape") setEditingSpecies(false);
                   }}
-                  placeholder="e.g. horse, human, dragon…"
+                  placeholder="например, человек, лошадь, дракон…"
                   className="h-6 text-xs bg-background border-border"
                   autoFocus
                   list="species-suggestions"
@@ -950,7 +952,7 @@ export function InspectorPanel() {
                 onClick={() => { setSpeciesValue(activeEntity.species ?? ""); setEditingSpecies(true); }}
                 data-testid="inspector-species"
               >
-                {activeEntity.species ? activeEntity.species : <span className="text-muted-foreground italic">Not set — click to add</span>}
+                {activeEntity.species ? activeEntity.species : <span className="text-muted-foreground italic">Не задано — нажмите, чтобы добавить</span>}
               </p>
             )}
           </div>
@@ -960,7 +962,7 @@ export function InspectorPanel() {
           {/* ── Compatibility panel ── */}
           <div className="space-y-1.5">
             <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Compatibility
+              Совместимость
               {compatWarnings.length > 0 && (
                 <span className="ml-1.5 text-yellow-500">({compatWarnings.length})</span>
               )}
@@ -969,7 +971,7 @@ export function InspectorPanel() {
             {compatWarnings.length === 0 ? (
               <div className="flex items-center gap-1.5 text-[10px] text-green-600 dark:text-green-400">
                 <CheckCircle2 className="w-3 h-3" />
-                All slots compatible
+                Все крепления совместимы
               </div>
             ) : (
               <div className="space-y-1">
@@ -991,13 +993,14 @@ export function InspectorPanel() {
             )}
           </div>
 
+          </details>
           {/* ── Selected slot item detail ── */}
           {selectedSlotDef && (
             <>
               <Separator className="bg-border" />
               <div className="space-y-1.5">
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Selected Slot: {selectedSlotDef.name}
+                  Выбранное крепление: {uiLabel(selectedSlotDef.name)}
                 </Label>
                 {selectedItem ? (
                   <div className="space-y-2">
@@ -1014,10 +1017,10 @@ export function InspectorPanel() {
                     </div>
                     {/* Item compatibility info */}
                     <div className="space-y-1">
-                      <p className="text-[10px] text-muted-foreground">Supports families:</p>
+                      <p className="text-[10px] text-muted-foreground">Семейства скелетов:</p>
                       <div className="flex flex-wrap gap-1">
                         {selectedItem.compatibility.skeletonFamilies.length === 0 ? (
-                          <Badge variant="outline" className="text-[9px]">All</Badge>
+                          <Badge variant="outline" className="text-[9px]">Все</Badge>
                         ) : selectedItem.compatibility.skeletonFamilies.map(f => {
                           const isMatch = template ? templateMatchesCompatibilityFamily(template, f) : f === entityFamily;
                           return (
@@ -1044,13 +1047,13 @@ export function InspectorPanel() {
                       onClick={() => setEntitySlot(activeEntity.id, selectedSlotDef.id, null)}
                       className="text-[10px] text-destructive/70 hover:text-destructive transition-colors flex items-center gap-1"
                     >
-                      <span>× Unequip</span>
+                      <span>× Снять</span>
                     </button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                     <Info className="w-3 h-3" />
-                    Empty slot — pick an item from the Items tab.
+                    Крепление пустое — выберите предмет во вкладке «Предметы».
                   </div>
                 )}
               </div>
@@ -1062,20 +1065,22 @@ export function InspectorPanel() {
               <Separator className="bg-border" />
               <div className="space-y-2">
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Item Part
+                  Часть предмета
                 </Label>
                 <div className="space-y-1 text-[10px] text-muted-foreground">
-                  <div className="flex justify-between"><span>Item</span><span className="text-foreground">{selectedItem.name}</span></div>
-                  <div className="flex justify-between"><span>Part</span><span className="text-foreground">{selectedPart?.id ?? selection.partId}</span></div>
-                  <div className="flex justify-between"><span>Slot</span><span className="text-foreground">{selectedSlotDef.name}</span></div>
-                  <div className="flex justify-between"><span>Bone</span><span className="text-foreground">{selectedPart?.boneId ?? selectedSlotDef.boneId}</span></div>
-                  <div className="flex justify-between"><span>Anchor</span><span className="text-foreground">{selectedItemAnchor?.id ?? "none"}</span></div>
-                  <div className="flex justify-between"><span>Pivot</span><span className="text-foreground">{selectedPart ? `${selectedPart.pivot.x}, ${selectedPart.pivot.y}` : "n/a"}</span></div>
-                  <div className="flex justify-between"><span>Z Offset</span><span className="text-foreground">{selectedPart?.zOffset ?? 0}</span></div>
+                  <div className="flex justify-between"><span>Предмет</span><span className="text-foreground">{selectedItem.name}</span></div>
+                  <div className="flex justify-between"><span>Крепление</span><span className="text-foreground">{uiLabel(selectedSlotDef.name)}</span></div>
+                  <details open={contextual ? undefined : true}><summary>Дополнительно: привязка части</summary>
+                  <div className="flex justify-between"><span>Часть</span><span className="text-foreground">{selectedPart?.id ?? selection.partId}</span></div>
+                  <div className="flex justify-between"><span>Кость</span><span className="text-foreground">{selectedPart?.boneId ?? selectedSlotDef.boneId}</span></div>
+                  <div className="flex justify-between"><span>Точка крепления</span><span className="text-foreground">{selectedItemAnchor?.id ?? "Нет"}</span></div>
+                  </details>
+                  <div className="flex justify-between"><span>Точка опоры</span><span className="text-foreground">{selectedPart ? `${selectedPart.pivot.x}, ${selectedPart.pivot.y}` : "n/a"}</span></div>
+                  <div className="flex justify-between"><span>Смещение глубины</span><span className="text-foreground">{selectedPart?.zOffset ?? 0}</span></div>
                 </div>
                 <Separator className="bg-border" />
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  {isEditingDefaultFit ? "Default Fit Transform" : "Attachment Transform"}
+                  {isEditingDefaultFit ? "Базовая подгонка" : "Положение крепления"}
                 </Label>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
@@ -1101,7 +1106,7 @@ export function InspectorPanel() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground">Rotation</label>
+                    <label className="text-[10px] text-muted-foreground">Поворот</label>
                     <TransactionalNumberInput
                       testId="inspector-attach-rotation"
                       value={itemPartTransformValues.rotation}
@@ -1112,7 +1117,7 @@ export function InspectorPanel() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground">Scale X</label>
+                    <label className="text-[10px] text-muted-foreground">Масштаб X</label>
                     <TransactionalNumberInput
                       testId="inspector-attach-scale-x"
                       value={itemPartTransformValues.scaleX}
@@ -1123,7 +1128,7 @@ export function InspectorPanel() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground">Scale Y</label>
+                    <label className="text-[10px] text-muted-foreground">Масштаб Y</label>
                     <TransactionalNumberInput
                       testId="inspector-attach-scale-y"
                       value={itemPartTransformValues.scaleY}
@@ -1139,7 +1144,7 @@ export function InspectorPanel() {
                   onClick={() => setAttachmentLockAspect(value => !value)}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
-                  {attachmentLockAspect ? "Lock Aspect: On" : "Lock Aspect: Off"}
+                  {attachmentLockAspect ? "Пропорции: фиксированные" : "Пропорции: свободные"}
                 </button>
                 <button
                   onClick={() => commitAttachmentValues({
@@ -1148,7 +1153,7 @@ export function InspectorPanel() {
                   }, isEditingDefaultFit ? "Reset fit position" : "Reset attachment position")}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
-                  Reset Position
+                  Сбросить положение
                 </button>
                 <button
                   onClick={() => {
@@ -1178,7 +1183,7 @@ export function InspectorPanel() {
                   }}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
-                  Reset Rotation
+                  Сбросить поворот
                 </button>
                 <button
                   onClick={() => commitAttachmentValues({
@@ -1190,7 +1195,7 @@ export function InspectorPanel() {
                   }, isEditingDefaultFit ? "Reset fit transform" : "Reset attachment transform")}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
-                  Reset All
+                  Сбросить всё
                 </button>
                 <button
                   onClick={() => commitAttachmentValues({
@@ -1198,7 +1203,7 @@ export function InspectorPanel() {
                   }, isEditingDefaultFit ? "Flip fit horizontally" : "Flip attachment horizontally")}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
-                  Flip X
+                  Отразить по X
                 </button>
                 <button
                   onClick={() => commitAttachmentValues({
@@ -1206,7 +1211,7 @@ export function InspectorPanel() {
                   }, isEditingDefaultFit ? "Flip fit vertically" : "Flip attachment vertically")}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
-                  Flip Y
+                  Отразить по Y
                 </button>
                 <button
                   onClick={() => commitAttachmentValues({
@@ -1215,26 +1220,26 @@ export function InspectorPanel() {
                   }, isEditingDefaultFit ? "Reset fit scale" : "Reset attachment scale")}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
-                  Reset Scale
+                  Сбросить масштаб
                 </button>
                 <button
                   onClick={() => setEntitySlot(activeEntity.id, selectedSlotDef.id, null)}
                   className="text-[10px] text-destructive/70 hover:text-destructive transition-colors flex items-center gap-1"
                 >
-                  <span>Remove from character</span>
+                  <span>Снять с персонажа</span>
                 </button>
                 <button
                   className="text-[10px] text-primary/60 cursor-not-allowed"
                   disabled
                 >
-                  Edit Source Asset
+                  Изменить исходный рисунок
                 </button>
                 {isEditingDefaultFit && (
                   <button
                     onClick={() => clearItemPartFitAuthoring()}
                     className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                   >
-                    Back To Attachment Override
+                    Вернуться к креплению
                   </button>
                 )}
                 <button
@@ -1247,7 +1252,7 @@ export function InspectorPanel() {
                   }}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
-                  Save Fit For This Template
+                  Сохранить подгонку для этой основы
                 </button>
                 <button
                   data-testid="save-fit-family"
@@ -1259,14 +1264,14 @@ export function InspectorPanel() {
                   }}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
-                  Save Fit For Skeleton Family
+                  Сохранить подгонку для семейства скелетов
                 </button>
                 <button
                   data-testid="reset-fit-default"
                   onClick={() => resetSelectedPartFitToDefault()}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
-                  Reset To Item Default
+                  Вернуть настройки предмета
                 </button>
               </div>
             </>
@@ -1277,18 +1282,18 @@ export function InspectorPanel() {
               <Separator className="bg-border" />
               <div className="space-y-2">
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Equipped Item
+                  Надетый предмет
                 </Label>
                 <div className="space-y-1 text-[10px] text-muted-foreground">
-                  <div className="flex justify-between"><span>Item</span><span className="text-foreground">{selectedItem.name}</span></div>
-                  <div className="flex justify-between"><span>Slot</span><span className="text-foreground">{selectedSlotDef.name}</span></div>
-                  <div className="flex justify-between"><span>Anchor</span><span className="text-foreground">{selectedItemAnchor?.id ?? "none"}</span></div>
-                  <div className="flex justify-between"><span>Shared Attachment Override</span><span className="text-foreground">active</span></div>
-                  <div className="flex justify-between"><span>Default Fit Editing</span><span className="text-foreground">{fitAuthoring && fitAuthoring.slotId === selectedSlotDef.id && fitAuthoring.itemId === selectedItem.id ? fitAuthoring.scope : "off"}</span></div>
-                  <div className="flex justify-between"><span>Palette Override</span><span className="text-foreground">{Object.keys(selectedAssign.paletteOverride ?? {}).length ? "custom" : "default"}</span></div>
+                  <div className="flex justify-between"><span>Предмет</span><span className="text-foreground">{selectedItem.name}</span></div>
+                  <div className="flex justify-between"><span>Крепление</span><span className="text-foreground">{uiLabel(selectedSlotDef.name)}</span></div>
+                  <div className="flex justify-between"><span>Точка крепления</span><span className="text-foreground">{selectedItemAnchor?.id ?? "none"}</span></div>
+                  <div className="flex justify-between"><span>Общая подгонка крепления</span><span className="text-foreground">активное</span></div>
+                  <div className="flex justify-between"><span>Редактирование базовой подгонки</span><span className="text-foreground">{fitAuthoring && fitAuthoring.slotId === selectedSlotDef.id && fitAuthoring.itemId === selectedItem.id ? fitAuthoring.scope : "выкл."}</span></div>
+                  <div className="flex justify-between"><span>Своя палитра</span><span className="text-foreground">{Object.keys(selectedAssign.paletteOverride ?? {}).length ? "свой" : "по умолчанию"}</span></div>
                   {import.meta.env.DEV && (
                     <div className="flex flex-col gap-1">
-                      <span>Attachment Override</span>
+                      <span>Подгонка крепления</span>
                       <span className="text-[9px] text-foreground break-words">
                         {JSON.stringify({
                           x: selectedAssign.attachmentOverride?.offsetX ?? 0,
@@ -1306,7 +1311,7 @@ export function InspectorPanel() {
                   onClick={() => setEntitySlot(activeEntity.id, selectedSlotDef.id, null)}
                   className="text-[10px] text-destructive/70 hover:text-destructive transition-colors flex items-center gap-1"
                 >
-                  <span>Remove from character</span>
+                  <span>Снять с персонажа</span>
                 </button>
                 <button
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
@@ -1316,7 +1321,7 @@ export function InspectorPanel() {
                     beginItemPartFitAuthoring("template", activeEntity.id, selectedSlotDef.id, selectedItem.id, firstPart.id);
                   }}
                 >
-                  Edit Default Fit
+                  Базовая подгонка
                 </button>
                 <button
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
@@ -1325,7 +1330,7 @@ export function InspectorPanel() {
                     setAnimBottomTab("authoring");
                   }}
                 >
-                  Open In Sprite Editor
+                  Открыть рисунок
                 </button>
               </div>
             </>
@@ -1336,19 +1341,19 @@ export function InspectorPanel() {
               <Separator className="bg-border" />
               <div className="space-y-2">
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Template Slot
+                  Крепление основы
                 </Label>
                 <div className="space-y-1 text-[10px] text-muted-foreground">
-                  <div className="flex justify-between"><span>Template</span><span className="text-foreground">{template.name}</span></div>
-                  <div className="flex justify-between"><span>Slot</span><span className="text-foreground">{selectedSlotDef.name}</span></div>
-                  <div className="flex justify-between"><span>Bone</span><span className="text-foreground">{selectedSlotDef.boneId}</span></div>
-                  <div className="flex justify-between"><span>Anchor</span><span className="text-foreground">{selectedSlotDef.defaultAnchorId ?? "none"}</span></div>
-                  <div className="flex justify-between"><span>Z Index</span><span className="text-foreground">{selectedSlotDef.zIndex}</span></div>
-                  <div className="flex justify-between"><span>Allowed</span><span className="text-foreground">{selectedSlotDef.allowedCategories.join(", ") || "none"}</span></div>
+                  <div className="flex justify-between"><span>Основа</span><span className="text-foreground">{uiLabel(template.name)}</span></div>
+                  <div className="flex justify-between"><span>Крепление</span><span className="text-foreground">{uiLabel(selectedSlotDef.name)}</span></div>
+                  <div className="flex justify-between"><span>Кость</span><span className="text-foreground">{selectedSlotDef.boneId}</span></div>
+                  <div className="flex justify-between"><span>Точка крепления</span><span className="text-foreground">{selectedSlotDef.defaultAnchorId ?? "none"}</span></div>
+                  <div className="flex justify-between"><span>Порядок глубины</span><span className="text-foreground">{selectedSlotDef.zIndex}</span></div>
+                  <div className="flex justify-between"><span>Разрешено</span><span className="text-foreground">{selectedSlotDef.allowedCategories.join(", ") || "none"}</span></div>
                 </div>
                 <Separator className="bg-border" />
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Slot Transform
+                  Положение крепления
                 </Label>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
@@ -1374,7 +1379,7 @@ export function InspectorPanel() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground">Rotation</label>
+                    <label className="text-[10px] text-muted-foreground">Поворот</label>
                     <TransactionalNumberInput
                       testId="inspector-slot-rotation"
                       value={slotTransformValues.rotation}
@@ -1385,7 +1390,7 @@ export function InspectorPanel() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground">Scale X</label>
+                    <label className="text-[10px] text-muted-foreground">Масштаб X</label>
                     <TransactionalNumberInput
                       testId="inspector-slot-scale-x"
                       value={slotTransformValues.scaleX}
@@ -1396,7 +1401,7 @@ export function InspectorPanel() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground">Scale Y</label>
+                    <label className="text-[10px] text-muted-foreground">Масштаб Y</label>
                     <TransactionalNumberInput
                       testId="inspector-slot-scale-y"
                       value={slotTransformValues.scaleY}
@@ -1417,7 +1422,7 @@ export function InspectorPanel() {
                   }, "Reset slot transform")}
                   className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 >
-                  Reset slot transform
+                  Сбросить положение крепления
                 </button>
               </div>
             </>
@@ -1428,20 +1433,20 @@ export function InspectorPanel() {
               <Separator className="bg-border" />
               <div className="space-y-2">
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Entity Visual
+                  Рисунок объекта
                 </Label>
                 <div className="space-y-1 text-[10px] text-muted-foreground">
-                  <Label className="text-[10px]">Bone</Label>
+                  <Label className="text-[10px]">Кость</Label>
                   <Select
                     value={selectedEntityVisual.boneId}
                     onValueChange={boneId => updateEntityVisual(activeEntity.id, selectedEntityVisual.id, { boneId })}
                   >
-                    <SelectTrigger className="h-7 text-[11px]" aria-label="Attached bone"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-7 text-[11px]" aria-label="Связанная кость"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {template.bones.map(bone => <SelectItem key={bone.id} value={bone.id}>{bone.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <div className="flex justify-between"><span>Pivot</span><span className="text-foreground">{`${selectedEntityVisual.pivot.x}, ${selectedEntityVisual.pivot.y}`}</span></div>
+                  <div className="flex justify-between"><span>Точка опоры</span><span className="text-foreground">{`${selectedEntityVisual.pivot.x}, ${selectedEntityVisual.pivot.y}`}</span></div>
                 </div>
                 <Separator className="bg-border" />
                 <div className="grid grid-cols-2 gap-2">
@@ -1468,7 +1473,7 @@ export function InspectorPanel() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground">Rotation</label>
+                    <label className="text-[10px] text-muted-foreground">Поворот</label>
                     <TransactionalNumberInput
                       testId="inspector-visual-rotation"
                       value={visualValues.rotation}
@@ -1479,7 +1484,7 @@ export function InspectorPanel() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground">Scale X</label>
+                    <label className="text-[10px] text-muted-foreground">Масштаб X</label>
                     <TransactionalNumberInput
                       testId="inspector-visual-scale-x"
                       value={visualValues.scaleX}
@@ -1490,7 +1495,7 @@ export function InspectorPanel() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground">Scale Y</label>
+                    <label className="text-[10px] text-muted-foreground">Масштаб Y</label>
                     <TransactionalNumberInput
                       testId="inspector-visual-scale-y"
                       value={visualValues.scaleY}
@@ -1501,7 +1506,7 @@ export function InspectorPanel() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground">Z Index</label>
+                    <label className="text-[10px] text-muted-foreground">Порядок глубины</label>
                     <Input
                       data-testid="inspector-visual-zindex"
                       type="number"
@@ -1522,13 +1527,13 @@ export function InspectorPanel() {
                       setAnimBottomTab("authoring");
                     }}
                   >
-                    Edit Source Asset
+                    Изменить исходный рисунок
                   </button>
                   <button
                     onClick={() => removeEntityVisual(activeEntity.id, selectedEntityVisual.id)}
                     className="text-[10px] text-destructive/70 hover:text-destructive transition-colors"
                   >
-                    Detach Source
+                    Отсоединить исходник
                   </button>
                 </div>
               </div>
@@ -1540,17 +1545,17 @@ export function InspectorPanel() {
               <Separator className="bg-border" />
               <div className="space-y-2">
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Face Overlay
+                  Рисунок лица
                 </Label>
                   <div className="space-y-1 text-[10px] text-muted-foreground">
-                    <div className="flex justify-between"><span>Name</span><span className="text-foreground">{selectedFaceOverlay.name}</span></div>
-                    <div className="flex justify-between"><span>Feature</span><span className="text-foreground">{selectedFaceOverlay.featureTag ?? "generic"}</span></div>
-                    <div className="flex justify-between"><span>Target Slot</span><span className="text-foreground">{selection.slotId ?? "head-local"}</span></div>
-                    <div className="flex justify-between"><span>Target Bone</span><span className="text-foreground">head</span></div>
-                    <div className="flex justify-between"><span>Role</span><span className="text-foreground">{getFaceOverlayRoleLabel(selectedFaceOverlay.overlayRole)}</span></div>
-                    <div className="flex justify-between"><span>Paint Pass</span><span className="text-foreground">{getPaintTargetLabel(selectedFaceOverlay.paintTarget)}</span></div>
-                    <div className="flex justify-between"><span>Symmetry</span><span className="text-foreground">{selectedFaceOverlay.symmetryMode ?? "none"}</span></div>
-                    <div className="flex justify-between"><span>Pivot</span><span className="text-foreground">{`${selectedFaceOverlay.pivot.x}, ${selectedFaceOverlay.pivot.y}`}</span></div>
+                    <div className="flex justify-between"><span>Название</span><span className="text-foreground">{selectedFaceOverlay.name}</span></div>
+                    <div className="flex justify-between"><span>Черта лица</span><span className="text-foreground">{selectedFaceOverlay.featureTag ?? "generic"}</span></div>
+                    <div className="flex justify-between"><span>Целевое крепление</span><span className="text-foreground">{selection.slotId ?? "head-local"}</span></div>
+                    <div className="flex justify-between"><span>Целевая кость</span><span className="text-foreground">голова</span></div>
+                    <div className="flex justify-between"><span>Назначение</span><span className="text-foreground">{getFaceOverlayRoleLabel(selectedFaceOverlay.overlayRole)}</span></div>
+                    <div className="flex justify-between"><span>Оформление</span><span className="text-foreground">{getPaintTargetLabel(selectedFaceOverlay.paintTarget)}</span></div>
+                    <div className="flex justify-between"><span>Симметрия</span><span className="text-foreground">{selectedFaceOverlay.symmetryMode ?? "none"}</span></div>
+                    <div className="flex justify-between"><span>Точка опоры</span><span className="text-foreground">{`${selectedFaceOverlay.pivot.x}, ${selectedFaceOverlay.pivot.y}`}</span></div>
                   </div>
                 <Separator className="bg-border" />
                 <div className="grid grid-cols-2 gap-2">
@@ -1575,7 +1580,7 @@ export function InspectorPanel() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground">Rotation</label>
+                    <label className="text-[10px] text-muted-foreground">Поворот</label>
                     <TransactionalNumberInput
                       testId="inspector-face-overlay-rotation"
                       value={selectedFaceOverlay.localTransform.rotation}
@@ -1585,7 +1590,7 @@ export function InspectorPanel() {
                     />
                   </div>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground">Scale</label>
+                    <label className="text-[10px] text-muted-foreground">Масштаб</label>
                     <TransactionalNumberInput
                       testId="inspector-face-overlay-scale"
                       value={selectedFaceOverlay.localTransform.scaleX}
@@ -1613,13 +1618,13 @@ export function InspectorPanel() {
                         openAuthoringWorkflow("face-editor", setActiveAuthoringMode, setAnimBottomTab, setCanvasMode);
                       }}
                   >
-                    Open In Face Mode
+                    Редактировать лицо
                   </button>
                   <button
                     className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                     onClick={() => setEntityFaceOverlayTransform(activeEntity.id, selectedFaceOverlay.id, { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 })}
                   >
-                    Reset Overlay Transform
+                    Сбросить положение рисунка
                   </button>
                 </div>
               </div>
@@ -1631,19 +1636,19 @@ export function InspectorPanel() {
               <Separator className="bg-border" />
               <div className="space-y-2">
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Bone
+                  Кость
                 </Label>
                 <div className="space-y-1 text-[10px] text-muted-foreground">
-                  <div className="flex justify-between"><span>Bone ID</span><span className="text-foreground">{selectedBone.id}</span></div>
-                  <div className="flex justify-between"><span>Name</span><span className="text-foreground">{selectedBone.name}</span></div>
-                  <div className="flex justify-between"><span>Parent</span><span className="text-foreground">{selectedBone.parentId ?? "none"}</span></div>
-                  <div className="flex justify-between"><span>Rest TX</span><span className="text-foreground">{selectedBone.restPose.tx}</span></div>
-                  <div className="flex justify-between"><span>Rest TY</span><span className="text-foreground">{selectedBone.restPose.ty}</span></div>
-                  <div className="flex justify-between"><span>Rest Rotation</span><span className="text-foreground">{selectedBone.restPose.rotation}</span></div>
-                  <div className="flex justify-between"><span>Rest Scale X</span><span className="text-foreground">{selectedBone.restPose.scaleX}</span></div>
-                  <div className="flex justify-between"><span>Rest Scale Y</span><span className="text-foreground">{selectedBone.restPose.scaleY}</span></div>
-                  <div className="flex justify-between"><span>Length</span><span className="text-foreground">{selectedBone.length}</span></div>
-                  <div className="flex justify-between"><span>Assigned Parts</span><span className="text-foreground">{template.boneParts?.filter(part => part.boneId === selectedBone.id).length ?? 0}</span></div>
+                  <div className="flex justify-between"><span>Идентификатор кости</span><span className="text-foreground">{selectedBone.id}</span></div>
+                  <div className="flex justify-between"><span>Название</span><span className="text-foreground">{selectedBone.name}</span></div>
+                  <div className="flex justify-between"><span>Родитель</span><span className="text-foreground">{selectedBone.parentId ?? "none"}</span></div>
+                  <div className="flex justify-between"><span>Исходное смещение X</span><span className="text-foreground">{selectedBone.restPose.tx}</span></div>
+                  <div className="flex justify-between"><span>Исходное смещение Y</span><span className="text-foreground">{selectedBone.restPose.ty}</span></div>
+                  <div className="flex justify-between"><span>Исходный поворот</span><span className="text-foreground">{selectedBone.restPose.rotation}</span></div>
+                  <div className="flex justify-between"><span>Исходный масштаб X</span><span className="text-foreground">{selectedBone.restPose.scaleX}</span></div>
+                  <div className="flex justify-between"><span>Исходный масштаб Y</span><span className="text-foreground">{selectedBone.restPose.scaleY}</span></div>
+                  <div className="flex justify-between"><span>Длина</span><span className="text-foreground">{selectedBone.length}</span></div>
+                  <div className="flex justify-between"><span>Назначенные части</span><span className="text-foreground">{template.boneParts?.filter(part => part.boneId === selectedBone.id).length ?? 0}</span></div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -1675,7 +1680,7 @@ export function InspectorPanel() {
                       setCanvasMode("select");
                     }}
                   >
-                    <Pencil size={12} /> Draw Attached Part
+                    <Pencil size={12} /> Нарисовать связанную часть
                   </button>
                   <button
                     className="text-[10px] text-primary hover:text-primary/80 transition-colors"
@@ -1696,7 +1701,7 @@ export function InspectorPanel() {
                       openAuthoringWorkflow("body-morph", setActiveAuthoringMode, setAnimBottomTab, setCanvasMode);
                     }}
                   >
-                    Focus Body Region
+                    Показать область тела
                   </button>
                   {selectedBone.id === "head" && (
                     <button
@@ -1709,7 +1714,7 @@ export function InspectorPanel() {
                         openAuthoringWorkflow("face-editor", setActiveAuthoringMode, setAnimBottomTab, setCanvasMode);
                       }}
                     >
-                      Draw On Head
+                      Рисовать на голове
                     </button>
                   )}
                 </div>
@@ -1722,15 +1727,15 @@ export function InspectorPanel() {
               <Separator className="bg-border" />
               <div className="space-y-2">
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Anchor
+                  Точка крепления
                 </Label>
                 <div className="space-y-1 text-[10px] text-muted-foreground">
-                  <div className="flex justify-between"><span>Anchor ID</span><span className="text-foreground">{selectedAnchor.id}</span></div>
-                  <div className="flex justify-between"><span>Bone</span><span className="text-foreground">{selectedAnchor.boneId}</span></div>
-                  <div className="flex justify-between"><span>Offset X</span><span className="text-foreground">{selectedAnchor.offsetX}</span></div>
-                  <div className="flex justify-between"><span>Offset Y</span><span className="text-foreground">{selectedAnchor.offsetY}</span></div>
-                  <div className="flex justify-between"><span>Rotation</span><span className="text-foreground">{selectedAnchor.rotation}</span></div>
-                  <div className="flex justify-between"><span>Usage</span><span className="text-foreground">{template.slots.filter(slot => slot.defaultAnchorId === selectedAnchor.id).length}</span></div>
+                  <div className="flex justify-between"><span>Идентификатор крепления</span><span className="text-foreground">{selectedAnchor.id}</span></div>
+                  <div className="flex justify-between"><span>Кость</span><span className="text-foreground">{selectedAnchor.boneId}</span></div>
+                  <div className="flex justify-between"><span>Смещение X</span><span className="text-foreground">{selectedAnchor.offsetX}</span></div>
+                  <div className="flex justify-between"><span>Смещение Y</span><span className="text-foreground">{selectedAnchor.offsetY}</span></div>
+                  <div className="flex justify-between"><span>Поворот</span><span className="text-foreground">{selectedAnchor.rotation}</span></div>
+                  <div className="flex justify-between"><span>Использование</span><span className="text-foreground">{template.slots.filter(slot => slot.defaultAnchorId === selectedAnchor.id).length}</span></div>
                 </div>
               </div>
             </>
@@ -1738,17 +1743,18 @@ export function InspectorPanel() {
 
           <Separator className="bg-border" />
 
+          <details open={contextual ? undefined : true} className="space-y-3"><summary>Дополнительно: внешность и данные</summary>
             <details className="space-y-3">
               <summary className="text-xs cursor-pointer text-foreground">Пропорции тела</summary>
               <div className="flex items-center justify-between">
-                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Body Morph</Label>
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Пропорции тела</Label>
                 <button
                 className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 onClick={() => {
                   openAuthoringWorkflow("body-morph", setActiveAuthoringMode, setAnimBottomTab, setCanvasMode);
                 }}
               >
-                  Morph Mode
+                  Режим пропорций
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-1">
@@ -1802,31 +1808,31 @@ export function InspectorPanel() {
           <details className="space-y-3">
             <summary className="text-xs cursor-pointer text-foreground">Лицо и волосы</summary>
             <div className="flex items-center justify-between">
-              <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Face Editor</Label>
+              <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Редактор лица</Label>
               <button
                 className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                 onClick={() => {
                   openAuthoringWorkflow("face-editor", setActiveAuthoringMode, setAnimBottomTab, setCanvasMode);
                 }}
               >
-                Face Mode
+                Режим лица
               </button>
             </div>
             {faceCustomization && (
                 <div className="space-y-3">
                   <div className="rounded border border-border bg-accent/20 p-2 space-y-1 text-[10px] text-muted-foreground">
-                    <div className="flex justify-between"><span>Focus</span><span className="text-foreground">{activeFaceFeature}</span></div>
-                    <div className="flex justify-between"><span>Target Slot</span><span className="text-foreground">{faceAuthoring.activeSlotId ?? "head-local"}</span></div>
-                    <div className="flex justify-between"><span>Target Bone</span><span className="text-foreground">{faceAuthoring.activeBoneId ?? "head"}</span></div>
-                    <div className="flex justify-between"><span>Workflow</span><span className="text-foreground">{faceAuthoring.workflowMode ?? "feature"}</span></div>
-                    <div className="flex justify-between"><span>Draft Role</span><span className="text-foreground">{faceAuthoring.draftOverlayRole ?? "detail"}</span></div>
-                    <div className="flex justify-between"><span>Draft Paint</span><span className="text-foreground">{faceAuthoring.draftPaintTarget ?? "both"}</span></div>
-                    <div className="flex justify-between"><span>Draft Symmetry</span><span className="text-foreground">{faceAuthoring.draftSymmetryMode ?? "none"}</span></div>
-                    <div className="flex justify-between"><span>Draw Mode</span><span className="text-foreground">{faceAuthoring.drawMode ?? "none"}</span></div>
-                    <div className="flex justify-between"><span>Canvas Focus</span><span className="text-foreground">{faceAuthoring.focusMode ?? "document"}</span></div>
-                    <div className="flex justify-between"><span>Role Filter</span><span className="text-foreground">{faceAuthoring.overlayRoleFilter ?? "all"}</span></div>
-                    <div className="flex justify-between"><span>Paint Filter</span><span className="text-foreground">{faceAuthoring.paintTargetFilter ?? "all"}</span></div>
-                    <div className="flex justify-between"><span>Grouping</span><span className="text-foreground">{faceAuthoring.overlayGrouping ?? "feature"}</span></div>
+                    <div className="flex justify-between"><span>Область</span><span className="text-foreground">{activeFaceFeature}</span></div>
+                    <div className="flex justify-between"><span>Целевое крепление</span><span className="text-foreground">{faceAuthoring.activeSlotId ?? "head-local"}</span></div>
+                    <div className="flex justify-between"><span>Целевая кость</span><span className="text-foreground">{faceAuthoring.activeBoneId ?? "head"}</span></div>
+                    <div className="flex justify-between"><span>Задача</span><span className="text-foreground">{faceAuthoring.workflowMode ?? "feature"}</span></div>
+                    <div className="flex justify-between"><span>Назначение рисунка</span><span className="text-foreground">{faceAuthoring.draftOverlayRole ?? "detail"}</span></div>
+                    <div className="flex justify-between"><span>Оформление рисунка</span><span className="text-foreground">{faceAuthoring.draftPaintTarget ?? "both"}</span></div>
+                    <div className="flex justify-between"><span>Симметрия рисунка</span><span className="text-foreground">{faceAuthoring.draftSymmetryMode ?? "none"}</span></div>
+                    <div className="flex justify-between"><span>Режим рисования</span><span className="text-foreground">{faceAuthoring.drawMode ?? "none"}</span></div>
+                    <div className="flex justify-between"><span>Область холста</span><span className="text-foreground">{faceAuthoring.focusMode ?? "document"}</span></div>
+                    <div className="flex justify-between"><span>Фильтр назначений</span><span className="text-foreground">{faceAuthoring.overlayRoleFilter ?? "all"}</span></div>
+                    <div className="flex justify-between"><span>Фильтр оформления</span><span className="text-foreground">{faceAuthoring.paintTargetFilter ?? "all"}</span></div>
+                    <div className="flex justify-between"><span>Группировка</span><span className="text-foreground">{faceAuthoring.overlayGrouping ?? "feature"}</span></div>
                   </div>
                   <div className="grid grid-cols-3 gap-1">
                   {(Object.keys(FACE_FEATURE_LABELS) as FaceFeatureKey[]).map(featureKey => (
@@ -1873,7 +1879,7 @@ export function InspectorPanel() {
                               setEntityFaceFeature(activeEntity.id, featureKey, { visible: e.target.checked });
                             }}
                           />
-                          Visible
+                          Видимый
                         </label>
                       </div>
                       <Select
@@ -1952,7 +1958,7 @@ export function InspectorPanel() {
 
                 <div className="rounded border border-border bg-accent/20 p-2 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-foreground">Face Overlays</span>
+                    <span className="text-[11px] text-foreground">Рисунки лица</span>
                     <button
                       className="text-[10px] text-primary hover:text-primary/80 transition-colors"
                       onClick={() => {
@@ -1968,12 +1974,12 @@ export function InspectorPanel() {
                         setAnimBottomTab("authoring");
                       }}
                     >
-                      New Overlay
+                      Новый рисунок лица
                     </button>
                   </div>
                   {visibleFaceOverlays.length === 0 ? (
                     <p className="text-[10px] text-muted-foreground">
-                      No custom face overlays for the current feature.
+                      Нет своих рисунков для выбранной черты лица.
                     </p>
                   ) : (
                     <div className="space-y-1">
@@ -1991,7 +1997,7 @@ export function InspectorPanel() {
                             <div className="min-w-0">
                               <div className="truncate text-[11px] text-foreground">{overlay.name}</div>
                               <div className="truncate text-[10px] text-muted-foreground">
-                                z {overlay.zOffset} · pivot {overlay.pivot.x}, {overlay.pivot.y}
+                                Порядок глубины {overlay.zOffset} · опора {overlay.pivot.x}, {overlay.pivot.y}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -2023,13 +2029,13 @@ export function InspectorPanel() {
                                   setAnimBottomTab("authoring");
                                 }}
                               >
-                                Edit
+                                Редактировать
                               </button>
                               <button
                                 className="text-[10px] text-destructive/70 hover:text-destructive transition-colors"
                                 onClick={() => removeEntityFaceOverlay(activeEntity.id, overlay.id)}
                               >
-                                Remove
+                                Убрать
                               </button>
                             </div>
                           </div>
@@ -2046,7 +2052,7 @@ export function InspectorPanel() {
 
           {/* Palette tokens */}
           <div className="space-y-2">
-            <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Palette</Label>
+            <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Палитра</Label>
             <div className="grid grid-cols-2 gap-2">
               {(Object.keys(activeEntity.palette) as (keyof PaletteTokens)[]).map(token => (
                 <div key={token} className="space-y-0.5">
@@ -2080,10 +2086,10 @@ export function InspectorPanel() {
           {/* Equipped items summary */}
           <div className="space-y-2">
             <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Equipped ({equippedItems.length})
+              Надето ({equippedItems.length})
             </Label>
             {equippedItems.length === 0 && (
-              <p className="text-xs text-muted-foreground">No items equipped. Use the Slots tab to equip items.</p>
+              <p className="text-xs text-muted-foreground">Нет экипировки. Выберите предметы в разделе «Экипировка».</p>
             )}
             <div className="space-y-1">
               {equippedItems.map(({ slot, item }) => {
@@ -2107,7 +2113,7 @@ export function InspectorPanel() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-foreground truncate">{item!.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{slot!.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{uiLabel(slot!.name)}</p>
                     </div>
                     {isIncompat && <AlertTriangle className="w-3 h-3 text-yellow-500 flex-shrink-0" />}
                   </div>
@@ -2121,8 +2127,8 @@ export function InspectorPanel() {
           {/* Per-entity StyleSet override */}
           <div className="space-y-1.5">
             <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Style Set
-              <span className="ml-1 text-muted-foreground/50 normal-case font-normal">(this entity only)</span>
+              Стиль
+              <span className="ml-1 text-muted-foreground/50 normal-case font-normal">(только этот объект)</span>
             </Label>
             <Select
               value={activeEntity.styleSetId}
@@ -2143,7 +2149,7 @@ export function InspectorPanel() {
               </SelectContent>
             </Select>
             <p className="text-[10px] text-muted-foreground">
-              Overrides the scene style for this entity. Use the toolbar to reset all entities at once.
+              Стиль этого объекта. Общий стиль персонажей можно изменить в настройках проекта.
             </p>
           </div>
 
@@ -2151,34 +2157,34 @@ export function InspectorPanel() {
 
           {/* Metadata */}
           <div className="space-y-1.5">
-            <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Metadata</Label>
+            <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Дополнительные данные</Label>
             <div className="space-y-1 text-[10px] text-muted-foreground">
               <div className="flex justify-between">
-                <span>ID</span>
+                <span>Идентификатор</span>
                 <span className="font-mono text-foreground text-[9px]">{activeEntity.id.slice(0, 8)}…</span>
               </div>
               <div className="flex justify-between">
-                <span>Created</span>
+                <span>Создано</span>
                 <span className="text-foreground">{new Date(activeEntity.createdAt).toLocaleDateString()}</span>
               </div>
               <div className="flex justify-between">
-                <span>License</span>
+                <span>Лицензия</span>
                 <span className="text-foreground">{activeEntity.licenseMeta.licenseType}</span>
               </div>
               {import.meta.env.DEV && (
                 <>
                   <div className="flex justify-between">
-                    <span>Entity Visuals</span>
+                    <span>Рисунки объекта</span>
                     <span className="text-foreground">{activeEntity.visuals?.length ?? 0}</span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span>Visual Bones</span>
+                    <span>Кости рисунков</span>
                     <span className="text-[9px] text-foreground break-words">
                       {(activeEntity.visuals ?? []).map(visual => visual.boneId).join(", ") || "none"}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span>Slot Overrides</span>
+                    <span>Настройки креплений</span>
                     <span className="text-[9px] text-foreground break-words">
                       {activeEntity.slots
                         .filter(slot => slot.itemId)
@@ -2197,6 +2203,7 @@ export function InspectorPanel() {
               )}
             </div>
           </div>
+          </details>
         </div>
       </ScrollArea>
     </aside>

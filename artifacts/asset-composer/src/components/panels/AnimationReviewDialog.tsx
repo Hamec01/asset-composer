@@ -44,23 +44,23 @@ export function AnimationReviewDialog({ open, onOpenChange }: { open: boolean; o
   };
   return <Dialog open={open} onOpenChange={value => { if (!busy) onOpenChange(value); }}>
     <DialogContent className="max-h-[90vh] overflow-y-auto">
-      <DialogTitle>Export Animation Review</DialogTitle>
-      <DialogDescription>{clip?.label ?? "Select an animation"} · RIGHT and LEFT · Normal / Rig Colors / Depth Colors / Skeleton. Includes SVG, PNG and diagnostic JSON.</DialogDescription>
+      <DialogTitle>Скачать проверку анимации</DialogTitle>
+      <DialogDescription>{clip?.label ?? "Select an animation"} · Справа и слева · Обычный вид / Цвета скелета / Цвета глубины / Скелет. SVG, PNG и JSON диагностики.</DialogDescription>
       <div className="space-y-2">
-        <div className="grid grid-cols-[1fr_100px_32px] gap-2 text-xs text-muted-foreground"><span>Phase</span><span>Time (ms)</span><span /></div>
+        <div className="grid grid-cols-[1fr_100px_32px] gap-2 text-xs text-muted-foreground"><span>Фаза</span><span>Время, мс</span><span /></div>
         {markers.map((marker, i) => <div key={i} className="grid grid-cols-[1fr_100px_32px] gap-2">
           <input aria-label={`Review phase ${i + 1}`} disabled={busy} className="min-w-0 rounded border bg-background px-2 py-1 text-sm" value={marker.label} onChange={e => edit(markers.map((m, j) => j === i ? { ...m, label: e.target.value } : m))} />
           <input aria-label={`Review time ${i + 1}`} disabled={busy} type="number" min={0} max={clip?.durationMs} step="any" className="min-w-0 rounded border bg-background px-2 py-1 text-sm" value={Number.isNaN(marker.timeMs) ? "" : marker.timeMs} onChange={e => edit(markers.map((m, j) => j === i ? { ...m, timeMs: e.target.valueAsNumber } : m))} />
           <button aria-label={`Remove review marker ${i + 1}`} disabled={busy} onClick={() => edit(markers.filter((_, j) => j !== i))}>×</button>
         </div>)}
-        <Button variant="outline" size="sm" disabled={busy || !clip} onClick={() => edit([...markers, { label: "Pose", timeMs: clip?.durationMs ?? 0 }])}>Add marker</Button>
+        <Button variant="outline" size="sm" disabled={busy || !clip} onClick={() => edit([...markers, { label: "Поза", timeMs: clip?.durationMs ?? 0 }])}>Добавить маркер</Button>
       </div>
-      <p className="text-xs text-muted-foreground">Markers are saved only with “Save markers to clip”. Rig Colors always includes depth shading. Equipment and joint labels follow the current X-Ray settings.</p>
+      <p className="text-xs text-muted-foreground">Маркеры сохраняются кнопкой «Сохранить маркеры в клип». Цвета скелета учитывают глубину. Экипировка и подписи зависят от настроек диагностики.</p>
       {(validation || error) && <p role="alert" className="text-sm text-red-400">{error || validation}</p>}
-      {saved && <p role="status" className="text-sm text-emerald-400">Markers saved to clip.</p>}
+      {saved && <p role="status" className="text-sm text-emerald-400">Маркеры сохранены в клип.</p>}
       <div className="flex justify-end gap-2">
-        <Button variant="outline" disabled={busy || !!validation || !clip} onClick={() => { if (clip) { saveMarkers(clip.id, markers); setSaved(true); } }}>Save markers to clip</Button>
-        <Button disabled={busy || !!validation || !entity || !template} onClick={exportReview}>{busy ? "Generating…" : "Download review ZIP"}</Button>
+        <Button variant="outline" disabled={busy || !!validation || !clip} onClick={() => { if (clip) { saveMarkers(clip.id, markers); setSaved(true); } }}>Сохранить маркеры в клип</Button>
+        <Button disabled={busy || !!validation || !entity || !template} onClick={exportReview}>{busy ? "Подготовка…" : "Скачать проверку в ZIP"}</Button>
       </div>
     </DialogContent>
   </Dialog>;

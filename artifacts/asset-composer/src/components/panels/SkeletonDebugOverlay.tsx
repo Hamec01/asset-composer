@@ -98,7 +98,7 @@ export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; p
             })}
           </g>)}
           <rect x={grip.x-1.5} y={grip.y-1.5} width={3} height={3} />
-          {labels && <text x={grip.x+2} y={grip.y+4} fontSize={9/viewport.zoom} stroke="none" fill={color}>Grip {side.toUpperCase()}</text>}
+          {labels && <text x={grip.x+2} y={grip.y+4} fontSize={9/viewport.zoom} stroke="none" fill={color}>Хват {side.toUpperCase()}</text>}
         </g>;
       })}
       <polyline points={["root", "pelvis", "spine", "chest", "neck", "head"].map(id => pose.bones.get(id)).filter(p => !!p).map(p => `${p!.x},${p!.y}`).join(" ")} fill="none" stroke="#B7A2EF" strokeWidth={1/viewport.zoom} />
@@ -112,60 +112,60 @@ export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; p
   return <>
     <AnimationReviewDialog open={reviewOpen} onOpenChange={setReviewOpen} />
     <div className="absolute right-3 top-3 z-20" onMouseDown={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()} onWheel={event => event.stopPropagation()}>
-      <button type="button" aria-label="Debug" title="Debug" aria-expanded={open} onClick={() => setOpen(!open)} className="flex h-8 items-center gap-1 rounded border border-border bg-card px-2 text-xs"><Bug size={14} />Debug</button>
+      <button type="button" aria-label="Диагностика" title="Диагностика" aria-expanded={open} onClick={() => setOpen(!open)} className="flex h-8 items-center gap-1 rounded border border-border bg-card px-2 text-xs"><Bug size={14} />Диагностика</button>
       {open && <div className="absolute right-0 mt-1 max-h-[80vh] w-72 overflow-y-auto rounded border border-border bg-card p-2 text-xs space-y-2">
-        <label className="block font-semibold">Animation X-Ray
-          <select aria-label="Animation X-Ray mode" value={xray.mode} onChange={e => setXray({mode:e.target.value as AnimationXRayMode})} className="mt-1 w-full rounded border border-border bg-card p-1 font-normal">
-            <option value="normal">Normal</option><option value="rig">Rig Colors</option><option value="depth">Depth Colors</option><option value="skeleton">Skeleton</option>
+        <label className="block font-semibold">Диагностика анимации
+          <select aria-label="Режим диагностики" value={xray.mode} onChange={e => setXray({mode:e.target.value as AnimationXRayMode})} className="mt-1 w-full rounded border border-border bg-card p-1 font-normal">
+            <option value="normal">Обычный вид</option><option value="rig">Цвета скелета</option><option value="depth">Цвета глубины</option><option value="skeleton">Скелет</option>
           </select>
         </label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={xray.depthShading} disabled={xray.mode !== "rig"} onChange={e => setXray({depthShading:e.target.checked})}/>Depth shading</label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={xray.markers} disabled={!xrayEnabled} onChange={e => setXray({markers:e.target.checked})}/>X-Ray joint markers and labels</label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={xray.showEquipment} disabled={!xrayEnabled} onChange={e => setXray({showEquipment:e.target.checked})}/>Show equipment</label>
-        <button type="button" disabled={!clip || !entity} onClick={() => setReviewOpen(true)} className="w-full rounded border border-border px-2 py-1 disabled:opacity-40">Export Animation Review</button>
-        {xrayEnabled && <div aria-label="Animation X-Ray legend" className="space-y-1 border-t border-border pt-2">
+        <label className="flex items-center gap-2"><input type="checkbox" checked={xray.depthShading} disabled={xray.mode !== "rig"} onChange={e => setXray({depthShading:e.target.checked})}/>Оттенки глубины</label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={xray.markers} disabled={!xrayEnabled} onChange={e => setXray({markers:e.target.checked})}/>Маркеры и подписи суставов</label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={xray.showEquipment} disabled={!xrayEnabled} onChange={e => setXray({showEquipment:e.target.checked})}/>Показать экипировку</label>
+        <button type="button" disabled={!clip || !entity} onClick={() => setReviewOpen(true)} className="w-full rounded border border-border px-2 py-1 disabled:opacity-40">Скачать проверку анимации</button>
+        {xrayEnabled && <div aria-label="Обозначения диагностики" className="space-y-1 border-t border-border pt-2">
           <div className="grid grid-cols-2 gap-1">{Object.entries(ANATOMY_COLORS).map(([name,color]) => <div key={name} className="flex items-center gap-1"><span style={{backgroundColor:color}} className="inline-block h-3 w-3 border border-white/30"/>{name}</div>)}</div>
-          <div>Dark = FAR · Base = CROSS_BODY/BODY · Bright = NEAR/FRONT</div>
-          <div>SL/EL/HL · SR/ER/HR: shoulder / elbow / hand. N/F: near / far.</div>
-          <details><summary className="cursor-pointer">Depth slot colors</summary>{Object.entries(DEPTH_COLORS).map(([slot,color]) => <div key={slot} style={{color}}>{slot}</div>)}<div>No depth metadata = neutral gray.</div></details>
-          {roots && <div aria-label="Shoulder roots" className="font-mono text-[10px]">SL: {roots.left ? `${roots.left.x.toFixed(2)}, ${roots.left.y.toFixed(2)}` : "—"}<br/>SR: {roots.right ? `${roots.right.x.toFixed(2)}, ${roots.right.y.toFixed(2)}` : "—"}<br/>Distance: {roots.distance?.toFixed(2) ?? "—"} rig units</div>}
+          <div>Тёмный — сзади · обычный — на теле · яркий — спереди</div>
+          <div>SL/EL/HL · SR/ER/HR: плечо / локоть / кисть. N/F: ближний / дальний.</div>
+          <details><summary className="cursor-pointer">Цвета уровней глубины</summary>{Object.entries(DEPTH_COLORS).map(([slot,color]) => <div key={slot} style={{color}}>{slot}</div>)}<div>Без данных глубины — нейтральный серый.</div></details>
+          {roots && <div aria-label="Начала плеч" className="font-mono text-[10px]">SL: {roots.left ? `${roots.left.x.toFixed(2)}, ${roots.left.y.toFixed(2)}` : "—"}<br/>SR: {roots.right ? `${roots.right.x.toFixed(2)}, ${roots.right.y.toFixed(2)}` : "—"}<br/>Расстояние: {roots.distance?.toFixed(2) ?? "—"} единицы скелета</div>}
           {presented?.presentation?.supported === false && <div role="status" className="text-amber-400">{XRAY_UNSUPPORTED}</div>}
         </div>}
-        <label className="flex items-center gap-2"><input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />Skeleton</label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={depthEnabled} onChange={e => setDepthEnabled(e.target.checked)} />Depth Layers</label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={stackEnabled} onChange={e => setStackEnabled(e.target.checked)} />Draw Order Inspector</label>
-        <label className="flex items-center gap-2"><input type="checkbox" disabled={!enabled} checked={onion} onChange={e => setOnion(e.target.checked)} />Onion Skin</label>
-        <label className="flex items-center gap-2"><input type="checkbox" disabled={!enabled} checked={labels} onChange={e => setLabels(e.target.checked)} />Joint labels</label>
-        <select aria-label="Joint trajectory" disabled={!enabled} value={joint} onChange={e => setJoint(e.target.value)} className="w-full border border-border bg-card">
-          <option value="">Trajectory: None</option>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />Скелет</label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={depthEnabled} onChange={e => setDepthEnabled(e.target.checked)} />Слои глубины</label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={stackEnabled} onChange={e => setStackEnabled(e.target.checked)} />Порядок отрисовки</label>
+        <label className="flex items-center gap-2"><input type="checkbox" disabled={!enabled} checked={onion} onChange={e => setOnion(e.target.checked)} />Соседние кадры</label>
+        <label className="flex items-center gap-2"><input type="checkbox" disabled={!enabled} checked={labels} onChange={e => setLabels(e.target.checked)} />Подписи суставов</label>
+        <select aria-label="Траектория сустава" disabled={!enabled} value={joint} onChange={e => setJoint(e.target.value)} className="w-full border border-border bg-card">
+          <option value="">Траектория: нет</option>
           {["elbow_l", "elbow_r", "hand_l", "hand_r"].map(id => <option key={id} value={id}>{id.replace("hand", "wrist")}</option>)}
         </select>
-        <button type="button" disabled={!enabled || !clip} aria-label="Export arm diagnostics" title="Export arm diagnostics" onClick={exportDiagnostics} className="flex h-6 w-6 items-center justify-center rounded border border-border"><Download size={14} /></button>
-        {(depthWarnings.length>0 || clearanceWarnings.length>0) && <div aria-label="Animation validation warnings" className="max-h-40 overflow-auto border-t border-border text-amber-400">
+        <button type="button" disabled={!enabled || !clip} aria-label="Скачать диагностику рук" title="Скачать диагностику рук" onClick={exportDiagnostics} className="flex h-6 w-6 items-center justify-center rounded border border-border"><Download size={14} /></button>
+        {(depthWarnings.length>0 || clearanceWarnings.length>0) && <div aria-label="Проверка анимации" className="max-h-40 overflow-auto border-t border-border text-amber-400">
           {[...depthWarnings,...clearanceWarnings.map(w=>w.message)].map(message=><div key={message}>{message}</div>)}
         </div>}
         {clip && <details className="border-t border-border pt-1">
-          <summary className="cursor-pointer">Animation data</summary>
-          <textarea aria-label="Animation data" readOnly value={JSON.stringify(clip,null,2)} className="mt-1 h-24 w-full resize-y border border-border bg-background p-1 font-mono text-[10px]" />
+          <summary className="cursor-pointer">Данные анимации</summary>
+          <textarea aria-label="Данные анимации" readOnly value={JSON.stringify(clip,null,2)} className="mt-1 h-24 w-full resize-y border border-border bg-background p-1 font-mono text-[10px]" />
         </details>}
         {enabled && diagnostics.map(d => <div key={d.id} className={`border-t border-border pt-1 font-mono text-[10px] ${d.warnings.length ? "text-red-400" : "text-emerald-400"}`}>
           <div>{d.id}: {d.upper.toFixed(2)} / {d.lower.toFixed(2)}</div>
-          <div>Length {d.lengthError.toFixed(2)}% · Grip {d.gripError?.toFixed(2) ?? "—"} px</div>
-          <div>Δ {d.velocity.toFixed(2)} px / {d.turn.toFixed(1)}° · Bend {d.bend}</div>
+          <div>Длина {d.lengthError.toFixed(2)}% · хват {d.gripError?.toFixed(2) ?? "—"} пикс.</div>
+          <div>Δ {d.velocity.toFixed(2)} пикс. / {d.turn.toFixed(1)}° · изгиб {d.bend}</div>
           {d.warnings.length > 0 && <div>{d.warnings.join(", ")}</div>}
         </div>)}
       </div>}
     </div>
-    {stackEnabled && scene && <div aria-label="Draw Order Inspector" className="absolute left-3 bottom-3 z-20 w-72 max-h-[85%] overflow-auto rounded border border-border bg-card p-2 text-[10px] font-mono" onMouseDown={e=>e.stopPropagation()} onWheel={e=>e.stopPropagation()}>
-      <div className="sticky top-0 bg-card pb-1 font-semibold">Draw Order · {Math.round(time*(clip?.fps ?? 24)/1000)}f · {entity?.appearance?.view}</div>
+    {stackEnabled && scene && <div aria-label="Порядок отрисовки" className="absolute left-3 bottom-3 z-20 w-72 max-h-[85%] overflow-auto rounded border border-border bg-card p-2 text-[10px] font-mono" onMouseDown={e=>e.stopPropagation()} onWheel={e=>e.stopPropagation()}>
+      <div className="sticky top-0 bg-card pb-1 font-semibold">Порядок отрисовки · {Math.round(time*(clip?.fps ?? 24)/1000)}f · {entity?.appearance?.view}</div>
       {scene.visuals.map((visual,index)=><div key={visual.id} className="border-t border-border py-0.5" style={{color:visual.renderDepth ? DEPTH_COLORS[visual.renderDepth.slot] : undefined}}>
         <div title={`${visual.id} · ${visual.renderDepth?.segment ?? "body"} · ${visual.renderDepth?.source ?? "legacy"}`}>{String(index+1).padStart(2,"0")} {visual.renderDepth?.role} {visual.partId ?? visual.renderDepth?.boneId ?? visual.id} · {visual.renderDepth?.slot ?? "LEGACY"}</div>
-        {visual.renderDepth?.source === "binding" && <div className="text-muted-foreground">Pose: {visual.renderDepth.boneId} · Depth: {visual.renderDepth.depthBoneId}</div>}
+        {visual.renderDepth?.source === "binding" && <div className="text-muted-foreground">Поза: {visual.renderDepth.boneId} · Глубина: {visual.renderDepth.depthBoneId}</div>}
       </div>)}
     </div>}
-    {skeleton && <svg aria-label="Debug skeleton" className="absolute inset-0 h-full w-full pointer-events-none z-10">
+    {skeleton && <svg aria-label="Показать скелет" className="absolute inset-0 h-full w-full pointer-events-none z-10">
       <svg x="50%" y="50%" overflow="visible"><g transform={`translate(${viewport.panX} ${viewport.panY}) scale(${viewport.zoom})`}>
-        {enabled && clearance && <ellipse aria-label="Head forbidden core" cx={clearance.center.x} cy={clearance.center.y} rx={clearance.radiusX} ry={clearance.radiusY} fill={clearanceWarnings.length ? "#FF737D" : "#69D98E"} fillOpacity={.1} stroke={clearanceWarnings.length ? "#FF737D" : "#69D98E"} strokeDasharray="2 2" strokeWidth={1/viewport.zoom}/>}
+        {enabled && clearance && <ellipse aria-label="Запретная область головы" cx={clearance.center.x} cy={clearance.center.y} rx={clearance.radiusX} ry={clearance.radiusY} fill={clearanceWarnings.length ? "#FF737D" : "#69D98E"} fillOpacity={.1} stroke={clearanceWarnings.length ? "#FF737D" : "#69D98E"} strokeDasharray="2 2" strokeWidth={1/viewport.zoom}/>}
         {trajectory.length > 0 && <polyline points={trajectory.map(p => `${p!.x},${p!.y}`).join(" ")} fill="none" stroke="#FFE07B" strokeWidth={1/viewport.zoom} />}
         {onion && [-2,-1,1,2].map(offset => <g key={offset}>{draw(Math.max(0, Math.min(clip?.durationMs ?? time, time+offset*1000/(clip?.fps ?? 24))), .18, false)}</g>)}
         {enabled && draw(time, 1, labels)}
@@ -187,7 +187,7 @@ export function SkeletonDebugOverlay({ viewport }: { viewport: { zoom: number; p
         </g>)}
       </g></svg>
     </svg>}
-    {presented?.presentation?.supported && <svg aria-label="Animation X-Ray joints" className="pointer-events-none absolute inset-0 z-10 h-full w-full">
+    {presented?.presentation?.supported && <svg aria-label="Суставы на диагностике" className="pointer-events-none absolute inset-0 z-10 h-full w-full">
       <svg x="50%" y="50%" overflow="visible"><g transform={`translate(${viewport.panX} ${viewport.panY}) scale(${viewport.zoom})`} dangerouslySetInnerHTML={{__html:xrayOverlaySvg(presented,viewport.zoom)}}/></svg>
     </svg>}
   </>;

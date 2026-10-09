@@ -81,12 +81,11 @@ export async function renderContent(
   if (content.kind === "composite") {
     ctx.scale(width / content.width, height / content.height);
     for (const child of content.children) {
-      const image = await renderContent(
-        child.content,
-        content.width,
-        content.height,
-        assets,
-      );
+      // Atlas windows magnify a small part of a large image. Keep the original
+      // raster until the final draw instead of shrinking the entire atlas first.
+      const image = child.content.kind === "raster"
+        ? live.get(child.content.assetId) ?? await loadImage(contentUri(child.content, { assets, documents: [] }))
+        : await renderContent(child.content, width, height, assets);
       ctx.save();
       ctx.transform(...child.matrix);
       ctx.globalAlpha = child.opacity;
@@ -311,7 +310,9 @@ const esc = (s: string) =>
 /** Share bitmap bytes across body parts, alpha masks and review cells. */
 export function createSvgAssetRegistry(prefix = "artwork") {
   const ids = new Map<string, string>();
+  let serial = 0;
   return {
+    uniqueId(base: string) { return `${prefix.replace(/[^a-zA-Z0-9_]/g, "_")}_${base}_${serial++}`; },
     reference(uri: string) {
       let id = ids.get(uri);
       if (!id) { id = `${prefix}_${ids.size}`; ids.set(uri, id); }
@@ -385,7 +386,7 @@ export function visualSvg(v: EvaluatedVisual, pixelScale = 1, registry?: SvgAsse
       v.assetResources ?? getVisualResources().assets,
       registry,
     ),
-    id = "v_" + v.id.replace(/[^a-zA-Z0-9_]/g, "_");
+    id = registry?.uniqueId("v_" + v.id.replace(/[^a-zA-Z0-9_]/g, "_")) ?? "v_" + v.id.replace(/[^a-zA-Z0-9_]/g, "_");
   const filter = v.tint
     ? '<filter id="' +
       id +

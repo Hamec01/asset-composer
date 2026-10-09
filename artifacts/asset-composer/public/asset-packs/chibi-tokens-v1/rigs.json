@@ -1,0 +1,1922 @@
+[
+  {
+    "id": "chibi_token_skin_0",
+    "name": "Чиби-токен · Тёплая кожа",
+    "description": "Рисованный чиби без рук и ног. Модульное лицо, одежда и плавающее оружие.",
+    "skeletonFamily": "chibi_token_v1",
+    "rigFamilyId": "chibi_token_v1",
+    "viewProfile": "side_view",
+    "defaultFacing": "east",
+    "entityTypes": [
+      "character"
+    ],
+    "bones": [
+      {
+        "id": "root",
+        "name": "Весь персонаж",
+        "parentId": null,
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "chest",
+        "name": "Корпус",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": -42,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "head",
+        "name": "Голова",
+        "parentId": "chest",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": -30,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_weapon",
+        "name": "Предмет справа",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 85,
+          "ty": -63,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_offhand",
+        "name": "Щит у корпуса",
+        "parentId": "chest",
+        "length": 12,
+        "restPose": {
+          "tx": -54,
+          "ty": -16,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_arrow",
+        "name": "Стрела",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 85,
+          "ty": -63,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_cover",
+        "name": "Укрытие",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_hook",
+        "name": "Крючок",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 105,
+          "ty": -153,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_base",
+        "name": "Подставка",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_support",
+        "name": "Второй рабочий предмет",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": -75,
+          "ty": -70,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_station",
+        "name": "Рабочее место",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 140,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "id": "token_station",
+        "name": "Рабочее место / декорация",
+        "boneId": "token_station",
+        "zIndex": -940,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_support",
+        "name": "Второй рабочий предмет",
+        "boneId": "token_support",
+        "zIndex": -585,
+        "allowedCategories": [
+          "weapon_main"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_headshape",
+        "name": "Форма головы / ушей",
+        "boneId": "head",
+        "zIndex": -789,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_eyes",
+        "name": "Глаза",
+        "boneId": "head",
+        "zIndex": -720,
+        "allowedCategories": [
+          "eyes"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_hair",
+        "name": "Причёска",
+        "boneId": "head",
+        "zIndex": -690,
+        "allowedCategories": [
+          "hair"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_torso",
+        "name": "Одежда и броня",
+        "boneId": "chest",
+        "zIndex": -850,
+        "allowedCategories": [
+          "torso"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_headgear",
+        "name": "Шлем / головной убор",
+        "boneId": "head",
+        "zIndex": -670,
+        "allowedCategories": [
+          "head_cover"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_main",
+        "name": "Оружие / предмет рядом",
+        "boneId": "token_weapon",
+        "zIndex": -600,
+        "allowedCategories": [
+          "weapon_main"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_off",
+        "name": "Щит",
+        "boneId": "token_offhand",
+        "zIndex": -590,
+        "allowedCategories": [
+          "shield"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_projectile",
+        "name": "Стрела",
+        "boneId": "token_arrow",
+        "zIndex": -580,
+        "allowedCategories": [
+          "weapon_main"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_beard",
+        "name": "Борода / усы",
+        "boneId": "head",
+        "zIndex": -700,
+        "allowedCategories": [
+          "beard"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_nose",
+        "name": "Нос",
+        "boneId": "head",
+        "zIndex": -715,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_mouth",
+        "name": "Рот",
+        "boneId": "head",
+        "zIndex": -702,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_scar",
+        "name": "Шрам",
+        "boneId": "head",
+        "zIndex": -708,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_freckles",
+        "name": "Веснушки",
+        "boneId": "head",
+        "zIndex": -709,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_mole",
+        "name": "Родинки",
+        "boneId": "head",
+        "zIndex": -707,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_brows",
+        "name": "Брови",
+        "boneId": "head",
+        "zIndex": -705,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_patch",
+        "name": "Повязка",
+        "boneId": "head",
+        "zIndex": -680,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_circlet",
+        "name": "Диадема",
+        "boneId": "head",
+        "zIndex": -675,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_cover",
+        "name": "Укрытие",
+        "boneId": "token_cover",
+        "zIndex": -500,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_hook",
+        "name": "Крючок",
+        "boneId": "token_hook",
+        "zIndex": -660,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_base",
+        "name": "Подставка",
+        "boneId": "token_base",
+        "zIndex": -980,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      }
+    ],
+    "anchors": {},
+    "paletteTokens": {
+      "skin": "#C19A73",
+      "hair": "#62432C",
+      "primaryCloth": "#5E4932",
+      "secondaryCloth": "#7C8141",
+      "metal": "#AAA9A3",
+      "accent": "#CAA34F",
+      "outline": "#21180F",
+      "shadow": "#00000033"
+    },
+    "baseBodyLayers": [],
+    "boneParts": [
+      {
+        "id": "token_body",
+        "boneId": "chest",
+        "content": {
+          "kind": "composite",
+          "width": 124,
+          "height": 92,
+          "children": [
+            {
+              "content": {
+                "kind": "raster",
+                "assetId": "token_atlas_anatomy"
+              },
+              "matrix": [
+                4.462633451957295,
+                0,
+                0,
+                5.313559322033898,
+                -11.91459074733096,
+                -299.3898305084746
+              ],
+              "opacity": 1
+            }
+          ]
+        },
+        "naturalWidth": 124,
+        "naturalHeight": 92,
+        "localX": 0,
+        "localY": 0,
+        "zOffset": -900
+      },
+      {
+        "id": "token_head",
+        "boneId": "head",
+        "content": {
+          "kind": "composite",
+          "width": 134,
+          "height": 156,
+          "children": [
+            {
+              "content": {
+                "kind": "raster",
+                "assetId": "token_atlas_anatomy"
+              },
+              "matrix": [
+                4.125,
+                0,
+                0,
+                3.542372881355932,
+                -7.934210526315789,
+                -114.57627118644068
+              ],
+              "opacity": 1
+            }
+          ]
+        },
+        "naturalWidth": 134,
+        "naturalHeight": 156,
+        "localX": 0,
+        "localY": -70,
+        "zOffset": -790
+      }
+    ],
+    "previewWidth": 256,
+    "previewHeight": 256,
+    "thumbnailSvg": ""
+  },
+  {
+    "id": "chibi_token_skin_1",
+    "name": "Чиби-токен · Светлая кожа",
+    "description": "Рисованный чиби без рук и ног. Модульное лицо, одежда и плавающее оружие.",
+    "skeletonFamily": "chibi_token_v1",
+    "rigFamilyId": "chibi_token_v1",
+    "viewProfile": "side_view",
+    "defaultFacing": "east",
+    "entityTypes": [
+      "character"
+    ],
+    "bones": [
+      {
+        "id": "root",
+        "name": "Весь персонаж",
+        "parentId": null,
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "chest",
+        "name": "Корпус",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": -42,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "head",
+        "name": "Голова",
+        "parentId": "chest",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": -30,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_weapon",
+        "name": "Предмет справа",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 85,
+          "ty": -63,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_offhand",
+        "name": "Щит у корпуса",
+        "parentId": "chest",
+        "length": 12,
+        "restPose": {
+          "tx": -54,
+          "ty": -16,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_arrow",
+        "name": "Стрела",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 85,
+          "ty": -63,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_cover",
+        "name": "Укрытие",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_hook",
+        "name": "Крючок",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 105,
+          "ty": -153,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_base",
+        "name": "Подставка",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_support",
+        "name": "Второй рабочий предмет",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": -75,
+          "ty": -70,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_station",
+        "name": "Рабочее место",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 140,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "id": "token_station",
+        "name": "Рабочее место / декорация",
+        "boneId": "token_station",
+        "zIndex": -940,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_support",
+        "name": "Второй рабочий предмет",
+        "boneId": "token_support",
+        "zIndex": -585,
+        "allowedCategories": [
+          "weapon_main"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_headshape",
+        "name": "Форма головы / ушей",
+        "boneId": "head",
+        "zIndex": -789,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_eyes",
+        "name": "Глаза",
+        "boneId": "head",
+        "zIndex": -720,
+        "allowedCategories": [
+          "eyes"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_hair",
+        "name": "Причёска",
+        "boneId": "head",
+        "zIndex": -690,
+        "allowedCategories": [
+          "hair"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_torso",
+        "name": "Одежда и броня",
+        "boneId": "chest",
+        "zIndex": -850,
+        "allowedCategories": [
+          "torso"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_headgear",
+        "name": "Шлем / головной убор",
+        "boneId": "head",
+        "zIndex": -670,
+        "allowedCategories": [
+          "head_cover"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_main",
+        "name": "Оружие / предмет рядом",
+        "boneId": "token_weapon",
+        "zIndex": -600,
+        "allowedCategories": [
+          "weapon_main"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_off",
+        "name": "Щит",
+        "boneId": "token_offhand",
+        "zIndex": -590,
+        "allowedCategories": [
+          "shield"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_projectile",
+        "name": "Стрела",
+        "boneId": "token_arrow",
+        "zIndex": -580,
+        "allowedCategories": [
+          "weapon_main"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_beard",
+        "name": "Борода / усы",
+        "boneId": "head",
+        "zIndex": -700,
+        "allowedCategories": [
+          "beard"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_nose",
+        "name": "Нос",
+        "boneId": "head",
+        "zIndex": -715,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_mouth",
+        "name": "Рот",
+        "boneId": "head",
+        "zIndex": -702,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_scar",
+        "name": "Шрам",
+        "boneId": "head",
+        "zIndex": -708,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_freckles",
+        "name": "Веснушки",
+        "boneId": "head",
+        "zIndex": -709,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_mole",
+        "name": "Родинки",
+        "boneId": "head",
+        "zIndex": -707,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_brows",
+        "name": "Брови",
+        "boneId": "head",
+        "zIndex": -705,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_patch",
+        "name": "Повязка",
+        "boneId": "head",
+        "zIndex": -680,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_circlet",
+        "name": "Диадема",
+        "boneId": "head",
+        "zIndex": -675,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_cover",
+        "name": "Укрытие",
+        "boneId": "token_cover",
+        "zIndex": -500,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_hook",
+        "name": "Крючок",
+        "boneId": "token_hook",
+        "zIndex": -660,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_base",
+        "name": "Подставка",
+        "boneId": "token_base",
+        "zIndex": -980,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      }
+    ],
+    "anchors": {},
+    "paletteTokens": {
+      "skin": "#F0C6A2",
+      "hair": "#62432C",
+      "primaryCloth": "#5E4932",
+      "secondaryCloth": "#7C8141",
+      "metal": "#AAA9A3",
+      "accent": "#CAA34F",
+      "outline": "#21180F",
+      "shadow": "#00000033"
+    },
+    "baseBodyLayers": [],
+    "boneParts": [
+      {
+        "id": "token_body",
+        "boneId": "chest",
+        "content": {
+          "kind": "composite",
+          "width": 124,
+          "height": 92,
+          "children": [
+            {
+              "content": {
+                "kind": "raster",
+                "assetId": "token_atlas_anatomy"
+              },
+              "matrix": [
+                4.510791366906475,
+                0,
+                0,
+                5.313559322033898,
+                -149.42446043165467,
+                -299.3898305084746
+              ],
+              "opacity": 1
+            }
+          ]
+        },
+        "naturalWidth": 124,
+        "naturalHeight": 92,
+        "localX": 0,
+        "localY": 0,
+        "zOffset": -900
+      },
+      {
+        "id": "token_head",
+        "boneId": "head",
+        "content": {
+          "kind": "composite",
+          "width": 134,
+          "height": 156,
+          "children": [
+            {
+              "content": {
+                "kind": "raster",
+                "assetId": "token_atlas_anatomy"
+              },
+              "matrix": [
+                4.152317880794702,
+                0,
+                0,
+                3.5323943661971833,
+                -144.64900662251657,
+                -113.81408450704225
+              ],
+              "opacity": 1
+            }
+          ]
+        },
+        "naturalWidth": 134,
+        "naturalHeight": 156,
+        "localX": 0,
+        "localY": -70,
+        "zOffset": -790
+      }
+    ],
+    "previewWidth": 256,
+    "previewHeight": 256,
+    "thumbnailSvg": ""
+  },
+  {
+    "id": "chibi_token_skin_2",
+    "name": "Чиби-токен · Тёмная кожа",
+    "description": "Рисованный чиби без рук и ног. Модульное лицо, одежда и плавающее оружие.",
+    "skeletonFamily": "chibi_token_v1",
+    "rigFamilyId": "chibi_token_v1",
+    "viewProfile": "side_view",
+    "defaultFacing": "east",
+    "entityTypes": [
+      "character"
+    ],
+    "bones": [
+      {
+        "id": "root",
+        "name": "Весь персонаж",
+        "parentId": null,
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "chest",
+        "name": "Корпус",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": -42,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "head",
+        "name": "Голова",
+        "parentId": "chest",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": -30,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_weapon",
+        "name": "Предмет справа",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 85,
+          "ty": -63,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_offhand",
+        "name": "Щит у корпуса",
+        "parentId": "chest",
+        "length": 12,
+        "restPose": {
+          "tx": -54,
+          "ty": -16,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_arrow",
+        "name": "Стрела",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 85,
+          "ty": -63,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_cover",
+        "name": "Укрытие",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_hook",
+        "name": "Крючок",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 105,
+          "ty": -153,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_base",
+        "name": "Подставка",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_support",
+        "name": "Второй рабочий предмет",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": -75,
+          "ty": -70,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_station",
+        "name": "Рабочее место",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 140,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "id": "token_station",
+        "name": "Рабочее место / декорация",
+        "boneId": "token_station",
+        "zIndex": -940,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_support",
+        "name": "Второй рабочий предмет",
+        "boneId": "token_support",
+        "zIndex": -585,
+        "allowedCategories": [
+          "weapon_main"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_headshape",
+        "name": "Форма головы / ушей",
+        "boneId": "head",
+        "zIndex": -789,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_eyes",
+        "name": "Глаза",
+        "boneId": "head",
+        "zIndex": -720,
+        "allowedCategories": [
+          "eyes"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_hair",
+        "name": "Причёска",
+        "boneId": "head",
+        "zIndex": -690,
+        "allowedCategories": [
+          "hair"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_torso",
+        "name": "Одежда и броня",
+        "boneId": "chest",
+        "zIndex": -850,
+        "allowedCategories": [
+          "torso"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_headgear",
+        "name": "Шлем / головной убор",
+        "boneId": "head",
+        "zIndex": -670,
+        "allowedCategories": [
+          "head_cover"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_main",
+        "name": "Оружие / предмет рядом",
+        "boneId": "token_weapon",
+        "zIndex": -600,
+        "allowedCategories": [
+          "weapon_main"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_off",
+        "name": "Щит",
+        "boneId": "token_offhand",
+        "zIndex": -590,
+        "allowedCategories": [
+          "shield"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_projectile",
+        "name": "Стрела",
+        "boneId": "token_arrow",
+        "zIndex": -580,
+        "allowedCategories": [
+          "weapon_main"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_beard",
+        "name": "Борода / усы",
+        "boneId": "head",
+        "zIndex": -700,
+        "allowedCategories": [
+          "beard"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_nose",
+        "name": "Нос",
+        "boneId": "head",
+        "zIndex": -715,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_mouth",
+        "name": "Рот",
+        "boneId": "head",
+        "zIndex": -702,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_scar",
+        "name": "Шрам",
+        "boneId": "head",
+        "zIndex": -708,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_freckles",
+        "name": "Веснушки",
+        "boneId": "head",
+        "zIndex": -709,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_mole",
+        "name": "Родинки",
+        "boneId": "head",
+        "zIndex": -707,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_brows",
+        "name": "Брови",
+        "boneId": "head",
+        "zIndex": -705,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_patch",
+        "name": "Повязка",
+        "boneId": "head",
+        "zIndex": -680,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_circlet",
+        "name": "Диадема",
+        "boneId": "head",
+        "zIndex": -675,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_cover",
+        "name": "Укрытие",
+        "boneId": "token_cover",
+        "zIndex": -500,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_hook",
+        "name": "Крючок",
+        "boneId": "token_hook",
+        "zIndex": -660,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_base",
+        "name": "Подставка",
+        "boneId": "token_base",
+        "zIndex": -980,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      }
+    ],
+    "anchors": {},
+    "paletteTokens": {
+      "skin": "#765035",
+      "hair": "#62432C",
+      "primaryCloth": "#5E4932",
+      "secondaryCloth": "#7C8141",
+      "metal": "#AAA9A3",
+      "accent": "#CAA34F",
+      "outline": "#21180F",
+      "shadow": "#00000033"
+    },
+    "baseBodyLayers": [],
+    "boneParts": [
+      {
+        "id": "token_body",
+        "boneId": "chest",
+        "content": {
+          "kind": "composite",
+          "width": 124,
+          "height": 92,
+          "children": [
+            {
+              "content": {
+                "kind": "raster",
+                "assetId": "token_atlas_anatomy"
+              },
+              "matrix": [
+                4.494623655913978,
+                0,
+                0,
+                5.313559322033898,
+                -285.3333333333333,
+                -299.3898305084746
+              ],
+              "opacity": 1
+            }
+          ]
+        },
+        "naturalWidth": 124,
+        "naturalHeight": 92,
+        "localX": 0,
+        "localY": 0,
+        "zOffset": -900
+      },
+      {
+        "id": "token_head",
+        "boneId": "head",
+        "content": {
+          "kind": "composite",
+          "width": 134,
+          "height": 156,
+          "children": [
+            {
+              "content": {
+                "kind": "raster",
+                "assetId": "token_atlas_anatomy"
+              },
+              "matrix": [
+                4.152317880794702,
+                0,
+                0,
+                3.5323943661971833,
+                -281.3112582781457,
+                -113.81408450704225
+              ],
+              "opacity": 1
+            }
+          ]
+        },
+        "naturalWidth": 134,
+        "naturalHeight": 156,
+        "localX": 0,
+        "localY": -70,
+        "zOffset": -790
+      }
+    ],
+    "previewWidth": 256,
+    "previewHeight": 256,
+    "thumbnailSvg": ""
+  },
+  {
+    "id": "chibi_token_skin_3",
+    "name": "Чиби-токен · Оливковая кожа",
+    "description": "Рисованный чиби без рук и ног. Модульное лицо, одежда и плавающее оружие.",
+    "skeletonFamily": "chibi_token_v1",
+    "rigFamilyId": "chibi_token_v1",
+    "viewProfile": "side_view",
+    "defaultFacing": "east",
+    "entityTypes": [
+      "character"
+    ],
+    "bones": [
+      {
+        "id": "root",
+        "name": "Весь персонаж",
+        "parentId": null,
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "chest",
+        "name": "Корпус",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": -42,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "head",
+        "name": "Голова",
+        "parentId": "chest",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": -30,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_weapon",
+        "name": "Предмет справа",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 85,
+          "ty": -63,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_offhand",
+        "name": "Щит у корпуса",
+        "parentId": "chest",
+        "length": 12,
+        "restPose": {
+          "tx": -54,
+          "ty": -16,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_arrow",
+        "name": "Стрела",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 85,
+          "ty": -63,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_cover",
+        "name": "Укрытие",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_hook",
+        "name": "Крючок",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 105,
+          "ty": -153,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_base",
+        "name": "Подставка",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 0,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_support",
+        "name": "Второй рабочий предмет",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": -75,
+          "ty": -70,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      },
+      {
+        "id": "token_station",
+        "name": "Рабочее место",
+        "parentId": "root",
+        "length": 12,
+        "restPose": {
+          "tx": 140,
+          "ty": 0,
+          "rotation": 0,
+          "scaleX": 1,
+          "scaleY": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "id": "token_station",
+        "name": "Рабочее место / декорация",
+        "boneId": "token_station",
+        "zIndex": -940,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_support",
+        "name": "Второй рабочий предмет",
+        "boneId": "token_support",
+        "zIndex": -585,
+        "allowedCategories": [
+          "weapon_main"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_headshape",
+        "name": "Форма головы / ушей",
+        "boneId": "head",
+        "zIndex": -789,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_eyes",
+        "name": "Глаза",
+        "boneId": "head",
+        "zIndex": -720,
+        "allowedCategories": [
+          "eyes"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_hair",
+        "name": "Причёска",
+        "boneId": "head",
+        "zIndex": -690,
+        "allowedCategories": [
+          "hair"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_torso",
+        "name": "Одежда и броня",
+        "boneId": "chest",
+        "zIndex": -850,
+        "allowedCategories": [
+          "torso"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_headgear",
+        "name": "Шлем / головной убор",
+        "boneId": "head",
+        "zIndex": -670,
+        "allowedCategories": [
+          "head_cover"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_main",
+        "name": "Оружие / предмет рядом",
+        "boneId": "token_weapon",
+        "zIndex": -600,
+        "allowedCategories": [
+          "weapon_main"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_off",
+        "name": "Щит",
+        "boneId": "token_offhand",
+        "zIndex": -590,
+        "allowedCategories": [
+          "shield"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_projectile",
+        "name": "Стрела",
+        "boneId": "token_arrow",
+        "zIndex": -580,
+        "allowedCategories": [
+          "weapon_main"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_beard",
+        "name": "Борода / усы",
+        "boneId": "head",
+        "zIndex": -700,
+        "allowedCategories": [
+          "beard"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_nose",
+        "name": "Нос",
+        "boneId": "head",
+        "zIndex": -715,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_mouth",
+        "name": "Рот",
+        "boneId": "head",
+        "zIndex": -702,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_scar",
+        "name": "Шрам",
+        "boneId": "head",
+        "zIndex": -708,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_freckles",
+        "name": "Веснушки",
+        "boneId": "head",
+        "zIndex": -709,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_mole",
+        "name": "Родинки",
+        "boneId": "head",
+        "zIndex": -707,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_brows",
+        "name": "Брови",
+        "boneId": "head",
+        "zIndex": -705,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_patch",
+        "name": "Повязка",
+        "boneId": "head",
+        "zIndex": -680,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_circlet",
+        "name": "Диадема",
+        "boneId": "head",
+        "zIndex": -675,
+        "allowedCategories": [
+          "face"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_cover",
+        "name": "Укрытие",
+        "boneId": "token_cover",
+        "zIndex": -500,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_hook",
+        "name": "Крючок",
+        "boneId": "token_hook",
+        "zIndex": -660,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      },
+      {
+        "id": "token_base",
+        "name": "Подставка",
+        "boneId": "token_base",
+        "zIndex": -980,
+        "allowedCategories": [
+          "static_part"
+        ],
+        "required": false,
+        "defaultItemId": null
+      }
+    ],
+    "anchors": {},
+    "paletteTokens": {
+      "skin": "#8A8C64",
+      "hair": "#62432C",
+      "primaryCloth": "#5E4932",
+      "secondaryCloth": "#7C8141",
+      "metal": "#AAA9A3",
+      "accent": "#CAA34F",
+      "outline": "#21180F",
+      "shadow": "#00000033"
+    },
+    "baseBodyLayers": [],
+    "boneParts": [
+      {
+        "id": "token_body",
+        "boneId": "chest",
+        "content": {
+          "kind": "composite",
+          "width": 124,
+          "height": 92,
+          "children": [
+            {
+              "content": {
+                "kind": "raster",
+                "assetId": "token_atlas_anatomy"
+              },
+              "matrix": [
+                4.510791366906475,
+                0,
+                0,
+                5.313559322033898,
+                -423.7410071942446,
+                -299
+              ],
+              "opacity": 1
+            }
+          ]
+        },
+        "naturalWidth": 124,
+        "naturalHeight": 92,
+        "localX": 0,
+        "localY": 0,
+        "zOffset": -900
+      },
+      {
+        "id": "token_head",
+        "boneId": "head",
+        "content": {
+          "kind": "composite",
+          "width": 134,
+          "height": 156,
+          "children": [
+            {
+              "content": {
+                "kind": "raster",
+                "assetId": "token_atlas_anatomy"
+              },
+              "matrix": [
+                4.152317880794702,
+                0,
+                0,
+                3.4833333333333334,
+                -418.86092715231786,
+                -110.5
+              ],
+              "opacity": 1
+            }
+          ]
+        },
+        "naturalWidth": 134,
+        "naturalHeight": 156,
+        "localX": 0,
+        "localY": -70,
+        "zOffset": -790
+      }
+    ],
+    "previewWidth": 256,
+    "previewHeight": 256,
+    "thumbnailSvg": ""
+  }
+]

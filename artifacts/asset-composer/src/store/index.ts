@@ -1,4 +1,7 @@
 import { setVisualResources } from "@/lib/visualContent";
+import { enforceTokenEquipment } from "@/lib/chibiEquipment";
+import { refreshTokenPackDefinitions } from "@/data/chibiTokenPack";
+import { parseMetrics } from "@/lib/svgMetrics";
 import { vectorSource } from "@/lib/visualContent";
 import { create } from "zustand";
 import { DEFAULT_XRAY_OPTIONS, type AnimationXRayOptions } from "@/lib/animationXRay";
@@ -550,7 +553,7 @@ function makeDefaultProject(): Project {
   return {
     id:              createId(),
     version:         "2.0",
-    name:            "New Project",
+    name:            "Новый проект",
     description:     "",
     entities:        [],
     templates:       cloneTemplates().filter(template => template.id.startsWith("biped_profile_")),
@@ -935,6 +938,11 @@ export const useStore = create<AppStore>()(
     deleteEntity: (entityId) => {
       set(state => {
         state.project.entities = state.project.entities.filter(e => e.id !== entityId);
+        const itemDocIds = new Set(state.project.items.flatMap(item => item.parts?.map(part => part.editorDocumentId) ?? []));
+        const documents = state.project.editorMeta.spriteEditorDocuments;
+        state.project.editorMeta.spriteEditorDocuments = documents.filter(doc => doc.target.entityId !== entityId || doc.target.itemId || doc.target.propId || itemDocIds.has(doc.id));
+        for (const doc of state.project.editorMeta.spriteEditorDocuments) if (doc.target.entityId === entityId) delete doc.target.entityId;
+        if (!state.project.editorMeta.spriteEditorDocuments.some(doc => doc.id === state.project.editorMeta.activeSpriteDocumentId)) state.project.editorMeta.activeSpriteDocumentId = null;
         if (state.project.activeEntityId === entityId) {
           state.project.activeEntityId = state.project.entities[0]?.id ?? null;
         }
@@ -998,7 +1006,8 @@ export const useStore = create<AppStore>()(
       } else {
         afterSlots = [...beforeSlots, { slotId, itemId, paletteOverride: {}, attachmentOverride: {} }];
       }
-      get().pushCommand(makeSetSlotCommand(entityId, beforeSlots, afterSlots));
+        if (entity.templateId.startsWith("chibi_token_skin_")) afterSlots = enforceTokenEquipment(afterSlots, slotId);
+        get().pushCommand(makeSetSlotCommand(entityId, beforeSlots, afterSlots));
       set(state => {
         if (state.project.activeEntityId !== entityId) return;
         if (state.editor.selectedSlotId !== slotId && state.editor.selection.kind !== "equipped-item" && state.editor.selection.kind !== "item-part") {
@@ -1378,7 +1387,16 @@ export const useStore = create<AppStore>()(
       const store = get();
       const item = store.project.items.find(i => i.id === itemId);
       if (!item) return;
-      const part = (partId && item.parts?.find(p => p.id === partId)) || item.parts?.[0];
+      let part = (partId && item.parts?.find(p => p.id === partId)) || item.parts?.[0];
+      if (!part && item.svgLayers.length) {
+        const source = item.svgLayers[0];
+        const metrics = parseMetrics(source.svgData ?? "<svg viewBox='0 0 128 128'/>");
+        part = { id: `${item.id}_part`, boneId: "root", svgData: source.svgData, content: source.content,
+          metrics, pivot: { x: metrics.viewBoxWidth / 2, y: metrics.viewBoxHeight / 2, preset: "center" },
+          localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 }, coordinateMode: "bone_local", zOffset: source.zOffset };
+        const initialPart = part;
+        set(state => { const current = state.project.items.find(i => i.id === itemId); if (current) current.parts = [initialPart]; });
+      }
       if (!part) return;
       const existingDoc = store.project.editorMeta.spriteEditorDocuments.find(d =>
         (d.target.kind === "item-part" || d.target.kind === "world-object") && d.target.itemId === itemId && (d.target.partId === part.id || !partId)
@@ -1392,6 +1410,8 @@ export const useStore = create<AppStore>()(
           state.project.editorMeta.spriteEditorDocuments.push(doc);
         }
         state.project.editorMeta.activeSpriteDocumentId = doc.id;
+        const currentPart = state.project.items.find(i => i.id === itemId)?.parts?.find(p => p.id === part!.id);
+        if (currentPart) currentPart.editorDocumentId = doc.id;
         state.project.editorMeta.activeAuthoringMode = "sprite-editor";
         state.animPlayback.activeTab = "authoring";
         state.project.updatedAt = Date.now();
@@ -1399,6 +1419,10 @@ export const useStore = create<AppStore>()(
     },
     deleteProjectItem: (itemId) => {
       set(state => {
+        const documentIds = new Set(state.project.items.find(i => i.id === itemId)?.parts?.map(p => p.editorDocumentId));
+        const related = state.project.editorMeta.spriteEditorDocuments.filter(d => documentIds.has(d.id) || d.target.itemId === itemId || d.target.propId === itemId);
+        const rigIds = new Set(related.map(d => d.studioEntityId).filter(Boolean));
+        state.project.entities = state.project.entities.filter(e => !rigIds.has(e.id));
         state.project.items = state.project.items.filter(i => i.id !== itemId);
         // Remove item from any equipped slots
         for (const entity of state.project.entities) {
@@ -1406,9 +1430,9 @@ export const useStore = create<AppStore>()(
         }
         // Remove associated documents
         state.project.editorMeta.spriteEditorDocuments = state.project.editorMeta.spriteEditorDocuments.filter(
-          d => d.target.itemId !== itemId && d.target.propId !== itemId
+          d => !documentIds.has(d.id) && d.target.itemId !== itemId && d.target.propId !== itemId
         );
-        if (state.project.editorMeta.activeSpriteDocumentId?.includes(itemId)) {
+        if (related.some(d => d.id === state.project.editorMeta.activeSpriteDocumentId)) {
           state.project.editorMeta.activeSpriteDocumentId = state.project.editorMeta.spriteEditorDocuments[0]?.id ?? null;
         }
         state.project.updatedAt = Date.now();
@@ -1554,6 +1578,7 @@ export const useStore = create<AppStore>()(
     loadProject: (raw: unknown) => {
       animController.pause();
       const migrated = resetTransientProjectUiState(parseProjectSnapshot(raw) as Project);
+      refreshTokenPackDefinitions(migrated);
       for (const entity of migrated.entities) {
         if (!entity.templateId.startsWith("biped_profile_reference_")) continue;
         const template = migrated.templates.find(candidate => candidate.id === entity.templateId);

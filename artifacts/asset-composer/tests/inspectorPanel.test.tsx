@@ -225,11 +225,11 @@ describe("InspectorPanel", () => {
     setItemPartSelection();
     renderInspector();
 
-    expect(document.body.textContent).toContain("Entity Type");
-    expect(document.body.textContent).toContain("Root Transform");
-    expect(document.body.textContent).toContain("Item Part");
-    expect(document.body.textContent).toContain("Anchor");
-    expect(document.body.textContent).toContain("Attachment Transform");
+    expect(document.body.textContent).toContain("Тип объекта");
+    expect(document.body.textContent).toContain("Положение объекта");
+    expect(document.body.textContent).toContain("Часть предмета");
+    expect(document.body.textContent).toContain("Точка крепления");
+    expect(document.body.textContent).toContain("Положение крепления");
     expect(getInput("inspector-attach-x")).toBeTruthy();
   });
 
@@ -237,9 +237,9 @@ describe("InspectorPanel", () => {
     setTemplateSlotSelection();
     renderInspector();
 
-    expect(document.body.textContent).toContain("Template Slot");
-    expect(document.body.textContent).toContain("Allowed");
-    expect(document.body.textContent).toContain("Slot Transform");
+    expect(document.body.textContent).toContain("Крепление основы");
+    expect(document.body.textContent).toContain("Разрешено");
+    expect(document.body.textContent).toContain("Положение крепления");
     expect(getInput("inspector-slot-x")).toBeTruthy();
   });
 
@@ -247,7 +247,7 @@ describe("InspectorPanel", () => {
     setEntityVisualSelection();
     renderInspector();
 
-    expect(document.body.textContent).toContain("Entity Visual");
+    expect(document.body.textContent).toContain("Рисунок объекта");
     expect(getInput("inspector-visual-x")).toBeTruthy();
   });
 
@@ -255,19 +255,19 @@ describe("InspectorPanel", () => {
     setBoneSelection();
     renderInspector();
 
-    expect(document.body.textContent).toContain("Bone");
-    expect(document.body.textContent).toContain("Rest Rotation");
-    expect(document.body.textContent).toContain("Assigned Parts");
-    expect(document.body.textContent).toContain("Focus Body Region");
-    expect(document.body.textContent).toContain("Draw On Head");
+    expect(document.body.textContent).toContain("Кость");
+    expect(document.body.textContent).toContain("Исходный поворот");
+    expect(document.body.textContent).toContain("Назначенные части");
+    expect(document.body.textContent).toContain("Показать область тела");
+    expect(document.body.textContent).toContain("Рисовать на голове");
   });
 
   it("shows anchor inspector for anchor selection", () => {
     setAnchorSelection();
     renderInspector();
 
-    expect(document.body.textContent).toContain("Anchor");
-    expect(document.body.textContent).toContain("Usage");
+    expect(document.body.textContent).toContain("Точка крепления");
+    expect(document.body.textContent).toContain("Использование");
     expect(document.body.textContent).toContain("hair_top");
   });
 
@@ -275,13 +275,13 @@ describe("InspectorPanel", () => {
     setFaceOverlaySelection();
     renderInspector();
 
-    expect(document.body.textContent).toContain("Face Overlay");
+    expect(document.body.textContent).toContain("Рисунок лица");
     expect(document.body.textContent).toContain("Scar");
-    expect(document.body.textContent).toContain("Role");
-    expect(document.body.textContent).toContain("Paint Pass");
-    expect(document.body.textContent).toContain("Symmetry");
-    expect(document.body.textContent).toContain("Target Slot");
-    expect(document.body.textContent).toContain("Target Bone");
+    expect(document.body.textContent).toContain("Назначение");
+    expect(document.body.textContent).toContain("Оформление");
+    expect(document.body.textContent).toContain("Симметрия");
+    expect(document.body.textContent).toContain("Целевое крепление");
+    expect(document.body.textContent).toContain("Целевая кость");
     expect(document.body.textContent).toContain("line");
     expect(document.body.textContent).toContain("Line");
     expect(document.body.textContent).toContain("mirror_x");
@@ -292,9 +292,9 @@ describe("InspectorPanel", () => {
     setEquippedItemSelection();
     renderInspector();
 
-    expect(document.body.textContent).toContain("Equipped Item");
-    expect(document.body.textContent).toContain("Edit Default Fit");
-    expect(document.body.textContent).toContain("Palette Override");
+    expect(document.body.textContent).toContain("Надетый предмет");
+    expect(document.body.textContent).toContain("Базовая подгонка");
+    expect(document.body.textContent).toContain("Своя палитра");
   });
 
   it("Edit Default Fit switches equipped-item selection into item-part editing", () => {
@@ -302,7 +302,7 @@ describe("InspectorPanel", () => {
     renderInspector();
 
     act(() => {
-      getButton("Edit Default Fit").click();
+      getButton("Базовая подгонка").click();
     });
 
     expect(useStore.getState().editor.canvasMode).toBe("edit-attachment");
@@ -435,7 +435,7 @@ describe("InspectorPanel", () => {
     renderInspector();
 
     act(() => {
-      getButton("Reset Scale").click();
+      getButton("Сбросить масштаб").click();
     });
 
     const entity = useStore.getState().project.entities.find(e => e.id === entityId)!;
@@ -451,7 +451,7 @@ describe("InspectorPanel", () => {
     renderInspector();
 
     act(() => {
-      getButton("Flip X").click();
+      getButton("Отразить по X").click();
     });
 
     const entity = useStore.getState().project.entities.find(e => e.id === entityId)!;
@@ -465,7 +465,7 @@ describe("InspectorPanel", () => {
     renderInspector();
 
     act(() => {
-      getButton("Lock Aspect").click();
+      getButton("Пропорции:").click();
     });
 
     const input = getInput("inspector-attach-scale-x");
@@ -493,7 +493,7 @@ describe("InspectorPanel", () => {
     renderInspector();
 
     act(() => {
-      getButton("Save Fit For This Template").click();
+      getButton("Сохранить подгонку для этой основы").click();
     });
 
     const profile = useStore.getState().project.itemFitProfiles.find(candidate =>
@@ -525,7 +525,7 @@ describe("InspectorPanel", () => {
     renderInspector();
 
     act(() => {
-      getButton("Reset To Item Default").click();
+      getButton("Вернуть настройки предмета").click();
     });
 
     expect(useStore.getState().project.itemFitProfiles.some(candidate =>
@@ -551,7 +551,7 @@ describe("InspectorPanel", () => {
     renderInspector();
 
     act(() => {
-      getButton("Reset All").click();
+      getButton("Сбросить всё").click();
     });
 
     const entity = useStore.getState().project.entities.find(e => e.id === entityId)!;
@@ -576,7 +576,7 @@ describe("InspectorPanel", () => {
     renderInspector();
 
     act(() => {
-      getButton("Reset Rotation").click();
+      getButton("Сбросить поворот").click();
     });
 
     const entity = useStore.getState().project.entities.find(e => e.id === entityId)!;
@@ -602,7 +602,7 @@ describe("InspectorPanel", () => {
     renderInspector();
 
     act(() => {
-      getButton("Reset slot transform").click();
+      getButton("Сбросить положение крепления").click();
     });
 
     const slot = useStore.getState().project.templates
@@ -623,7 +623,7 @@ describe("InspectorPanel", () => {
     renderInspector();
 
     act(() => {
-      getButton("Remove from character").click();
+      getButton("Снять с персонажа").click();
     });
 
     const entity = useStore.getState().project.entities.find(e => e.id === entityId)!;

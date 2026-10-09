@@ -19,7 +19,7 @@ export function executeMeshJob(job: MeshJob): VisualMesh {
   const mesh = job.pixels
     ? autoMesh(job.pixels, job.width, job.height, job.setup, job.quality)
     : job.mesh;
-  if (!mesh) throw new Error("No mesh or artwork");
+  if (!mesh) throw new Error("Нет сетки или рисунка. Выберите непустой слой.");
   return job.weights
     ? autoWeights(mesh, job.bones, job.skeleton, job.influences, job.matrices)
     : mesh;

@@ -48,31 +48,31 @@ type ImportTarget = "custom_item" | "entity_visual";
 type VisualMode = "full_vector" | "bone_part";
 
 const CATEGORY_LABELS: Record<ItemCategory, string> = {
-  head_cover: "Helmets",
-  hair: "Hair",
-  eyes: "Eyes",
-  face: "Face",
-  beard: "Beard",
-  neck: "Neck",
-  torso: "Torso",
-  arms: "Arms",
-  hands: "Hands",
-  waist: "Waist",
-  legs: "Legs",
-  feet: "Feet",
-  cloak: "Cloaks",
-  weapon_main: "Main Weapon",
-  weapon_off: "Off-hand",
-  shield: "Shields",
-  ring: "Rings",
-  amulet: "Amulets",
-  creature_horn: "Horns",
-  creature_wing: "Wings",
-  creature_tail: "Tails",
-  creature_saddle: "Saddles",
-  creature_pack: "Packs",
-  creature_shell: "Shells",
-  static_part: "Static Part",
+  head_cover: "Головные уборы",
+  hair: "Волосы",
+  eyes: "Глаза",
+  face: "Лицо",
+  beard: "Борода",
+  neck: "Шея",
+  torso: "Туловище",
+  arms: "Руки",
+  hands: "Кисти",
+  waist: "Пояс",
+  legs: "Ноги",
+  feet: "Стопы",
+  cloak: "Плащи",
+  weapon_main: "Основное оружие",
+  weapon_off: "Вторая рука",
+  shield: "Щиты",
+  ring: "Кольца",
+  amulet: "Амулеты",
+  creature_horn: "Рога",
+  creature_wing: "Крылья",
+  creature_tail: "Хвосты",
+  creature_saddle: "Сёдла",
+  creature_pack: "Сумки",
+  creature_shell: "Панцири",
+  static_part: "Деталь окружения",
 };
 
 interface Props {
@@ -97,25 +97,25 @@ interface ImportedAssetDraft {
 }
 
 const PART_ROLE_LABELS: Record<ImportPartRole, string> = {
-  auto: "Auto",
-  center: "Center",
-  front: "Front",
-  back: "Back",
-  head: "Head",
-  neck: "Neck",
-  chest: "Chest",
-  spine: "Back / Spine",
-  pelvis: "Pelvis / Waist",
-  shoulder_l: "Left Shoulder",
-  shoulder_r: "Right Shoulder",
-  hand_l: "Left Hand",
-  hand_r: "Right Hand",
-  hip_l: "Left Hip",
-  hip_r: "Right Hip",
-  knee_l: "Left Knee / Shin",
-  knee_r: "Right Knee / Shin",
-  foot_l: "Left Foot",
-  foot_r: "Right Foot",
+  auto: "Автоматически",
+  center: "Центр",
+  front: "Спереди",
+  back: "Назад",
+  head: "Голова",
+  neck: "Шея",
+  chest: "Грудь",
+  spine: "Спина / позвоночник",
+  pelvis: "Таз / пояс",
+  shoulder_l: "Левое плечо",
+  shoulder_r: "Правое плечо",
+  hand_l: "Левая кисть",
+  hand_r: "Правая кисть",
+  hip_l: "Левое бедро",
+  hip_r: "Правое бедро",
+  knee_l: "Левое колено / голень",
+  knee_r: "Правое колено / голень",
+  foot_l: "Левая стопа",
+  foot_r: "Правая стопа",
 };
 
 interface WizardState {
@@ -165,7 +165,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-    reader.onerror = () => reject(reader.error ?? new Error(`Failed to read ${file.name}`));
+    reader.onerror = () => reject(reader.error ?? new Error(`Не удалось прочитать ${file.name}. Выберите файл ещё раз.`));
     reader.readAsDataURL(file);
   });
 }
@@ -177,7 +177,7 @@ function loadRasterDimensions(dataUri: string): Promise<{ width: number; height:
       width: img.naturalWidth || img.width || 64,
       height: img.naturalHeight || img.height || 64,
     });
-    img.onerror = () => reject(new Error("Failed to inspect PNG dimensions"));
+    img.onerror = () => reject(new Error("Не удалось определить размер изображения. Проверьте файл."));
     img.src = dataUri;
   });
 }
@@ -240,7 +240,7 @@ async function fileToAssetDraft(
     };
   }
 
-  throw new Error(`${file.name}: only SVG, PNG, WebP and JPEG are supported.`);
+  throw new Error(`${file.name}: поддерживаются SVG, PNG, WebP и JPEG.`);
 }
 
 function getRoleOptions(category: ItemCategory): ImportPartRole[] {
@@ -583,8 +583,8 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
       <DialogContent className="max-w-3xl bg-card border-border text-foreground">
         <DialogHeader>
           <DialogTitle className="text-sm font-semibold">
-            Import Asset
-            <span className="ml-2 text-xs font-normal text-muted-foreground">Step {ws.step} of 3</span>
+            Импорт части или предмета
+            <span className="ml-2 text-xs font-normal text-muted-foreground">Шаг {ws.step} из 3</span>
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
             {stepDescription}
@@ -609,10 +609,10 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
               <Upload className="w-8 h-8 text-muted-foreground" />
               <div className="text-center">
                 <p className="text-sm font-medium">
-                  {dragOver ? "Drop assets here" : "Drag SVG, PNG, WebP or JPEG files here"}
+                  {dragOver ? "Перетащите файлы сюда" : "Перетащите сюда SVG, PNG, WebP или JPEG"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Single-file or multi-part item import is supported
+                  Можно импортировать один файл или набор частей предмета
                 </p>
               </div>
             </div>
@@ -638,34 +638,34 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Target</Label>
+                  <Label className="text-xs">Назначение</Label>
                   <Select value={ws.target} onValueChange={value => setWs(current => ({ ...current, target: value as ImportTarget }))}>
                     <SelectTrigger className="h-8 text-xs bg-background border-border">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border text-foreground text-xs">
-                      <SelectItem value="custom_item">Custom Item</SelectItem>
-                      <SelectItem value="entity_visual">Entity Visual</SelectItem>
+                      <SelectItem value="custom_item">Свой предмет</SelectItem>
+                      <SelectItem value="entity_visual">Рисунок объекта</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {ws.target === "entity_visual" ? (
                   <div className="space-y-1">
-                    <Label className="text-xs">Visual Mode</Label>
+                    <Label className="text-xs">Режим отображения</Label>
                     <Select value={ws.visualMode} onValueChange={value => setWs(current => ({ ...current, visualMode: value as VisualMode }))}>
                       <SelectTrigger className="h-8 text-xs bg-background border-border">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-card border-border text-foreground text-xs">
-                        <SelectItem value="full_vector">Full Vector</SelectItem>
-                        <SelectItem value="bone_part">Bone Part</SelectItem>
+                        <SelectItem value="full_vector">Цельный векторный рисунок</SelectItem>
+                        <SelectItem value="bone_part">Часть на кости</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    <Label className="text-xs">Category</Label>
+                    <Label className="text-xs">Категория</Label>
                     <Select
                       value={ws.category}
                       onValueChange={value => {
@@ -698,7 +698,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
                 {ws.target === "custom_item" && (
                   <>
                     <div className="col-span-2 space-y-1">
-                      <Label className="text-xs">Item Name</Label>
+                      <Label className="text-xs">Название предмета</Label>
                       <Input
                         value={ws.itemName}
                         onChange={event => setWs(current => ({ ...current, itemName: event.target.value }))}
@@ -706,16 +706,16 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
                       />
                     </div>
                     <div className="col-span-2 space-y-1">
-                      <Label className="text-xs">Description</Label>
+                      <Label className="text-xs">Описание</Label>
                       <Input
                         value={ws.itemDescription}
                         onChange={event => setWs(current => ({ ...current, itemDescription: event.target.value }))}
                         className="h-8 text-xs bg-background border-border"
-                        placeholder="Imported armor, hair, face detail..."
+                        placeholder="Броня, волосы, детали лица…"
                       />
                     </div>
                     <div className="col-span-2 space-y-1">
-                      <Label className="text-xs">Target Slot</Label>
+                      <Label className="text-xs">Целевое крепление</Label>
                       <Select
                         value={ws.slotId}
                         onValueChange={value => {
@@ -741,7 +741,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
                   <>
                     {ws.visualMode === "bone_part" && (
                       <div className="space-y-1">
-                        <Label className="text-xs">Bone</Label>
+                        <Label className="text-xs">Кость</Label>
                         <Select value={ws.visualBoneId} onValueChange={value => setWs(current => ({ ...current, visualBoneId: value }))}>
                           <SelectTrigger className="h-8 text-xs bg-background border-border">
                             <SelectValue />
@@ -757,7 +757,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
                       </div>
                     )}
                     <div className="space-y-1">
-                      <Label className="text-xs">Z Index</Label>
+                      <Label className="text-xs">Порядок глубины</Label>
                       <Input
                         type="number"
                         value={ws.visualZIndex}
@@ -770,15 +770,15 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Imported Parts</Label>
+                <Label className="text-xs">Импортированные части</Label>
                 <div className="max-h-72 overflow-auto rounded border border-border bg-background/40">
                   <div className="grid grid-cols-[1.05fr_0.95fr_0.8fr_0.4fr_0.55fr_0.55fr] gap-2 p-2 text-[10px] uppercase tracking-wide text-muted-foreground">
-                    <span>Asset</span>
-                    <span>Role</span>
-                    <span>Bone</span>
+                    <span>Объект</span>
+                    <span>Назначение</span>
+                    <span>Кость</span>
                     <span>Z</span>
-                    <span>Pivot X</span>
-                    <span>Pivot Y</span>
+                    <span>Опора X</span>
+                    <span>Опора Y</span>
                   </div>
                   {ws.assets.map(asset => (
                     <div key={asset.id} className="grid grid-cols-[1.05fr_0.95fr_0.8fr_0.4fr_0.55fr_0.55fr] gap-2 border-t border-border p-2">
@@ -855,9 +855,9 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
             <div className="space-y-3">
               <div className="rounded border border-border bg-background/50 p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium">Preview</p>
+                  <p className="text-xs font-medium">Предпросмотр</p>
                   {ws.target === "custom_item" && ws.assets.length > 1 && (
-                    <span className="text-[10px] text-muted-foreground">Layered stack</span>
+                    <span className="text-[10px] text-muted-foreground">Послойная сборка</span>
                   )}
                 </div>
                 <div className="flex items-center justify-center h-48 rounded border border-border bg-background overflow-hidden">
@@ -882,13 +882,13 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
                   ) : previewUrl ? (
                     <img src={previewUrl} alt="Imported asset preview" className="max-h-full max-w-full object-contain" />
                   ) : (
-                    <span className="text-xs text-muted-foreground">No preview</span>
+                    <span className="text-xs text-muted-foreground">Нет предпросмотра</span>
                   )}
                 </div>
               </div>
               {ws.target === "custom_item" && stackedPreviewAssets.length > 0 && (
                 <div className="rounded border border-border bg-background/50 p-3">
-                  <p className="text-[11px] font-medium mb-2">Preview Layers</p>
+                  <p className="text-[11px] font-medium mb-2">Слои предпросмотра</p>
                   <div className="space-y-1">
                     {stackedPreviewAssets.map(asset => (
                       <div key={asset.id} className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
@@ -900,10 +900,10 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
                 </div>
               )}
               <div className="rounded border border-border bg-background/50 p-3 text-xs text-muted-foreground space-y-1">
-                <p><span className="text-foreground font-medium">Active template:</span> {template?.name ?? "None"}</p>
-                <p><span className="text-foreground font-medium">Target slot:</span> {activeSlot?.name ?? "Not selected"}</p>
-                <p><span className="text-foreground font-medium">Files:</span> {ws.assets.length}</p>
-                <p><span className="text-foreground font-medium">Behavior:</span> {ws.target === "custom_item" ? "Creates a project item and equips it immediately." : "Adds a visual directly to the entity."}</p>
+                <p><span className="text-foreground font-medium">Текущая основа:</span> {template?.name ?? "None"}</p>
+                <p><span className="text-foreground font-medium">Целевое крепление:</span> {activeSlot?.name ?? "Not selected"}</p>
+                <p><span className="text-foreground font-medium">Файлы:</span> {ws.assets.length}</p>
+                <p><span className="text-foreground font-medium">Поведение:</span> {ws.target === "custom_item" ? "Создаёт предмет проекта и сразу надевает его." : "Добавляет рисунок прямо к объекту."}</p>
               </div>
             </div>
           </div>
@@ -912,25 +912,25 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
         {ws.step === 3 && (
           <div className="space-y-4">
             <div className="rounded border border-border bg-background/50 p-4 space-y-2 text-xs">
-              <p><span className="font-medium text-foreground">Mode:</span> {ws.target === "custom_item" ? "Custom Item" : "Entity Visual"}</p>
+              <p><span className="font-medium text-foreground">Режим:</span> {ws.target === "custom_item" ? "Свой предмет" : "Рисунок объекта"}</p>
               {ws.target === "custom_item" ? (
                 <>
-                  <p><span className="font-medium text-foreground">Name:</span> {ws.itemName}</p>
-                  <p><span className="font-medium text-foreground">Category:</span> {CATEGORY_LABELS[ws.category]}</p>
-                  <p><span className="font-medium text-foreground">Slot:</span> {activeSlot?.name ?? ws.slotId}</p>
-                  <p><span className="font-medium text-foreground">Parts:</span> {ws.assets.length}</p>
+                  <p><span className="font-medium text-foreground">Название:</span> {ws.itemName}</p>
+                  <p><span className="font-medium text-foreground">Категория:</span> {CATEGORY_LABELS[ws.category]}</p>
+                  <p><span className="font-medium text-foreground">Крепление:</span> {activeSlot?.name ?? ws.slotId}</p>
+                  <p><span className="font-medium text-foreground">Части:</span> {ws.assets.length}</p>
                 </>
               ) : (
                 <>
-                  <p><span className="font-medium text-foreground">Visual Mode:</span> {ws.visualMode === "full_vector" ? "Full Vector" : "Bone Part"}</p>
-                  <p><span className="font-medium text-foreground">Bone:</span> {ws.visualMode === "full_vector" ? "root" : ws.visualBoneId}</p>
-                  <p><span className="font-medium text-foreground">Source File:</span> {previewAsset?.fileName ?? "None"}</p>
+                  <p><span className="font-medium text-foreground">Режим отображения:</span> {ws.visualMode === "full_vector" ? "Цельный векторный рисунок" : "Часть на кости"}</p>
+                  <p><span className="font-medium text-foreground">Кость:</span> {ws.visualMode === "full_vector" ? "Корень" : ws.visualBoneId}</p>
+                  <p><span className="font-medium text-foreground">Исходный файл:</span> {previewAsset?.fileName ?? "None"}</p>
                 </>
               )}
             </div>
 
             <div className="rounded border border-border bg-background/50 p-4">
-              <p className="text-xs font-medium mb-2">Part Mapping</p>
+              <p className="text-xs font-medium mb-2">Назначение частей</p>
               <div className="space-y-1 text-xs text-muted-foreground">
                 {ws.assets.map(asset => (
                   <p key={asset.id}>
@@ -956,7 +956,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
             }}
           >
             <ChevronLeft className="w-4 h-4 mr-1" />
-            {ws.step === 1 ? "Cancel" : "Back"}
+            {ws.step === 1 ? "Отмена" : "Назад"}
           </Button>
 
           <div className="flex items-center gap-2">
@@ -967,7 +967,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
                 disabled={!canGoNext}
                 onClick={() => setWs(current => ({ ...current, step: (current.step + 1) as 1 | 2 | 3 }))}
               >
-                Next
+                Далее
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             ) : (
@@ -978,7 +978,7 @@ export function ImportWizard({ open, onClose, activeEntityId }: Props) {
                 disabled={!previewAsset}
               >
                 <Check className="w-4 h-4 mr-1" />
-                Import
+                Импортировать
               </Button>
             )}
           </div>

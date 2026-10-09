@@ -9,6 +9,7 @@ import { loadPaintedPreset, paintedPreset } from "@/data/paintedAppearance";
 import { studioCommit } from "@/lib/studioActions";
 import { DEFAULT_BLINK, DEFAULT_MOUTH_MOTION } from "@/lib/faceAnimation";
 import { defaultMouthOpening } from "@/data/chibiFaceArt";
+import { useWorkbench } from "@/store/workbench";
 
 const SKIN_COLORS = ["#FFD0A8", "#F1B88D", "#D99A70", "#AF7451", "#80553F", "#553B30"];
 const HAIR_COLORS = ["#362820", "#75482E", "#AE7748", "#D5B26A", "#B8593D", "#D4D0C7", "#845677"];
@@ -52,6 +53,7 @@ export function AppearancePanel() {
   const [error,setError]=useState("");
   const selectionRequest=useRef(0);
   if (!entity) return <div className="p-3 text-sm text-muted-foreground">Нет персонажа</div>;
+  if (entity.templateId.startsWith("chibi_token_skin_")) return <div className="p-4 space-y-3"><p>Рисованный чиби без рук и ног. Кожа, лицо, причёска, одежда и оружие собираются из модулей пака.</p><button className="action-primary" onClick={() => useWorkbench.setState({ chibiPackOpen: true })}>Изменить чиби</button><p className="context-note">Растровые детали сохраняют нарисованные цвета. Сменить отдельную деталь также можно в «Экипировка».</p></div>;
   if (!entity.templateId.startsWith("biped_profile_")) return <div className="p-3 text-sm text-muted-foreground">Выберите базу чиби</div>;
   const store = useStore.getState();
   const appearance = { ...DEFAULT_APPEARANCE, ...entity.appearance };

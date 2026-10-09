@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
-import { drawVisual, visualCanvas, visualSvg, contentSvg, createSvgAssetRegistry } from "../src/lib/visualRenderer";
+import { drawVisual, visualCanvas, visualSvg, contentSvg, createSvgAssetRegistry, renderContent } from "../src/lib/visualRenderer";
 import { Resvg } from "@resvg/resvg-js";
 import type { EvaluatedVisual } from "../src/domain/types";
 
@@ -63,6 +63,25 @@ function canvasHarness(operations?: string[]) {
   });
   return contexts;
 }
+
+it("samples a magnified atlas window from the original image without a reduced atlas bitmap", async () => {
+  const contexts = canvasHarness();
+  try {
+    const content = { kind: "composite" as const, width: 100, height: 100, children: [{
+      content: { kind: "raster" as const, assetId: "sharp-atlas" },
+      matrix: [16, 0, 0, 16, -300, -200] as EvaluatedVisual["worldMatrix"], opacity: 1,
+    }] };
+    await renderContent(content, 400, 400, { "sharp-atlas": {
+      id: "sharp-atlas", name: "atlas", width: 1600, height: 1600,
+      mimeType: "image/png", dataUri: "data:image/png;base64,sharp-atlas",
+    } });
+    expect(contexts).toHaveLength(1);
+    const source = contexts[0].drawImage.mock.calls[0][0];
+    expect(source).toBeInstanceOf(Image);
+    expect(source).not.toBeInstanceOf(HTMLCanvasElement);
+    expect(contexts[0].transform).toHaveBeenCalledWith(16, 0, 0, 16, -300, -200);
+  } finally { vi.unstubAllGlobals(); }
+});
 
 it("builds a local mesh texture without baking the outer transform or opacity", async () => {
   const contexts = canvasHarness();

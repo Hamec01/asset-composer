@@ -14,8 +14,8 @@ const SESSION_DEBUG_KEY = "asset-composer:session-debug:v1";
 const MAX_RECENT_PROJECTS = 6;
 const MAX_DEBUG_EVENTS = 120;
 
-export function clearProjectSessions() {
-  void clearSessionDatabase().catch(reportPersistenceError);
+export async function clearProjectSessions() {
+  await clearSessionDatabase();
   if (typeof window === "undefined") return;
   for (const key of [LAST_PROJECT_KEY, LAST_PROJECT_KEY_LEGACY, RECENT_PROJECTS_KEY, SESSION_DEBUG_KEY]) {
     window.localStorage.removeItem(key);
@@ -316,11 +316,12 @@ export function getLastProjectSnapshotName(): string | null {
   return typeof name === "string" && name.trim().length > 0 ? name : null;
 }
 
-export function saveLastProjectSnapshot(project: unknown, folderPath?: string): boolean {
+export async function saveLastProjectSnapshot(project: unknown, folderPath?: string): Promise<boolean> {
   if(databaseReady()){
     const normalized=normalizeSessionSnapshot(compactProjectAssets(project as Project),"database-save");
     if(!normalized)return false;
-    void saveDatabaseSession(normalized,folderPath).catch(reportPersistenceError);return true;
+    try { await saveDatabaseSession(normalized,folderPath); return true; }
+    catch (error) { reportPersistenceError(error); return false; }
   }
   if (typeof window === "undefined") return false;
   const result = normalizeSessionSnapshot(project, "save-last-project");
@@ -345,7 +346,7 @@ export function saveLastProjectSnapshot(project: unknown, folderPath?: string): 
         .filter(entry => entry.id !== nextEntry.id)
         .map(entry => ({
           ...entry,
-          folderPath: entry.folderPath ?? existing?.folderPath,
+          folderPath: entry.folderPath,
         })),
     ];
     saveRecentProjectEntries(nextEntries);

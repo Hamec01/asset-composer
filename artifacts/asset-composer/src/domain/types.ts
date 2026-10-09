@@ -7,6 +7,7 @@ export type EntityType =
   | "animation_pack";
 
 export type SkeletonFamilyId =
+  | "chibi_token_v1"
   | "humanoid_topdown_v1"
   | "humanoid_side_v1"
   | "quadruped_side_v1"
@@ -252,6 +253,8 @@ export type BodyAuthoringViewportMode = "full_body" | "focus_region";
 export type FaceFeatureKey = "eyes" | "mouth" | "brows" | "beard" | "hair";
 
 export interface CharacterAppearance {
+  tokenAge?: "child" | "teen" | "adult" | "elder";
+  tokenFace?: { emotion: "auto" | "neutral" | "happy" | "angry" | "sad" | "surprised"; blink: boolean; mouthMotion: boolean };
   view?: "front" | "right" | "left";
   projection?: "profile" | "authored";
   sex: "male" | "female";

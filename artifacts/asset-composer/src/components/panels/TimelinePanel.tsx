@@ -1,3 +1,4 @@
+import { uiLabel } from "@/lib/uiLabels";
 import { useStore } from "@/store";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -112,7 +113,7 @@ export function TimelinePanel() {
 
     if (activeClip) {
       sections.push({
-        label:          "BASE",
+        label:          "ОСНОВНОЙ",
         labelClass:     "bg-blue-500/20 text-blue-400 border border-blue-500/30",
         clipName:       activeClip.label,
         rows:           buildRows(activeClip),
@@ -123,7 +124,7 @@ export function TimelinePanel() {
     const upperClip = animationClips.find(c => c.id === upperClipId) ?? null;
     if (upperClip) {
       sections.push({
-        label:          "UPPER",
+        label:          "ВЕРХ",
         labelClass:     "bg-amber-500/20 text-amber-400 border border-amber-500/30",
         clipName:       upperClip.label,
         rows:           buildRows(upperClip),
@@ -134,7 +135,7 @@ export function TimelinePanel() {
     const lowerClip = animationClips.find(c => c.id === lowerClipId) ?? null;
     if (lowerClip) {
       sections.push({
-        label:          "LOWER",
+        label:          "НИЗ",
         labelClass:     "bg-green-500/20 text-green-400 border border-green-500/30",
         clipName:       lowerClip.label,
         rows:           buildRows(lowerClip),
@@ -148,6 +149,15 @@ export function TimelinePanel() {
 
   // Grouped clip list for current family
   const clipGroups = useMemo(() => {
+    if (template?.skeletonFamily === "chibi_token_v1") {
+      const categories = [
+        { group: "Передвижение", match: (name: string) => ["idle", "walk", "run", "jump", "roll"].includes(name) },
+        { group: "Реакции и эмоции", match: (name: string) => ["fall", "death", "dance", "indignation"].includes(name) },
+        { group: "Бытовые действия", match: (name: string) => ["work", "trade", "carry", "pickup", "hang", "plough", "hide"].includes(name) },
+        { group: "Бой и инструменты", match: (name: string) => /attack|block|chop/.test(name) },
+      ];
+      return categories.map(({ group, match }) => ({ group, clips: familyClips.filter(c => match(c.name)) })).filter(g => g.clips.length);
+    }
     const groups: { group: string; clips: typeof familyClips }[] = [];
     const usedIds = new Set<string>();
     for (const [group, names] of Object.entries(GROUP_NAMES)) {
@@ -159,9 +169,9 @@ export function TimelinePanel() {
     }
     // catch-all for remaining clips
     const rest = familyClips.filter(c => !usedIds.has(c.id));
-    if (rest.length) groups.push({ group: "Other", clips: rest });
+    if (rest.length) groups.push({ group: "Другие", clips: rest });
     return groups;
-  }, [familyClips]);
+  }, [familyClips, template?.skeletonFamily]);
 
   // Playhead drag
   const scrub = useCallback((clientX: number) => {
@@ -252,27 +262,27 @@ export function TimelinePanel() {
         <button
           className="text-[10px] font-mono text-muted-foreground hover:text-foreground px-1 rounded hover:bg-accent transition-colors min-w-[48px] text-center"
           onClick={() => setShowMs(v => !v)}
-          title="Toggle ms/frames"
+          title="Миллисекунды / кадры"
         >
           {fmtTime(timeMs)} / {fmtTime(durationMs)}
         </button>
 
         {activeClip && (
           <span className="text-[10px] text-muted-foreground hidden sm:block ml-1">
-            {activeClip.fps}fps
+            {activeClip.fps}кадров/с
           </span>
         )}
 
         <div className="flex-1" />
 
         {/* Zoom */}
-        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTimelineZoom(zoomPx / 1.4)} title="Zoom out">
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTimelineZoom(zoomPx / 1.4)} title="Отдалить">
           <ZoomOut className="w-3 h-3" />
         </Button>
-        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTimelineZoom(zoomPx * 1.4)} title="Zoom in">
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTimelineZoom(zoomPx * 1.4)} title="Приблизить">
           <ZoomIn className="w-3 h-3" />
         </Button>
-        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTimelineZoom(120)} title="Reset zoom">
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTimelineZoom(120)} title="Сбросить масштаб">
           <AlignLeft className="w-3 h-3" />
         </Button>
       </div>
@@ -281,16 +291,16 @@ export function TimelinePanel() {
       <EquipmentDepthPanel />
       {activeEntity && !activeEntity.templateId.startsWith("biped_profile_") && (
         <div className="flex items-center gap-2 px-2 py-1 border-b border-border flex-shrink-0 bg-background/40">
-          <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider w-14 flex-shrink-0">Blend</span>
+          <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider w-14 flex-shrink-0">Смешивание</span>
           {/* Upper body override */}
-          <span className="text-[9px] text-amber-400/80">↑ Upper:</span>
+          <span className="text-[9px] text-amber-400/80">↑ Верх:</span>
           <select
             className="text-[9px] bg-background border border-border rounded px-1 py-0 h-5 text-foreground max-w-[120px] cursor-pointer"
             value={upperClipId ?? ""}
             onChange={e => setUpperClip(e.target.value || null)}
-            title="Upper-body clip overlay (plays simultaneously with base clip)"
+            title="Клип верхней части тела (одновременно с основным)"
           >
-            <option value="">— none —</option>
+            <option value="">— нет —</option>
             {familyClips.map(c => (
               <option key={c.id} value={c.id}>{c.label}</option>
             ))}
@@ -299,7 +309,7 @@ export function TimelinePanel() {
             <button
               className="text-[9px] text-muted-foreground hover:text-foreground leading-none"
               onClick={() => setUpperClip(null)}
-              title="Clear upper body override"
+              title="Сбросить клип верхней части"
             >✕</button>
           )}
 
@@ -307,7 +317,7 @@ export function TimelinePanel() {
           {upperClipId && (
             <>
               <div className="w-px h-3 bg-border mx-0.5 flex-shrink-0" />
-              <span className="text-[9px] text-muted-foreground/60">wt:</span>
+              <span className="text-[9px] text-muted-foreground/60">вес:</span>
               <input
                 type="range" min={0} max={1} step={0.05}
                 value={upperBlendWeight}
@@ -324,14 +334,14 @@ export function TimelinePanel() {
           <div className="w-px h-3 bg-border mx-0.5 flex-shrink-0" />
 
           {/* Lower body override */}
-          <span className="text-[9px] text-green-400/80">↓ Lower:</span>
+          <span className="text-[9px] text-green-400/80">↓ Низ:</span>
           <select
             className="text-[9px] bg-background border border-border rounded px-1 py-0 h-5 text-foreground max-w-[120px] cursor-pointer"
             value={lowerClipId ?? ""}
             onChange={e => setLowerClip(e.target.value || null)}
-            title="Lower-body clip override (plays simultaneously with base clip)"
+            title="Клип нижней части тела (одновременно с основным)"
           >
-            <option value="">— none —</option>
+            <option value="">— нет —</option>
             {familyClips.map(c => (
               <option key={c.id} value={c.id}>{c.label}</option>
             ))}
@@ -340,7 +350,7 @@ export function TimelinePanel() {
             <button
               className="text-[9px] text-muted-foreground hover:text-foreground leading-none"
               onClick={() => setLowerClip(null)}
-              title="Clear lower body override"
+              title="Сбросить клип нижней части"
             >✕</button>
           )}
         </div>
@@ -353,13 +363,13 @@ export function TimelinePanel() {
         <div className="w-44 flex-shrink-0 border-r border-border flex flex-col overflow-hidden">
           <ScrollArea className="flex-1 ide-scroll">
             {!activeEntity ? (
-              <p className="text-[10px] text-muted-foreground px-3 py-4">No entity selected.</p>
+              <p className="text-[10px] text-muted-foreground px-3 py-4">Откройте объект.</p>
             ) : clipGroups.length === 0 ? (
-              <p className="text-[10px] text-muted-foreground px-3 py-4">No clips for this family.</p>
+              <p className="text-[10px] text-muted-foreground px-3 py-4">Нет клипов для этого скелета.</p>
             ) : clipGroups.map(({ group, clips }) => (
-              <div key={group} className="mb-1">
+              <div key={uiLabel(group)} className="mb-1">
                 <p className="text-[9px] text-muted-foreground/60 uppercase tracking-wider px-3 py-0.5 bg-background/40 sticky top-0">
-                  {group}
+                  {uiLabel(group)}
                 </p>
                 {clips.map(clip => (
                   <button
@@ -426,7 +436,7 @@ export function TimelinePanel() {
           <ScrollArea className="flex-1 ide-scroll">
             {trackSections.length === 0 ? (
               <div className="py-6 text-center text-xs text-muted-foreground">
-                Select an animation clip to view its keyframe tracks.
+                Выберите клип, чтобы увидеть дорожки с ключами.
               </div>
             ) : (
               <div className="relative" style={{ width: Math.max(rulerW + LABEL_W, 200) }}>
@@ -439,7 +449,7 @@ export function TimelinePanel() {
                       </span>
                       <span className="text-[9px] text-muted-foreground truncate">{section.clipName}</span>
                       <span className="text-[8px] text-muted-foreground/50 ml-auto flex-shrink-0">
-                        {section.rows.length} tracks
+                        {section.rows.length} дорожек
                       </span>
                     </div>
 
@@ -497,7 +507,7 @@ export function TimelinePanel() {
 
                     {section.rows.length === 0 && (
                       <div className="py-2 text-center text-[10px] text-muted-foreground">
-                        No keyframe tracks in this clip.
+                        В этом клипе нет дорожек с ключами.
                       </div>
                     )}
                   </div>
@@ -522,7 +532,7 @@ export function TimelinePanel() {
                 );
               })}
               <span className="text-[10px]">
-                <span className="text-muted-foreground">easing: </span>
+                <span className="text-muted-foreground">сглаживание: </span>
                 <span className="font-mono">{selectedKf.kf.easing}</span>
               </span>
               <button

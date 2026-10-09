@@ -1,3 +1,4 @@
+import { uiLabel } from "@/lib/uiLabels";
 import type { SpriteEditorDocument, SpriteEditorLayer } from "@/domain/types";
 export function StudioLayerTree({
   doc,
@@ -19,7 +20,7 @@ export function StudioLayerTree({
       .sort((a, b) => b.zIndex - a.zIndex)
       .flatMap((layer) => [{ layer, depth }, ...rows(layer.id, depth + 1)]);
   return (
-    <div role="group" aria-label="Artwork layers">
+    <div role="group" aria-label="Слои рисунка">
       {rows().map(({ layer: l, depth }) => (
         <div
           key={l.id}
@@ -29,7 +30,7 @@ export function StudioLayerTree({
           }
         >
           <input
-            aria-label={"Visibility " + l.name}
+            aria-label={"Видимость: " + l.name}
             type="checkbox"
             checked={l.visible}
             onChange={(e) => onVisibility(l.id, e.target.checked)}
@@ -43,7 +44,7 @@ export function StudioLayerTree({
             {l.kind === "group" ? "▾ " : l.binding ? "🦴 " : ""}
             {l.name}
           </button>
-          <span className="text-muted-foreground">{l.kind ?? "vector"}</span>
+          <span className="text-muted-foreground">{uiLabel(l.kind ?? "vector")}</span>
         </div>
       ))}
     </div>

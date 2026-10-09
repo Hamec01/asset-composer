@@ -44,9 +44,9 @@ export class RuntimeErrorBoundary extends React.Component<
       return (
         <div className="flex h-screen w-screen items-center justify-center bg-background p-6 text-foreground">
           <div className="max-w-xl rounded-lg border border-border bg-card p-6">
-            <h1 className="text-lg font-semibold">Runtime error</h1>
+            <h1 className="text-lg font-semibold">Ошибка приложения</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Open the browser console for the full component stack.
+              Подробности ошибки доступны в консоли браузера.
             </p>
             <pre className="mt-4 overflow-auto rounded bg-background p-3 text-xs text-red-300">
               {this.state.error.message}

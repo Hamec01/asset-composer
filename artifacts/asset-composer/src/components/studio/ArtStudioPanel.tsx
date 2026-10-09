@@ -1,3 +1,6 @@
+import { openAsset } from "@/lib/assetNavigation";
+import { importArtwork } from "@/lib/artworkImport";
+import { uiLabel } from "@/lib/uiLabels";
 import { documentSetupSpace } from "@/lib/studioSpace";
 import { StudioLayerTree } from "./StudioLayerTree";
 import { NumberField } from "./StudioNumberField";
@@ -51,8 +54,12 @@ const button =
   "px-2 py-1 rounded border border-border hover:bg-accent disabled:opacity-40 text-xs";
 export function ArtStudioPanel({
   onLegacyEditor,
+  mode: controlledMode,
+  onModeChange,
 }: {
   onLegacyEditor: () => void;
+  mode?: "DRAW" | "RIG" | "ANIMATE";
+  onModeChange?: (mode: "DRAW" | "RIG" | "ANIMATE") => void;
 }) {
   const project = useStore((s) => s.project),
     playback = useStore((s) => s.animPlayback),
@@ -61,16 +68,19 @@ export function ArtStudioPanel({
     (d) => d.id === project.editorMeta.activeSpriteDocumentId,
   );
   const [replacementBone, setReplacementBone] = useState(""),
-    [mode, setMode] = useState<"DRAW" | "RIG" | "ANIMATE">("DRAW"),
+    [localMode, setLocalMode] = useState<"DRAW" | "RIG" | "ANIMATE">("DRAW"),
     [tool, setTool] = useState<StudioTool>("brush"),
     [layerId, setLayerId] = useState(""),
     [boneId, setBoneId] = useState("root"),
     [vertexId, setVertexId] = useState(-1);
+  const mode = controlledMode ?? localMode;
+  const setMode = (next: "DRAW" | "RIG" | "ANIMATE") => { setLocalMode(next); onModeChange?.(next); };
   const [color, setColor] = useState("#478d3b"),
     [size, setSize] = useState(12),
     [opacity, setOpacity] = useState(1),
     [selection, setSelection] = useState<{ x: number; y: number }[]>([]),
     [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
+  const [layersOpen, setLayersOpen] = useState(false), [propertiesOpen, setPropertiesOpen] = useState(false);
   const [split, setSplit] = useState(true),
     [debug, setDebug] = useState("artwork"),
     [revision, setRevision] = useState(0),
@@ -101,8 +111,7 @@ export function ArtStudioPanel({
       (e) =>
         e.id ===
         (doc?.studioEntityId ??
-          doc?.target.entityId ??
-          (doc?.target.itemId ? project.activeEntityId : null)),
+          (doc?.target.itemId ? project.activeEntityId : doc?.target.entityId)),
     ),
     template = project.templates.find((t) => t.id === entity?.templateId),
     layer = doc?.layers.find((l) => l.id === layerId) ?? doc?.layers[0],
@@ -181,9 +190,11 @@ export function ArtStudioPanel({
     }
   }, [doc?.id]);
   useEffect(() => {
+    if (mode === "DRAW") setTool(layer?.kind === "raster" ? "brush" : "pen");
+    else setTool("bone");
     if (!layer?.binding) return;
     setBoneId(layer.binding.boneId);
-  }, [layer?.id, layer?.binding?.boneId]);
+  }, [layer?.id, layer?.binding?.boneId, mode]);
   const fail = (e: unknown) =>
     setError(e instanceof Error ? e.message : String(e));
   const patchLayer = (
@@ -217,27 +228,16 @@ export function ArtStudioPanel({
       });
   };
   const activate = (d: SpriteEditorDocument) => {
-    const entityId =
-      d.studioEntityId ?? d.target.entityId ?? project.activeEntityId;
-    useStore.setState((s) => ({
-      ...s,
-      project: {
-        ...s.project,
-        activeEntityId: entityId,
-        updatedAt: Date.now(),
-        editorMeta: { ...s.project.editorMeta, activeSpriteDocumentId: d.id },
-      },
-    }));
-    const selected = project.entities.find((e) => e.id === entityId);
-    useStore
-      .getState()
-      .setPlaybackClip(selected?.activeAnimationClipId ?? null);
+    const item = project.items.find(i => i.id === d.target.itemId || i.parts?.some(part => part.editorDocumentId === d.id));
+    const ref = item ? { kind: "item" as const, id: item.id } : d.studioEntityId || !d.target.entityId ? { kind: "artwork" as const, id: d.id } : { kind: "entity" as const, id: d.target.entityId };
+    openAsset(ref, ref.kind === "entity" ? "parts" : "draw");
+    useStore.setState(s => { s.project.editorMeta.activeSpriteDocumentId = d.id; });
   };
   const addDocument = (example = false) => {
     const d = newStudioDocument();
     d.name = example
-      ? "Tree"
-      : "Artwork " + (project.editorMeta.spriteEditorDocuments.length + 1);
+      ? "Дерево"
+      : "Рисунок " + (project.editorMeta.spriteEditorDocuments.length + 1);
     const assets: NonNullable<Project["assets"]> = {};
     if (example) {
       const parts = [
@@ -307,6 +307,7 @@ export function ArtStudioPanel({
       p.editorMeta.spriteEditorDocuments.push(d);
       p.editorMeta.activeSpriteDocumentId = d.id;
     });
+    openAsset({ kind: "artwork", id: d.id }, "draw");
     setLayerId(d.layers[0]?.id ?? "");
   };
   const addLayer = (kind: SpriteEditorLayer["kind"]) => {
@@ -355,71 +356,8 @@ export function ArtStudioPanel({
     if (!doc) return;
     setBusy(true);
     try {
-      const uri = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
-      });
-      if (guide) {
-        editStudioDocument(doc.id, "Set reference", (d) => {
-          d.tracingAsset = {
-            format:
-              file.type === "image/svg+xml"
-                ? "svg"
-                : file.type === "image/webp"
-                  ? "webp"
-                  : file.type === "image/jpeg"
-                    ? "jpeg"
-                    : "png",
-            name: file.name,
-            originalFileName: file.name,
-            mimeType: file.type,
-            dataUri: uri,
-          };
-          d.tracingVisible = true;
-        });
-        return;
-      }
-      const l = newStudioLayer(
-        file.type === "image/svg+xml" ? "vector" : "raster",
-        file.name,
-      );
-      l.zIndex = Math.max(0, ...doc.layers.map((l) => l.zIndex)) + 1;
-      if (file.type === "image/svg+xml") {
-        const { sanitizeSvg } = await import("@/lib/sanitize");
-        l.sourceSvg = sanitizeSvg(await file.text());
-        editStudioDocument(doc.id, "Import SVG", (d) => d.layers.push(l));
-      } else {
-        if (!["image/png", "image/webp", "image/jpeg"].includes(file.type))
-          throw new Error("Choose SVG, PNG, WebP or JPEG");
-        const image = new Image();
-        await new Promise<void>((resolve, reject) => {
-          image.onload = () => resolve();
-          image.onerror = () => reject(new Error("Image decode failed"));
-          image.src = uri;
-        });
-        const asset = makeRasterAsset(
-          uri,
-          image.naturalWidth,
-          image.naturalHeight,
-          file.name,
-        );
-        l.assetId = asset.id;
-        l.transform = {
-          x: 0,
-          y: 0,
-          rotation: 0,
-          scaleX: image.naturalWidth / doc.width,
-          scaleY: image.naturalHeight / doc.height,
-        };
-        editStudioDocument(doc.id, "Import raster", (d, p) => {
-          p.assets ??= {};
-          p.assets[asset.id] = asset;
-          d.layers.push(l);
-        });
-      }
-      setLayerId(l.id);
+      const id = await importArtwork(file, doc.id, guide);
+      setLayerId(id);
     } catch (e) {
       fail(e);
     } finally {
@@ -429,9 +367,9 @@ export function ArtStudioPanel({
   const splitPixels = async (cut: boolean) => {
     if (!doc || !layer) return;
     if (layer.kind !== "raster")
-      throw new Error("Rasterize Copy first to select pixels");
+      throw new Error("Для выделения пикселей сначала нажмите «Растровая копия».");
     if (selection.length < 3)
-      throw new Error("Select pixels with rectangle or lasso first");
+      throw new Error("Сначала выделите пиксели рамкой или лассо.");
     const source = await renderContent(
         artLayerContent(doc, layer),
         doc.width,
@@ -562,7 +500,7 @@ export function ArtStudioPanel({
       })
     )
       throw new Error(
-        "Choose a subgroup without independently bound descendants",
+        "Выберите группу без дочерних слоёв с отдельными привязками.",
       );
     const old =
       part.binding?.mode === "weighted" ? part.binding.mesh : part.savedMesh;
@@ -570,15 +508,15 @@ export function ArtStudioPanel({
       !automatic &&
       ((regenerate && old?.manualMesh) || (reweight && old?.manualWeights)) &&
       !window.confirm(
-        "Replace manual " +
-          (regenerate ? "mesh" : "weights") +
-          "? This can be undone.",
+        "Заменить ручные " +
+          (regenerate ? "правки сетки" : "веса") +
+          "? Действие можно отменить.",
       )
     )
       return;
     if (automatic && old?.manualMesh) {
       setError(
-        "Artwork changed. The manual mesh is preserved; inspect coverage and use Regenerate Mesh to extend it.",
+        "Рисунок изменён. Ручная сетка сохранена. Проверьте покрытие и нажмите «Пересоздать сетку», чтобы расширить её.",
       );
       return;
     }
@@ -650,7 +588,7 @@ export function ArtStudioPanel({
       );
       if (ids.length === 1)
         setError(
-          "One influence follows one bone. Add a bone chain for bending.",
+          "Одна влияющая кость только перемещает рисунок. Для изгиба добавьте цепочку костей.",
         );
       if (!automatic) setTool("mesh");
     } finally {
@@ -816,7 +754,7 @@ export function ArtStudioPanel({
         c = structuredClone(clip);
         c.id = newId();
         c.name += "_copy";
-        c.label += " Copy";
+        c.label += " (копия)";
         c.templateId = template.id;
         p.animationClips.push(c);
         id = c.id;
@@ -882,7 +820,7 @@ export function ArtStudioPanel({
         ? {
             ...starterClip(template, "rotation"),
             name: "new_clip",
-            label: "New Clip",
+            label: "Новый клип",
             layers: [{ mask: "full_body" as const, tracks: [] }],
           }
         : starterClip(template, kind);
@@ -911,11 +849,11 @@ export function ArtStudioPanel({
     <div
       ref={rootRef}
       data-testid="art-studio"
-      className="flex flex-col h-full min-h-0 text-foreground bg-background"
+        className="art-studio-layout flex flex-col h-full min-h-0 text-foreground bg-background"
     >
       <div className="flex flex-wrap items-center gap-2 p-2 border-b">
-        <strong className="text-sm">Art Studio</strong>
-        {(["DRAW", "RIG", "ANIMATE"] as const).map((m) => (
+        <strong className="text-sm">Рисунок и слои</strong>
+        {!controlledMode && (["DRAW", "RIG", "ANIMATE"] as const).map((m) => (
           <button
             key={m}
             aria-pressed={mode === m}
@@ -925,17 +863,17 @@ export function ArtStudioPanel({
               setTool(m === "DRAW" ? "brush" : "bone");
             }}
           >
-            {m}
+            {uiLabel(m)}
           </button>
         ))}
         <button className={button} onClick={() => addDocument()}>
-          New Artwork
+          Новый рисунок
         </button>
         <button className={button} onClick={() => addDocument(true)}>
-          Tree Example
+          Пример дерева
         </button>
         <select
-          aria-label="Artwork document"
+          aria-label="Документ рисунка"
           className="bg-background border text-xs max-w-44"
           value={doc?.id ?? ""}
           onChange={(e) =>
@@ -947,7 +885,7 @@ export function ArtStudioPanel({
           }
         >
           <option value="" disabled>
-            Choose artwork
+            Выберите рисунок
           </option>
           {project.editorMeta.spriteEditorDocuments.map((d) => (
             <option key={d.id} value={d.id}>
@@ -960,14 +898,14 @@ export function ArtStudioPanel({
           onClick={() => useStore.getState().undo()}
           disabled={!history.past.length}
         >
-          Undo
+          Отменить
         </button>
         <button
           className={button}
           onClick={() => useStore.getState().redo()}
           disabled={!history.future.length}
         >
-          Redo
+          Повторить
         </button>
         <label className="text-xs">
           <input
@@ -975,10 +913,10 @@ export function ArtStudioPanel({
             checked={split}
             onChange={(e) => setSplit(e.target.checked)}
           />{" "}
-          Live Rig Preview
+          Предпросмотр скелета
         </label>
         <button className={button} onClick={onLegacyEditor}>
-          Detailed Vector Editor
+          Векторные контуры
         </button>
       </div>
       {error && (
@@ -992,7 +930,7 @@ export function ArtStudioPanel({
       )}
       {!doc ? (
         <div className="p-6">
-          Create artwork or open an existing document to draw, rig and animate.
+          Создайте или откройте рисунок для рисования, привязки и анимации.
         </div>
       ) : (
         <>
@@ -1004,31 +942,31 @@ export function ArtStudioPanel({
                 aria-pressed={tool === t}
                 onClick={() => setTool(t)}
               >
-                {t}
+                {uiLabel(t)}
               </button>
             ))}
-            <input
-              aria-label="Paint color"
+            {mode === "DRAW" && <><input
+              aria-label="Цвет кисти"
               type="color"
               value={color}
               onChange={(e) => setColor(e.target.value)}
             />
-            <NumberField label="Size" value={size} min={1} onChange={setSize} />
+            <NumberField label="Размер" value={size} min={1} onChange={setSize} />
             <NumberField
-              label="Opacity"
+              label="Непрозрачность"
               value={opacity}
               min={0}
               step={0.05}
               onChange={(n) => setOpacity(Math.min(1, n))}
-            />
+            /></>}
             <button
               className={button}
               onClick={() => setCamera({ x: 0, y: 0, zoom: 1 })}
             >
-              Fit
+              Вписать
             </button>
             <select
-              aria-label="Pixel filtering"
+              aria-label="Сглаживание пикселей"
               className="bg-background border text-xs"
               value={doc.sampling ?? "smooth"}
               onChange={(e) =>
@@ -1037,14 +975,15 @@ export function ArtStudioPanel({
                 })
               }
             >
-              <option value="smooth">Smooth</option>
-              <option value="pixel">Pixel</option>
+              <option value="smooth">Плавное</option>
+              <option value="pixel">Пиксельный</option>
             </select>
           </div>
-          <div className="flex flex-1 min-h-0">
-            <aside className="w-48 min-w-40 border-r overflow-auto p-2 space-y-2">
+          <div className="studio-drawer-controls"><button className={button} aria-pressed={layersOpen} onClick={() => setLayersOpen(!layersOpen)}>Слои и рисунок</button>{mode !== "DRAW" && <button className={button} aria-pressed={propertiesOpen} onClick={() => setPropertiesOpen(!propertiesOpen)}>Кости и деформация</button>}</div>
+          <div className="studio-content flex flex-1 min-h-0">
+            <aside className={`studio-layers ${layersOpen ? "drawer-open" : ""} w-48 min-w-40 border-r overflow-auto p-2 space-y-2`}>
               <input
-                aria-label="Artwork name"
+                aria-label="Название рисунка"
                 className="w-full bg-background border rounded text-xs p-1"
                 defaultValue={doc.name}
                 key={doc.id}
@@ -1061,7 +1000,7 @@ export function ArtStudioPanel({
                     key={k}
                     onClick={() => addLayer(k)}
                   >
-                    + {k}
+                    + {uiLabel(k)}
                   </button>
                 ))}
               </div>
@@ -1070,13 +1009,13 @@ export function ArtStudioPanel({
                   className={button}
                   onClick={() => fileRef.current?.click()}
                 >
-                  Import Art
+                  Импорт рисунка
                 </button>
                 <button
                   className={button}
                   onClick={() => guideRef.current?.click()}
                 >
-                  Reference
+                  Подложка
                 </button>
               </div>
               <input
@@ -1116,7 +1055,7 @@ export function ArtStudioPanel({
                       )
                     }
                   />
-                  Reference only
+                  Только подложка
                 </label>
               )}
               <StudioLayerTree
@@ -1136,7 +1075,7 @@ export function ArtStudioPanel({
               {layer && (
                 <>
                   <input
-                    aria-label="Layer name"
+                    aria-label="Название слоя"
                     key={layer.id}
                     defaultValue={layer.name}
                     className="w-full bg-background border text-xs p-1"
@@ -1156,10 +1095,10 @@ export function ArtStudioPanel({
                         })
                       }
                     />
-                    Locked
+                    Заблокирован
                   </label>
                   <NumberField
-                    label="Layer opacity"
+                    label="Непрозрачность слоя"
                     value={layer.opacity ?? 1}
                     min={0}
                     step={0.1}
@@ -1170,7 +1109,7 @@ export function ArtStudioPanel({
                     }
                   />
                   <select
-                    aria-label="Layer group"
+                    aria-label="Группа слоя"
                     className="w-full bg-background border text-xs"
                     value={layer.parentId ?? ""}
                     onChange={(e) => {
@@ -1178,7 +1117,7 @@ export function ArtStudioPanel({
                       patchLayer("Group layer", (l, d) => {
                         let cursor = parent;
                         while (cursor) {
-                          if (cursor === l.id) throw new Error("Group cycle");
+                          if (cursor === l.id) throw new Error("Группа не может содержать сама себя.");
                           cursor =
                             d.layers.find((l) => l.id === cursor)?.parentId ??
                             null;
@@ -1205,7 +1144,7 @@ export function ArtStudioPanel({
                       });
                     }}
                   >
-                    <option value="">No group</option>
+                    <option value="">Без группы</option>
                     {doc.layers
                       .filter((l) => l.kind === "group" && l.id !== layer.id)
                       .map((l) => (
@@ -1223,7 +1162,7 @@ export function ArtStudioPanel({
                         )
                       }
                     >
-                      Up
+                      Выше
                     </button>
                     <button
                       className={button}
@@ -1233,7 +1172,7 @@ export function ArtStudioPanel({
                         )
                       }
                     >
-                      Down
+                      Ниже
                     </button>
                     <button
                       className={button}
@@ -1245,7 +1184,7 @@ export function ArtStudioPanel({
                         setLayerId(id);
                       }}
                     >
-                      Duplicate
+                      Дублировать
                     </button>
                     <button
                       className={button}
@@ -1255,7 +1194,7 @@ export function ArtStudioPanel({
                         );
                       }}
                     >
-                      Delete
+                      Удалить
                     </button>
                   </div>
                   <button
@@ -1263,29 +1202,29 @@ export function ArtStudioPanel({
                     disabled={selection.length < 3}
                     onClick={() => void splitPixels(true).catch(fail)}
                   >
-                    Cut to New Layer
+                    Вырезать на новый слой
                   </button>
                   <button
                     className={button}
                     disabled={selection.length < 3}
                     onClick={() => void splitPixels(false).catch(fail)}
                   >
-                    Copy to New Layer
+                    Копировать на новый слой
                   </button>
                   <button className={button} onClick={() => setSelection([])}>
-                    Clear Selection
+                    Снять выделение
                   </button>
                   <button
                     className={button}
                     onClick={() => void rasterizeCopy().catch(fail)}
                   >
-                    Rasterize Copy
+                    Растровая копия
                   </button>
                   {(["x", "y", "rotation", "scaleX", "scaleY"] as const).map(
                     (key) => (
                       <NumberField
                         key={key}
-                        label={"Layer " + key}
+                        label={"Слой: " + uiLabel(key)}
                         value={
                           layer.transform?.[key] ??
                           (key.startsWith("scale") ? 1 : 0)
@@ -1347,11 +1286,11 @@ export function ArtStudioPanel({
                 onError={setError}
               />
               {split && (
-                <div className="flex flex-col w-1/2 min-w-0 border-l">
+                <div className="studio-preview-pane flex flex-col w-1/2 min-w-0 border-l">
                   <div className="p-1 text-xs border-b flex gap-2">
-                    <span>Animation Preview</span>
+                    <span>Предпросмотр анимации</span>
                     <select
-                      aria-label="Rig debug"
+                      aria-label="Диагностика скелета"
                       className="bg-background border"
                       value={debug}
                       onChange={(e) => setDebug(e.target.value)}
@@ -1366,7 +1305,7 @@ export function ArtStudioPanel({
                         "pivots",
                         "z",
                       ].map((d) => (
-                        <option key={d}>{d}</option>
+                        <option key={d} value={d}>{uiLabel(d)}</option>
                       ))}
                     </select>
                   </div>
@@ -1386,10 +1325,10 @@ export function ArtStudioPanel({
               )}
             </div>
             {mode !== "DRAW" && (
-              <aside className="w-56 border-l overflow-auto p-2 space-y-2">
+              <aside className={`studio-properties ${propertiesOpen ? "drawer-open" : ""} w-56 border-l overflow-auto p-2 space-y-2`}>
                 {!template ? (
                   <>
-                    <strong className="text-xs">Create Rig</strong>
+                    <strong className="text-xs">Создать скелет</strong>
                     <button
                       className={button}
                       onClick={() => {
@@ -1400,7 +1339,7 @@ export function ArtStudioPanel({
                         }
                       }}
                     >
-                      Empty Rig
+                      Пустой скелет
                     </button>
                     <button
                       className={button}
@@ -1412,10 +1351,10 @@ export function ArtStudioPanel({
                         }
                       }}
                     >
-                      Tree Rig
+                      Скелет дерева
                     </button>
                     <select
-                      aria-label="Skeleton preset"
+                      aria-label="Основа скелета"
                       className="bg-background border text-xs w-full"
                       defaultValue=""
                       onChange={(e) => {
@@ -1427,28 +1366,28 @@ export function ArtStudioPanel({
                           }
                       }}
                     >
-                      <option value="">Existing skeleton preset</option>
+                      <option value="">Готовая основа скелета</option>
                       {project.templates
                         .filter((t) => t.skeletonFamily !== "custom_2d_v1")
                         .map((t) => (
                           <option key={t.id} value={t.id}>
-                            {t.name}
+                            {uiLabel(t.name)}
                           </option>
                         ))}
                     </select>
                   </>
                 ) : (
                   <>
-                    <strong className="text-xs">{template.name}</strong>
+                    <strong className="text-xs">{uiLabel(template.name)}</strong>
                     <select
-                      aria-label="Selected bone"
+                      aria-label="Выбранная кость"
                       className="bg-background border text-xs w-full"
                       value={boneId}
                       onChange={(e) => setBoneId(e.target.value)}
                     >
                       {template.bones.map((b) => (
                         <option key={b.id} value={b.id}>
-                          {b.name}
+                          {uiLabel(b.name)}
                         </option>
                       ))}
                     </select>
@@ -1478,12 +1417,12 @@ export function ArtStudioPanel({
                             setBoneId(id);
                           }}
                         >
-                          Add Child Bone
+                          Добавить дочернюю кость
                         </button>
                         {bone && (
                           <>
                             <input
-                              aria-label="Bone name"
+                              aria-label="Название кости"
                               defaultValue={bone.name}
                               key={bone.id}
                               className="w-full bg-background border text-xs"
@@ -1494,7 +1433,7 @@ export function ArtStudioPanel({
                               }
                             />
                             <select
-                              aria-label="Bone parent"
+                              aria-label="Родитель кости"
                               className="bg-background border text-xs w-full"
                               value={bone.parentId ?? ""}
                               onChange={(e) => {
@@ -1504,7 +1443,7 @@ export function ArtStudioPanel({
                                   descendants(bone.id).includes(parentId ?? "")
                                 ) {
                                   setError(
-                                    "Bone hierarchy cannot contain cycles",
+                                    "Кость не может быть родителем самой себя или своего предка.",
                                   );
                                   return;
                                 }
@@ -1538,17 +1477,17 @@ export function ArtStudioPanel({
                                 }, "Reparent bone");
                               }}
                             >
-                              <option value="">No parent</option>
+                              <option value="">Без родителя</option>
                               {template.bones
                                 .filter((b) => b.id !== bone.id)
                                 .map((b) => (
                                   <option key={b.id} value={b.id}>
-                                    {b.name}
+                                    {uiLabel(b.name)}
                                   </option>
                                 ))}
                             </select>
                             <NumberField
-                              label="Bone length"
+                              label="Длина кости"
                               value={bone.length}
                               min={0}
                               onChange={(n) =>
@@ -1568,7 +1507,7 @@ export function ArtStudioPanel({
                             ).map((key) => (
                               <NumberField
                                 key={key}
-                                label={"Setup " + key}
+                                label={"Исходное: " + uiLabel(key)}
                                 value={bone.restPose[key]}
                                 step={0.1}
                                 onChange={(n) =>
@@ -1593,7 +1532,7 @@ export function ArtStudioPanel({
                                 );
                                 if (referenced) {
                                   setError(
-                                    "Reparent children and reassign bindings / animation tracks before deleting this bone",
+                                    "Сначала перенесите дочерние кости, привязки и дорожки на другую кость. Выберите замену ниже.",
                                   );
                                   return;
                                 }
@@ -1608,17 +1547,17 @@ export function ArtStudioPanel({
                                 setBoneId(template.bones[0]?.id ?? "root");
                               }}
                             >
-                              Delete Bone
+                              Удалить кость
                             </button>
                             <select
-                              aria-label="Reassign dependents to"
+                              aria-label="Перенести связи на кость"
                               className="bg-background border text-xs w-full"
                               value={replacementBone}
                               onChange={(e) =>
                                 setReplacementBone(e.target.value)
                               }
                             >
-                              <option value="">Choose replacement bone</option>
+                              <option value="">Выберите заменяющую кость</option>
                               {template.bones
                                 .filter(
                                   (b) =>
@@ -1627,7 +1566,7 @@ export function ArtStudioPanel({
                                 )
                                 .map((b) => (
                                   <option key={b.id} value={b.id}>
-                                    {b.name}
+                                    {uiLabel(b.name)}
                                   </option>
                                 ))}
                             </select>
@@ -1653,23 +1592,23 @@ export function ArtStudioPanel({
                                 }
                               }}
                             >
-                              Reassign and Delete Bone
+                              Переназначить связи и удалить кость
                             </button>
                           </>
                         )}
                         {layer && (
                           <>
                             <hr />
-                            <strong className="text-xs">Deformation</strong>
+                            <strong className="text-xs">Деформация</strong>
                             <div className="text-xs">
-                              {layer.binding?.mode ?? "Unbound"} →{" "}
+                              {uiLabel(layer.binding?.mode ?? "Unbound")} →{" "}
                               {layer.binding?.boneId ?? "—"}
                             </div>
                             <button
                               className={button}
                               onClick={() => bind(boneId)}
                             >
-                              Bind to Bone / Rigid
+                              Жёстко привязать к кости
                             </button>
                             <button
                               className={button}
@@ -1681,12 +1620,12 @@ export function ArtStudioPanel({
                                 })
                               }
                             >
-                              Use Group Binding / Unbind
+                              Наследовать привязку группы / отвязать
                             </button>
                             <label className="block text-xs">
-                              Anatomical owner
+                              Анатомическая принадлежность
                               <select
-                                aria-label="Anatomical owner"
+                                aria-label="Анатомическая принадлежность"
                                 className="bg-background border text-xs w-full"
                                 value={
                                   layer.anatomicalOwner ??
@@ -1700,10 +1639,10 @@ export function ArtStudioPanel({
                                   })
                                 }
                               >
-                                <option value="">Unspecified</option>
+                                <option value="">Не задано</option>
                                 {template.bones.map((b) => (
                                   <option key={b.id} value={b.id}>
-                                    {b.name}
+                                    {uiLabel(b.name)}
                                   </option>
                                 ))}
                               </select>
@@ -1713,10 +1652,10 @@ export function ArtStudioPanel({
                               disabled={busy}
                               onClick={() => void flexible().catch(fail)}
                             >
-                              Make Flexible
+                              Сделать гибким
                             </button>
                             <select
-                              aria-label="Mesh quality"
+                              aria-label="Качество сетки"
                               className="bg-background border text-xs"
                               value={quality}
                               onChange={(e) =>
@@ -1726,12 +1665,12 @@ export function ArtStudioPanel({
                               }
                             >
                               {["low", "medium", "high"].map((q) => (
-                                <option key={q}>{q}</option>
+                                <option key={q} value={q}>{uiLabel(q)}</option>
                               ))}
                             </select>
                             <details>
                               <summary className="text-xs">
-                                Influencing bones
+                                Влияющие кости
                               </summary>
                               {template.bones.map((b) => (
                                 <label className="block text-xs" key={b.id}>
@@ -1746,15 +1685,15 @@ export function ArtStudioPanel({
                                       )
                                     }
                                   />
-                                  {b.name}
+                                  {uiLabel(b.name)}
                                 </label>
                               ))}
                             </details>
                             {mesh && (
                               <>
                                 <div className="text-xs">
-                                  {mesh.vertices.length} vertices ·{" "}
-                                  {mesh.triangles.length / 3} triangles
+                                  {mesh.vertices.length} вершин ·{" "}
+                                  {mesh.triangles.length / 3} треугольников
                                 </div>
                                 <button
                                   className={button}
@@ -1763,7 +1702,7 @@ export function ArtStudioPanel({
                                     void flexible(true, false).catch(fail)
                                   }
                                 >
-                                  Regenerate Mesh
+                                  Пересоздать сетку
                                 </button>
                                 <button
                                   className={button}
@@ -1772,22 +1711,22 @@ export function ArtStudioPanel({
                                     void flexible(false, true).catch(fail)
                                   }
                                 >
-                                  Recalculate Weights
+                                  Пересчитать веса
                                 </button>
                                 <button
                                   className={button}
                                   onClick={() => setTool("mesh")}
                                 >
-                                  Edit Mesh
+                                  Изменить сетку
                                 </button>
                                 <button
                                   className={button}
                                   onClick={() => setTool("weights")}
                                 >
-                                  Edit Weights
+                                  Изменить веса
                                 </button>
                                 <select
-                                  aria-label="Weight brush mode"
+                                  aria-label="Режим кисти весов"
                                   className="bg-background border text-xs"
                                   value={weightMode}
                                   onChange={(e) =>
@@ -1798,7 +1737,7 @@ export function ArtStudioPanel({
                                 >
                                   {["add", "subtract", "replace", "smooth"].map(
                                     (m) => (
-                                      <option key={m}>{m}</option>
+                                      <option key={m} value={m}>{uiLabel(m)}</option>
                                     ),
                                   )}
                                 </select>
@@ -1821,11 +1760,11 @@ export function ArtStudioPanel({
                                   }}
                                   disabled={vertexId < 0}
                                 >
-                                  Delete Selected Vertex
+                                  Удалить вершину
                                 </button>
                                 {mesh.vertices[vertexId] && (
                                   <NumberField
-                                    label="Selected vertex weight"
+                                    label="Вес выбранной вершины"
                                     value={
                                       mesh.vertices[vertexId].weights.find(
                                         (w) => w.boneId === boneId,
@@ -1889,7 +1828,7 @@ export function ArtStudioPanel({
                                     })
                                   }
                                 >
-                                  Restore Flexible
+                                  Восстановить гибкость
                                 </button>
                               )}
                           </>
@@ -1902,19 +1841,19 @@ export function ArtStudioPanel({
                           className={button}
                           onClick={() => createClip("empty")}
                         >
-                          New Clip
+                          Новый клип
                         </button>
                         <button
                           className={button}
                           onClick={() => createClip("wind")}
                         >
-                          Wind Starter
+                          Пример ветра
                         </button>
                         <button
                           className={button}
                           onClick={() => createClip("rotation")}
                         >
-                          Rotation Starter
+                          Пример вращения
                         </button>
                         <label className="text-xs">
                           <input
@@ -1922,14 +1861,14 @@ export function ArtStudioPanel({
                             checked={autoKey}
                             onChange={(e) => setAutoKey(e.target.checked)}
                           />
-                          Auto Key
+                          Автоключ
                         </label>
                         {(
                           ["tx", "ty", "rotation", "scaleX", "scaleY"] as const
                         ).map((k) => (
                           <NumberField
                             key={k}
-                            label={"Pose " + k}
+                            label={"Поза: " + uiLabel(k)}
                             value={pose[k]}
                             step={0.1}
                             onChange={(n) => updatePose(k, n)}
@@ -1940,7 +1879,7 @@ export function ArtStudioPanel({
                           disabled={!clip}
                           onClick={() => keyframe()}
                         >
-                          Add / Replace Key
+                          Добавить / заменить ключ
                         </button>
                       </>
                     )}
@@ -1952,18 +1891,18 @@ export function ArtStudioPanel({
           {template && (
             <div className="border-t p-2 flex flex-wrap items-center gap-2 text-xs">
               <select
-                aria-label="Test animation"
+                aria-label="Проверка анимации"
                 className="bg-background border max-w-52"
                 value={clip?.id ?? ""}
                 onChange={(e) =>
                   useStore.getState().setPlaybackClip(e.target.value || null)
                 }
               >
-                <option value="">Rest Pose</option>
+                <option value="">Исходная поза</option>
                 {getClipsForTemplate(template, project.animationClips).map(
                   (c) => (
                     <option key={c.id} value={c.id}>
-                      {c.label}
+                      {uiLabel(c.label)}
                     </option>
                   ),
                 )}
@@ -1975,10 +1914,10 @@ export function ArtStudioPanel({
                   useStore.getState().setPlaybackPlaying(!playback.playing)
                 }
               >
-                {playback.playing ? "Pause" : "Play"}
+                {playback.playing ? "Пауза" : "Воспроизвести"}
               </button>
               <input
-                aria-label="Animation time"
+                aria-label="Время анимации"
                 type="range"
                 min={0}
                 max={clip?.durationMs ?? 1}
@@ -1989,11 +1928,11 @@ export function ArtStudioPanel({
                 }
                 className="flex-1 min-w-32"
               />
-              <span>{Math.round(playback.timeMs)} ms</span>
+              <span>{Math.round(playback.timeMs)} мс</span>
               {clip && mode === "ANIMATE" && (
-                <>
+                <details className="studio-clip-settings"><summary>Параметры клипа</summary><div className="flex flex-wrap gap-3 p-2">
                   <input
-                    aria-label="Clip name"
+                    aria-label="Название клипа"
                     key={clip.id}
                     defaultValue={clip.name}
                     className="bg-background border text-xs w-32"
@@ -2007,7 +1946,7 @@ export function ArtStudioPanel({
                     }}
                   />
                   <NumberField
-                    label="Duration ms"
+                    label="Длительность, мс"
                     value={clip.durationMs}
                     min={1}
                     onChange={(n) =>
@@ -2022,7 +1961,7 @@ export function ArtStudioPanel({
                     }
                   />
                   <NumberField
-                    label="FPS"
+                    label="Кадров/с"
                     value={clip.fps}
                     min={1}
                     onChange={(n) =>
@@ -2044,7 +1983,7 @@ export function ArtStudioPanel({
                           .setPlaybackLooping(e.target.checked);
                       }}
                     />
-                    Loop
+                    Зациклить
                   </label>
                   <button
                     className={button}
@@ -2052,7 +1991,7 @@ export function ArtStudioPanel({
                       const c = {
                         ...structuredClone(clip),
                         id: newId(),
-                        label: clip.label + " Copy",
+                        label: clip.label + " (копия)",
                         name: clip.name + "_copy",
                         templateId: template.id,
                       };
@@ -2062,10 +2001,10 @@ export function ArtStudioPanel({
                       useStore.getState().setPlaybackClip(c.id);
                     }}
                   >
-                    Duplicate Clip
+                    Дублировать клип
                   </button>
                   <select
-                    aria-label="Rotation interpolation"
+                    aria-label="Интерполяция поворота"
                     className="bg-background border"
                     value={
                       clip.layers
@@ -2090,10 +2029,10 @@ export function ArtStudioPanel({
                       })
                     }
                   >
-                    <option value="shortest">Shortest</option>
-                    <option value="unwrapped">Unwrapped</option>
+                    <option value="shortest">Кратчайший путь</option>
+                    <option value="unwrapped">Полный оборот</option>
                   </select>
-                </>
+                </div></details>
               )}
             </div>
           )}
@@ -2102,7 +2041,7 @@ export function ArtStudioPanel({
               className="border-t p-2 flex flex-wrap gap-2 text-xs"
               data-testid="studio-keyframes"
             >
-              <span>{boneId} keys:</span>
+              <span>{uiLabel(template?.bones.find(b => b.id === boneId)?.name ?? boneId)} · ключи:</span>
               {clip.layers
                 .flatMap((l) => l.tracks)
                 .find((t) => t.boneId === boneId)
@@ -2124,12 +2063,12 @@ export function ArtStudioPanel({
               {keyTime !== null && (
                 <>
                   <NumberField
-                    label="Key time"
+                    label="Время ключа"
                     value={keyTime}
                     min={0}
                     onChange={(n) => {
                       if (n > (clip?.durationMs ?? 0)) {
-                        setError("Key must be within the clip");
+                        setError("Время ключа должно находиться внутри клипа.");
                         return;
                       }
                       editClip("Move key", (c) => {
@@ -2156,14 +2095,14 @@ export function ArtStudioPanel({
                       setKeyClipboard({ ...pose });
                     }}
                   >
-                    Copy Key
+                    Копировать ключ
                   </button>
                   <button
                     className={button}
                     disabled={!keyClipboard}
                     onClick={() => keyClipboard && keyframe(keyClipboard)}
                   >
-                    Paste Key
+                    Вставить ключ
                   </button>
                   <button
                     className={button}
@@ -2179,10 +2118,10 @@ export function ArtStudioPanel({
                       setKeyTime(null);
                     }}
                   >
-                    Delete Key
+                    Удалить ключ
                   </button>
                   <select
-                    aria-label="Key easing"
+                    aria-label="Сглаживание ключа"
                     className="bg-background border"
                     value={
                       clip.layers
@@ -2203,7 +2142,7 @@ export function ArtStudioPanel({
                   >
                     {["linear", "ease_in", "ease_out", "ease_in_out"].map(
                       (e) => (
-                        <option key={e}>{e}</option>
+                        <option key={e} value={e}>{uiLabel(e)}</option>
                       ),
                     )}
                   </select>

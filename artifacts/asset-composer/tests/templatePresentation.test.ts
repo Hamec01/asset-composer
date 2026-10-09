@@ -14,11 +14,11 @@ describe("template presentation", () => {
     const template = cloneTemplates().find(candidate => candidate.id === "humanoid_topdown_v1");
     expect(template).toBeTruthy();
 
-    expect(getTemplateFamilyLabel(template!)).toBe("Biped Directional");
-    expect(getTemplateFacingPolicyLabel(template!)).toBe("Directional 5");
-    expect(getTemplateDefaultFacingLabel(template!)).toBe("South-East");
+    expect(getTemplateFamilyLabel(template!)).toBe("Двуногий по направлениям");
+    expect(getTemplateFacingPolicyLabel(template!)).toBe("5 направлений");
+    expect(getTemplateDefaultFacingLabel(template!)).toBe("Юго-восток");
     expect(getTemplatePresentationSummary(template!)).toBe(
-      "Biped Directional · Directional 5 · South-East",
+      "Двуногий по направлениям · 5 направлений · Юго-восток",
     );
   });
 
@@ -33,11 +33,11 @@ describe("template presentation", () => {
       views: undefined,
     };
 
-    expect(getTemplateFamilyLabel(template)).toBe("Humanoid (Side)");
-    expect(getTemplateFacingPolicyLabel(template)).toBe("Profile Mirror");
-    expect(getTemplateDefaultFacingLabel(template)).toBe("East");
+    expect(getTemplateFamilyLabel(template)).toBe("Человекоподобный (сбоку)");
+    expect(getTemplateFacingPolicyLabel(template)).toBe("Зеркальный профиль");
+    expect(getTemplateDefaultFacingLabel(template)).toBe("Восток");
     expect(getTemplatePresentationSummary(template)).toBe(
-      "Humanoid (Side) · Profile Mirror · East",
+      "Человекоподобный (сбоку) · Зеркальный профиль · Восток",
     );
   });
 });

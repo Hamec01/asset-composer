@@ -3,7 +3,7 @@ import type { ExportProfile } from "@/domain/types";
 export const DEFAULT_EXPORT_PROFILES: ExportProfile[] = [
   {
     id: "game_ready_64",
-    name: "Game Ready (64px)",
+    name: "Для игры (64 пикс.)",
     frameSizeKey: "64",
     formats: ["png_sheet"],
     pivotPolicy: "feet",
@@ -15,7 +15,7 @@ export const DEFAULT_EXPORT_PROFILES: ExportProfile[] = [
   },
   {
     id: "hires_256",
-    name: "Hi-Res (256px)",
+    name: "Высокое разрешение (256 пикс.)",
     frameSizeKey: "256",
     formats: ["png_sheet", "webp_sheet"],
     pivotPolicy: "center",
@@ -27,7 +27,7 @@ export const DEFAULT_EXPORT_PROFILES: ExportProfile[] = [
   },
   {
     id: "svg_source_pack",
-    name: "SVG Source Pack",
+    name: "Исходники SVG",
     frameSizeKey: "128",
     formats: ["svg_parts", "entity_json"],
     pivotPolicy: "center",

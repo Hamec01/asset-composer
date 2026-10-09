@@ -23,7 +23,7 @@ export function mouthOpennessAt(
 }
 /** Timeline-driven, deterministic and independent of renderer wall-clock time. */
 export function eyeOpennessAt(
-  config: FaceFeatureConfig,
+  config: Pick<FaceFeatureConfig, "eyeOpenness" | "blink">,
   context?: AnimationContext,
 ): number {
   const base = Math.max(0, Math.min(1, config.eyeOpenness ?? 1));

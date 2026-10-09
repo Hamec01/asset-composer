@@ -39,7 +39,7 @@ export function VisualThumbnail({
     return (
       <img
         src={contentUri(content, { assets: assets ?? {}, documents })}
-        alt="Artwork preview"
+        alt="Предпросмотр рисунка"
         className="w-full h-full object-contain"
       />
     );
@@ -49,7 +49,7 @@ export function VisualThumbnail({
       width={96}
       height={96}
       className="w-full h-full object-contain"
-      aria-label="Artwork preview"
+      aria-label="Предпросмотр рисунка"
     />
   );
 }

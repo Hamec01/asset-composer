@@ -1,3 +1,4 @@
+import { beginCreation } from "@/lib/assetNavigation";
 import { VisualThumbnail } from "@/components/VisualThumbnail";
 import { vectorSource } from "@/lib/visualContent";
 import { Pencil, RotateCcw, Plus } from "lucide-react";
@@ -10,6 +11,7 @@ import type { BonePart } from "@/domain/types";
 import { getCharacterBodyParts } from "@/data/chibiBody";
 
 const PART_NAMES: Record<string, string> = {
+  token_head: "Голова", token_body: "Корпус",
   hero_head: "Голова", hero_neck: "Шея", hero_torso: "Грудь", hero_belly: "Живот", hero_pelvis: "Таз / бельё",
   hero_arm_l_upper: "Левое плечо", hero_arm_r_upper: "Правое плечо",
   hero_arm_l_lower: "Левое предплечье", hero_arm_r_lower: "Правое предплечье",
@@ -50,7 +52,7 @@ export function CharacterPartsPanel() {
   if (!entity || !template) return (
     <div className="p-4 space-y-3">
       <p className="text-sm text-muted-foreground">Нет персонажа</p>
-      <button onClick={() => useStore.getState().openWizard()} className="flex items-center gap-2 text-sm text-primary"><Plus size={16} /> Создать персонажа</button>
+      <button onClick={() => beginCreation("character")} className="flex items-center gap-2 text-sm text-primary"><Plus size={16} /> Создать персонажа</button>
     </div>
   );
 

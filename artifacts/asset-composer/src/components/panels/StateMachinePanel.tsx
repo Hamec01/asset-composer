@@ -102,7 +102,7 @@ export function StateMachinePanel() {
   if (!sm) {
     return (
       <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
-        No state machine available. Create an entity first.
+        У этого объекта нет графа состояний. Здесь можно только просматривать готовые графы.
       </div>
     );
   }
@@ -120,23 +120,23 @@ export function StateMachinePanel() {
           {sm.name}
         </span>
         <span className="text-[10px] text-muted-foreground/50 ml-2">
-          {sm.states.length} states · {sm.transitions.length} transitions
+          {sm.states.length} состояний · {sm.transitions.length} переходов
         </span>
-        <span className="ml-auto text-[9px] text-muted-foreground/40 italic">read-only</span>
+        <span className="ml-auto text-[9px] text-muted-foreground/40 italic">только просмотр</span>
       </div>
 
       {/* Legend */}
       <div className="flex items-center gap-3 px-3 py-1 border-b border-border flex-shrink-0 text-[9px] text-muted-foreground">
         <span className="flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded-sm bg-primary/20 border border-primary/60" />
-          entry
+          начальное
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded-sm bg-amber-500/20 border border-amber-500/60" />
-          active
+          активное
         </span>
         <span className="flex items-center gap-1 opacity-60 ml-auto">
-          click state or edge to inspect
+          Выберите состояние или переход для просмотра
         </span>
       </div>
 
@@ -299,10 +299,10 @@ export function StateMachinePanel() {
           {selectedTransition ? (
             // Transition inspector
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Transition</span>
+              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Переход</span>
               <span className="text-[10px] font-semibold text-primary">
                 {selectedTransition.fromStateId === "*"
-                  ? "any"
+                  ? "любой"
                   : selectedTransition.fromStateId}
                 {" → "}
                 {selectedTransition.toStateId}
@@ -312,7 +312,7 @@ export function StateMachinePanel() {
               </span>
               {selectedTransition.durationMs > 0 && (
                 <span className="text-[9px] text-muted-foreground">
-                  blend {selectedTransition.durationMs}ms
+                  смешивание {selectedTransition.durationMs}мс
                 </span>
               )}
               <button
@@ -330,10 +330,10 @@ export function StateMachinePanel() {
               );
               return (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[9px] text-muted-foreground uppercase tracking-wider">State</span>
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Состояние</span>
                   <span className="text-[10px] font-semibold text-amber-400">{selectedStateId}</span>
                   <span className="text-[9px] text-muted-foreground">
-                    speed×{st.speed} · {st.loop ? "loops" : "once"}
+                    скорость ×{st.speed} · {st.loop ? "зациклен" : "один раз"}
                   </span>
                   {outgoing.length > 0 && (
                     <span className="text-[9px] text-muted-foreground/60 ml-1">

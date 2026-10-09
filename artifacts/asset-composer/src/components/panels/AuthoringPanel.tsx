@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { uiLabel } from "@/lib/uiLabels";
 import {
   MousePointer2, Pencil, Spline, PaintBucket, Eraser, Undo2, Redo2, Square, Circle, X,
   Layers, Eye, EyeOff, Lock, Unlock, Plus, Trash2, Copy, Crop, Crosshair, Anchor, User,
@@ -69,38 +70,38 @@ import type {
 } from "@/domain/types";
 
 const SHAPE_LABELS: Record<SpriteEditorShape["type"], string> = {
-  rect: "Rect",
-  ellipse: "Ellipse",
-  path: "Path",
+  rect: "Прямоугольник",
+  ellipse: "Эллипс",
+  path: "Контур",
 };
 
 const BODY_MORPH_LABELS: Record<keyof BodyMorphValues, string> = {
-  headSize: "Head Size",
-  neckLength: "Neck Length",
-  torsoHeight: "Torso Height",
-  torsoWidth: "Torso Width",
-  armLength: "Arm Length",
-  forearmLength: "Forearm Length",
-  handSize: "Hand Size",
-  legLength: "Leg Length",
-  shinLength: "Shin Length",
-  footSize: "Foot Size",
-  pelvisWidth: "Pelvis Width",
-  overallHeightScale: "Overall Height",
+  headSize: "Размер головы",
+  neckLength: "Длина шеи",
+  torsoHeight: "Высота туловища",
+  torsoWidth: "Ширина туловища",
+  armLength: "Длина плеча",
+  forearmLength: "Длина предплечья",
+  handSize: "Размер кисти",
+  legLength: "Длина бедра",
+  shinLength: "Длина голени",
+  footSize: "Размер стопы",
+  pelvisWidth: "Ширина таза",
+  overallHeightScale: "Общий рост",
 };
 
 const BODY_REGION_LABELS: Record<BodyMorphRegionId, string> = {
-  head: "Head",
-  torso: "Torso",
-  arms: "Arms",
-  legs: "Legs",
-  global: "Global",
+  head: "Голова",
+  torso: "Туловище",
+  arms: "Руки",
+  legs: "Ноги",
+  global: "Общие",
 };
 
 const BODY_AUTHORING_INTENT_LABELS: Record<BodyAuthoringIntent, string> = {
   morph: "Morph",
   inspect: "Inspect",
-  preview: "Preview",
+  preview: "Предпросмотр",
 };
 
 const BODY_VIEWPORT_MODE_LABELS: Record<BodyAuthoringViewportMode, string> = {
@@ -109,27 +110,27 @@ const BODY_VIEWPORT_MODE_LABELS: Record<BodyAuthoringViewportMode, string> = {
 };
 
 const FACE_WORKFLOW_MODE_LABELS: Record<FaceAuthoringWorkflowMode, string> = {
-  feature: "Feature",
+  feature: "Черта лица",
   overlay: "Overlay",
 };
 
 const FACE_OVERLAY_ROLE_LABELS: Record<FaceOverlayRole, string> = {
-  base: "Base",
-  line: "Line",
-  detail: "Detail",
-  shadow: "Shadow",
-  highlight: "Highlight",
+  base: "Основа",
+  line: "Линия",
+  detail: "Деталь",
+  shadow: "Тень",
+  highlight: "Блик",
 };
 
 const FACE_PAINT_TARGET_LABELS: Record<SpriteEditorPaintTarget, string> = {
-  fill: "Fill",
-  stroke: "Line",
-  both: "Both",
+  fill: "Заливка",
+  stroke: "Линия",
+  both: "Оба",
 };
 
 const FACE_SYMMETRY_LABELS: Record<SpriteEditorSymmetryMode, string> = {
-  none: "None",
-  mirror_x: "Mirror X",
+  none: "Нет",
+  mirror_x: "Отразить по X",
 };
 
 function getSuggestedToolForPaintTarget(target: SpriteEditorPaintTarget): FaceAuthoringTool {
@@ -170,41 +171,41 @@ const DEFAULT_BODY_MORPHS: BodyMorphValues = {
 const BODY_MORPH_PRESETS: Array<{ id: string; label: string; values: Partial<BodyMorphValues> }> = [
   {
     id: "heroic",
-    label: "Heroic",
+    label: "Герой",
     values: { headSize: 0.94, torsoWidth: 1.15, armLength: 1.08, handSize: 1.08, legLength: 1.08, overallHeightScale: 1.05 },
   },
   {
     id: "rogue",
-    label: "Rogue",
+    label: "Ловкач",
     values: { headSize: 1.02, torsoWidth: 0.92, armLength: 1.1, forearmLength: 1.08, legLength: 1.12, footSize: 0.95 },
   },
   {
     id: "dwarf",
-    label: "Dwarf",
+    label: "Коренастый",
     values: { headSize: 1.12, neckLength: 0.9, torsoHeight: 0.88, torsoWidth: 1.12, legLength: 0.84, shinLength: 0.86, overallHeightScale: 0.88 },
   },
 ];
 
 const BODY_QUICK_ACTIONS: Record<BodyMorphRegionId, Array<{ id: string; label: string; values: Partial<BodyMorphValues> }>> = {
   head: [
-    { id: "head_big_head", label: "Big Head", values: { headSize: 1.16, neckLength: 0.94 } },
-    { id: "head_small_head", label: "Small Head", values: { headSize: 0.9, neckLength: 1.05 } },
+    { id: "head_big_head", label: "Большая голова", values: { headSize: 1.16, neckLength: 0.94 } },
+    { id: "head_small_head", label: "Маленькая голова", values: { headSize: 0.9, neckLength: 1.05 } },
   ],
   torso: [
-    { id: "torso_broad_torso", label: "Broad Torso", values: { torsoWidth: 1.18, torsoHeight: 1.08, pelvisWidth: 1.08 } },
-    { id: "torso_lean_torso", label: "Lean Torso", values: { torsoWidth: 0.9, torsoHeight: 1.04, pelvisWidth: 0.94 } },
+    { id: "torso_broad_torso", label: "Широкое туловище", values: { torsoWidth: 1.18, torsoHeight: 1.08, pelvisWidth: 1.08 } },
+    { id: "torso_lean_torso", label: "Узкое туловище", values: { torsoWidth: 0.9, torsoHeight: 1.04, pelvisWidth: 0.94 } },
   ],
   arms: [
-    { id: "arms_long_reach", label: "Long Reach", values: { armLength: 1.14, forearmLength: 1.12, handSize: 1.02 } },
-    { id: "arms_compact_arms", label: "Compact Arms", values: { armLength: 0.92, forearmLength: 0.92, handSize: 0.94 } },
+    { id: "arms_long_reach", label: "Длинные руки", values: { armLength: 1.14, forearmLength: 1.12, handSize: 1.02 } },
+    { id: "arms_compact_arms", label: "Короткие руки", values: { armLength: 0.92, forearmLength: 0.92, handSize: 0.94 } },
   ],
   legs: [
-    { id: "legs_long_legs", label: "Long Legs", values: { legLength: 1.16, shinLength: 1.12, footSize: 1.02 } },
-    { id: "legs_heavy_steps", label: "Heavy Steps", values: { legLength: 0.96, shinLength: 0.96, footSize: 1.14 } },
+    { id: "legs_long_legs", label: "Длинные ноги", values: { legLength: 1.16, shinLength: 1.12, footSize: 1.02 } },
+    { id: "legs_heavy_steps", label: "Тяжёлая поступь", values: { legLength: 0.96, shinLength: 0.96, footSize: 1.14 } },
   ],
   global: [
-    { id: "global_compact", label: "Compact", values: { overallHeightScale: 0.92, armLength: 0.94, legLength: 0.9, shinLength: 0.92 } },
-    { id: "global_tall", label: "Tall", values: { overallHeightScale: 1.1, legLength: 1.08, torsoHeight: 1.04 } },
+    { id: "global_compact", label: "Компактный", values: { overallHeightScale: 0.92, armLength: 0.94, legLength: 0.9, shinLength: 0.92 } },
+    { id: "global_tall", label: "Высокий", values: { overallHeightScale: 1.1, legLength: 1.08, torsoHeight: 1.04 } },
   ],
 };
 
@@ -223,12 +224,12 @@ const BODY_POSE_PRESETS: Array<{
 }> = [
   {
     id: "neutral_reset",
-    label: "Neutral",
+    label: "Нейтральный",
     pose: {},
   },
   {
     id: "quarter_turn",
-    label: "3/4 Turn",
+    label: "Поворот 3/4",
     pose: {
       root: { rotation: -10 },
       chest: { rotation: -8 },
@@ -241,7 +242,7 @@ const BODY_POSE_PRESETS: Array<{
   },
   {
     id: "combat_ready",
-    label: "Combat",
+    label: "Бой",
     pose: {
       chest: { rotation: -6, ty: -1 },
       shoulder_l: { rotation: -26, ty: -1 },
@@ -255,11 +256,11 @@ const BODY_POSE_PRESETS: Array<{
 ];
 
 const FACE_WORKSPACE_LABELS: Record<keyof Omit<FaceCustomization, "overlays">, string> = {
-  eyes: "Eyes",
-  mouth: "Mouth",
-  brows: "Brows",
-  beard: "Beard",
-  hair: "Hair",
+  eyes: "Глаза",
+  mouth: "Рот",
+  brows: "Брови",
+  beard: "Борода",
+  hair: "Волосы",
 };
 
 const FACE_FEATURE_TO_SLOT: Partial<Record<FaceFeatureKey, string>> = {
@@ -272,42 +273,42 @@ const FACE_FEATURE_TO_SLOT: Partial<Record<FaceFeatureKey, string>> = {
 
 const FACE_PRESETS: Record<keyof Omit<FaceCustomization, "overlays">, Array<{ id: string; label: string }>> = {
   eyes: [
-    { id: "dot_cute", label: "Dot Cute" },
-    { id: "round_kawaii", label: "Round Kawaii" },
-    { id: "wide_shine", label: "Wide Shine" },
-    { id: "sleepy", label: "Sleepy" },
-    { id: "none", label: "None" },
+    { id: "dot_cute", label: "Точки" },
+    { id: "round_kawaii", label: "Круглые" },
+    { id: "wide_shine", label: "Широкие с бликом" },
+    { id: "sleepy", label: "Сонный" },
+    { id: "none", label: "Нет" },
   ],
   mouth: [
-    { id: "tiny_smile", label: "Tiny Smile" },
-    { id: "soft_smile", label: "Soft Smile" },
-    { id: "neutral", label: "Neutral" },
-    { id: "open_smile", label: "Open Smile" },
-    { id: "frown", label: "Frown" },
-    { id: "none", label: "None" },
+    { id: "tiny_smile", label: "Маленькая улыбка" },
+    { id: "soft_smile", label: "Лёгкая улыбка" },
+    { id: "neutral", label: "Нейтральный" },
+    { id: "open_smile", label: "Открытая улыбка" },
+    { id: "frown", label: "Нахмуренный" },
+    { id: "none", label: "Нет" },
   ],
   brows: [
-    { id: "soft_arc", label: "Soft Arc" },
-    { id: "stern", label: "Stern" },
-    { id: "worried", label: "Worried" },
-    { id: "none", label: "None" },
+    { id: "soft_arc", label: "Мягкая дуга" },
+    { id: "stern", label: "Строгий" },
+    { id: "worried", label: "Обеспокоенный" },
+    { id: "none", label: "Нет" },
   ],
   beard: [
-    { id: "short_goatee", label: "Short Goatee" },
-    { id: "full_short", label: "Full Short" },
-    { id: "none", label: "None" },
+    { id: "short_goatee", label: "Короткая эспаньолка" },
+    { id: "full_short", label: "Короткая борода" },
+    { id: "none", label: "Нет" },
   ],
   hair: [
-    { id: "messy_short", label: "Messy Short" },
-    { id: "fringe_short", label: "Fringe Short" },
-    { id: "fringe_long", label: "Fringe Long" },
-    { id: "tuft", label: "Tuft" },
-    { id: "none", label: "None" },
+    { id: "messy_short", label: "Короткие взъерошенные" },
+    { id: "fringe_short", label: "Короткая чёлка" },
+    { id: "fringe_long", label: "Длинная чёлка" },
+    { id: "tuft", label: "Хохолок" },
+    { id: "none", label: "Нет" },
   ],
 };
 
 const FACE_OVERLAY_DEFAULTS: Record<"generic" | keyof Omit<FaceCustomization, "overlays">, { name: string; width: number; height: number }> = {
-  generic: { name: "Face Overlay", width: 64, height: 64 },
+  generic: { name: "Деталь лица", width: 64, height: 64 },
   eyes: { name: "Eyes Overlay", width: 52, height: 22 },
   mouth: { name: "Mouth Overlay", width: 28, height: 18 },
   brows: { name: "Brows Overlay", width: 50, height: 18 },
@@ -413,10 +414,10 @@ function getBodyMorphPresetLabel(presetId?: string | null) {
 
 function getDocumentGroupLabel(groupKey: string) {
   if (groupKey.startsWith("face:")) {
-    return `Face · ${getFaceFeatureLabel(groupKey.slice(5) as FaceFeatureKey | "generic")}`;
+    return `Лицо · ${getFaceFeatureLabel(groupKey.slice(5) as FaceFeatureKey | "generic")}`;
   }
-  if (groupKey === "item:item-part") return "Item Parts";
-  if (groupKey === "entity:entity-visual") return "Entity Visuals";
+  if (groupKey === "item:item-part") return "Части предметов";
+  if (groupKey === "entity:entity-visual") return "Рисунки объектов";
   return groupKey;
 }
 
@@ -1025,7 +1026,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
     if (!activeDoc) return null;
     if (activeDoc.target.kind === "entity-visual") {
       return {
-        kindLabel: "Entity Visual",
+        kindLabel: "Рисунок объекта",
         targetLabel: activeDoc.target.visualId ?? "visual",
         slotLabel: null as string | null,
         boneLabel: getSpriteDocumentBoneLabel(activeDoc, project),
@@ -1033,7 +1034,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
     }
     if (activeDoc.target.kind === "face-overlay") {
       return {
-        kindLabel: "Face Overlay",
+        kindLabel: "Деталь лица",
         targetLabel: activeDoc.target.overlayId ?? "overlay",
         slotLabel: null as string | null,
         boneLabel: "head",
@@ -1044,7 +1045,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
       : null;
     const slotId = entity?.slots.find(slot => slot.itemId === activeDoc.target.itemId)?.slotId ?? null;
     return {
-      kindLabel: "Item Part",
+      kindLabel: "Часть предмета",
       targetLabel: activeDoc.target.partId ?? "part",
       slotLabel: slotId,
       boneLabel: getSpriteDocumentBoneLabel(activeDoc, project),
@@ -1085,10 +1086,10 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
   }, [activeDoc, selectedLayerId, selectedShapeId]);
 
   useEffect(() => {
-    if (project.editorMeta.activeAuthoringMode === "sprite-editor" && activeDoc?.id) {
+    if (!standalone && project.editorMeta.activeAuthoringMode === "sprite-editor" && activeDoc?.id) {
       setIsSpriteStudioOpen(true);
     }
-  }, [activeDoc?.id, project.editorMeta.activeAuthoringMode]);
+  }, [activeDoc?.id, project.editorMeta.activeAuthoringMode, standalone]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1269,6 +1270,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
   }, [activeDoc, activeFaceCanvasTool]);
 
   function applyDocumentToTarget(doc: SpriteEditorDocument) {
+    if (doc.studioArtwork) return; // Linked documents render directly; never flatten raster layers.
     const svgData = spriteEditorDocumentToSvg(doc);
     const metrics = doc.authoringHint?.preserveFrame
       ? getAuthoredDocumentMetrics(svgData, doc.width, doc.height)
@@ -1637,7 +1639,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                   } } : {}),
                 });
               }}>
-              {activeTemplate.bones.map(bone => <option key={bone.id} value={bone.id}>{PART_BONE_LABELS[bone.id] ?? bone.id}</option>)}
+              {activeTemplate.bones.map(bone => <option key={bone.id} value={bone.id}>{PART_BONE_LABELS[bone.id] ?? uiLabel(bone.name)}</option>)}
             </select>
           </label>
         )}
@@ -2972,7 +2974,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
             <rect x={7 * scale} y={18 * scale} width={14 * scale} height={26 * scale} rx={3 * scale} />
             <line x1={10 * scale} y1={44 * scale} x2={8 * scale} y2={68 * scale} strokeWidth="3" />
             <line x1={18 * scale} y1={44 * scale} x2={20 * scale} y2={68 * scale} strokeWidth="3" />
-            <text x={28 * scale} y={36 * scale} fill="#94a3b8" fontSize={9 * scale} fontFamily="sans-serif">1.8m Scale</text>
+            <text x={28 * scale} y={36 * scale} fill="#94a3b8" fontSize={9 * scale} fontFamily="sans-serif">Рост 1,8 м</text>
           </g>
         )}
       </svg>
@@ -2982,13 +2984,13 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
   return (
     <>
     <div className="flex h-full min-w-0 bg-background" data-document-history="true">
-      <div className={`${standalone ? "w-44" : "w-64"} flex-shrink-0 border-r border-border bg-sidebar/40`}>
+      <div className={`contour-sidebar ${standalone ? "w-44" : "w-64"} flex-shrink-0 border-r border-border bg-sidebar/40`}>
         <div className="h-full overflow-auto">
           <div className="p-3 space-y-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Рисунок</p>
               <p className="sr-only">
-                Open the selected item part or entity visual, draw vector shapes, then save back into the project.
+                Выберите часть предмета или рисунок объекта. Изменения рисунка обновляют связанный объект.
               </p>
             </div>
 
@@ -3073,7 +3075,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
               <div className="space-y-2">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Face Overlays</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Рисунки лица</p>
                     <NativeSelect
                       value={faceAuthoring.overlayGrouping ?? "feature"}
                       onValueChange={value => {
@@ -3084,9 +3086,9 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       }}
                       className="h-7 w-[128px]"
                       options={[
-                        { value: "feature", label: "By Feature" },
-                        { value: "feature_role", label: "Feature + Role" },
-                        { value: "feature_role_paint", label: "Feature + Role + Paint" },
+                        { value: "feature", label: "По черте лица" },
+                        { value: "feature_role", label: "Черта лица + назначение" },
+                        { value: "feature_role_paint", label: "Черта лица + назначение + оформление" },
                       ]}
                     />
                   </div>
@@ -3110,13 +3112,13 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       }}
                       className="h-7"
                       options={[
-                        { value: "all", label: "All features" },
-                        { value: "generic", label: "Generic" },
-                        { value: "eyes", label: "Eyes" },
-                        { value: "mouth", label: "Mouth" },
-                        { value: "brows", label: "Brows" },
-                        { value: "beard", label: "Beard" },
-                        { value: "hair", label: "Hair" },
+                        { value: "all", label: "Все черты лица" },
+                        { value: "generic", label: "Произвольный" },
+                        { value: "eyes", label: "Глаза" },
+                        { value: "mouth", label: "Рот" },
+                        { value: "brows", label: "Брови" },
+                        { value: "beard", label: "Борода" },
+                        { value: "hair", label: "Волосы" },
                       ]}
                     />
                     <NativeSelect
@@ -3129,12 +3131,12 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       }}
                       className="h-7"
                       options={[
-                        { value: "all", label: "All roles" },
-                        { value: "base", label: "Base" },
-                        { value: "line", label: "Line" },
-                        { value: "detail", label: "Detail" },
-                        { value: "shadow", label: "Shadow" },
-                        { value: "highlight", label: "Highlight" },
+                        { value: "all", label: "Все назначения" },
+                        { value: "base", label: "Основа" },
+                        { value: "line", label: "Линия" },
+                        { value: "detail", label: "Деталь" },
+                        { value: "shadow", label: "Тень" },
+                        { value: "highlight", label: "Блик" },
                       ]}
                     />
                     <NativeSelect
@@ -3147,10 +3149,10 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       }}
                       className="h-7"
                       options={[
-                        { value: "all", label: "All paint" },
-                        { value: "fill", label: "Fill" },
-                        { value: "stroke", label: "Line" },
-                        { value: "both", label: "Both" },
+                        { value: "all", label: "Всё оформление" },
+                        { value: "fill", label: "Заливка" },
+                        { value: "stroke", label: "Линия" },
+                        { value: "both", label: "Оба" },
                       ]}
                     />
                   </div>
@@ -3175,7 +3177,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                         >
                           <div className="truncate font-medium">{overlay.name}</div>
                           <div className="truncate text-[10px] opacity-80">
-                            overlay · {getFaceFeatureLabel(overlay.featureTag)}
+                            рисунок · {getFaceFeatureLabel(overlay.featureTag)}
                             {overlay.editorDocumentId && " · linked doc"}
                           </div>
                           <div className="truncate text-[10px] opacity-70">
@@ -3192,10 +3194,10 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
             <Separator className="bg-border" />
 
             <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Documents</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Документы</p>
               <div className="space-y-2">
                 {project.editorMeta.spriteEditorDocuments.length === 0 && (
-                  <p className="text-[11px] text-muted-foreground">No editor documents yet.</p>
+                  <p className="text-[11px] text-muted-foreground">Пока нет документов рисунков.</p>
                 )}
                 {groupedDocuments.map(([groupKey, docs]) => (
                   <div key={groupKey} className="space-y-1">
@@ -3225,9 +3227,9 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       >
                         <div className="font-medium truncate">{doc.name}</div>
                         <div className="text-[10px] opacity-80 truncate">
-                          {doc.target.kind}
+                          {uiLabel(doc.target.kind)}
                           {doc.target.kind === "face-overlay" && ` · ${getFaceFeatureLabel(doc.authoringHint?.faceFeatureKey)}`}
-                          {doc.target.kind === "face-overlay" && doc.target.overlayId && " · overlay doc"}
+                          {doc.target.kind === "face-overlay" && doc.target.overlayId && " · рисунок детали"}
                           {doc.target.kind !== "face-overlay" && doc.authoringHint?.bodyMorphPresetId && ` · ${getBodyMorphPresetLabel(doc.authoringHint.bodyMorphPresetId)}`}
                         </div>
                       </button>
@@ -3245,14 +3247,14 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
           <div className="border-r border-border p-3">
             <div className="space-y-3">
               <div>
-                <p className="text-xs font-semibold text-foreground">Body Morph Workspace</p>
+                <p className="text-xs font-semibold text-foreground">Редактор пропорций</p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  These sliders update the active entity immediately in canvas, animation preview and save data.
+                  Ползунки сразу обновляют объект на холсте, в анимации и в сохраняемых данных.
                 </p>
               </div>
 
               <div className="space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Presets</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Готовые настройки</p>
                 <div className="grid grid-cols-2 gap-2">
                   {BODY_MORPH_PRESETS.map(preset => (
                     <Button
@@ -3271,13 +3273,13 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     className="h-8 text-[11px]"
                     onClick={() => applyMorphPreset("balanced", DEFAULT_BODY_MORPHS)}
                   >
-                    Reset
+                    Сбросить
                   </Button>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Body Regions</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Области тела</p>
                 <div className="grid grid-cols-3 gap-2">
                   {(Object.keys(BODY_REGION_LABELS) as BodyMorphRegionId[]).map(region => (
                     <Button
@@ -3302,7 +3304,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Body Intent</Label>
+                  <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Задача редактирования тела</Label>
                   <NativeSelect
                     value={bodyAuthoring.intent ?? "morph"}
                     onValueChange={value => patchBodyWorkflow({ intent: value as BodyAuthoringIntent })}
@@ -3314,7 +3316,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Viewport</Label>
+                  <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Область просмотра</Label>
                   <NativeSelect
                     value={bodyAuthoring.viewportMode ?? "focus_region"}
                     onValueChange={value => patchBodyWorkflow({ viewportMode: value as BodyAuthoringViewportMode })}
@@ -3329,7 +3331,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
 
               <div className="space-y-2">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Quick Body Actions · {BODY_REGION_LABELS[bodyAuthoring.focusRegion]}
+                  Действия с телом · {BODY_REGION_LABELS[bodyAuthoring.focusRegion]}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {BODY_QUICK_ACTIONS[bodyAuthoring.focusRegion].map(action => (
@@ -3349,17 +3351,17 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     className="h-8 text-[11px]"
                     onClick={() => applyMorphPreset("balanced", DEFAULT_BODY_MORPHS, bodyAuthoring.focusRegion)}
                   >
-                    Reset Balanced
+                    Сбросить пропорции
                   </Button>
                 </div>
               </div>
 
               {activeEntity && (
                 <div className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Live Character Preview</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Предпросмотр в сцене</p>
                   <LiveAuthoringPreview entityId={activeEntity.id} />
                   <p className="text-[10px] text-muted-foreground">
-                    Morph changes apply directly to the active entity and re-render here in the same authoring flow.
+                    Изменения пропорций сразу видны на открытом объекте.
                   </p>
                 </div>
               )}
@@ -3367,9 +3369,9 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
               {activeEntity && activeTemplate && (
                 <div className="space-y-3 rounded border border-border bg-background/50 p-3">
                   <div className="space-y-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Skeleton Pose</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Поза скелета</p>
                     <p className="text-[10px] text-muted-foreground">
-                      Fine-tune the rig by nudging individual bones. These offsets are saved with the character.
+                      Настройте исходное положение отдельных костей. Смещения сохраняются с персонажем.
                     </p>
                   </div>
 
@@ -3390,7 +3392,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       onClick={() => resetEntityPoseOverride(activeEntity.id, activePoseBoneId)}
                       disabled={!activePoseBoneId}
                     >
-                      Reset Bone
+                      Сбросить кость
                     </Button>
                   </div>
 
@@ -3417,19 +3419,19 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                   {activePoseBoneId && (
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label className="text-[10px]">Offset X</Label>
+                        <Label className="text-[10px]">Смещение X</Label>
                         <NumericInput value={activePoseOverride.tx} onChange={value => patchPoseOverride(activePoseBoneId, { tx: value })} />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px]">Offset Y</Label>
+                        <Label className="text-[10px]">Смещение Y</Label>
                         <NumericInput value={activePoseOverride.ty} onChange={value => patchPoseOverride(activePoseBoneId, { ty: value })} />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px]">Rotation</Label>
+                        <Label className="text-[10px]">Поворот</Label>
                         <NumericInput value={activePoseOverride.rotation} onChange={value => patchPoseOverride(activePoseBoneId, { rotation: value })} />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px]">Uniform Scale</Label>
+                        <Label className="text-[10px]">Равномерный масштаб</Label>
                         <NumericInput value={activePoseOverride.scaleX} onChange={value => patchPoseOverride(activePoseBoneId, { scaleX: value, scaleY: value })} />
                       </div>
                     </div>
@@ -3440,17 +3442,17 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
               <Separator className="bg-border" />
 
               <div className="space-y-2 text-[11px] text-muted-foreground">
-                <div className="flex justify-between"><span>Profile</span><span>{getBodyMorphPresetLabel(activeEntity?.bodyMorphPresetId)}</span></div>
-                <div className="flex justify-between"><span>Focus</span><span>{BODY_REGION_LABELS[bodyAuthoring.focusRegion]}</span></div>
-                <div className="flex justify-between"><span>Intent</span><span>{BODY_AUTHORING_INTENT_LABELS[bodyAuthoring.intent ?? "morph"]}</span></div>
-                <div className="flex justify-between"><span>Viewport</span><span>{BODY_VIEWPORT_MODE_LABELS[bodyAuthoring.viewportMode ?? "focus_region"]}</span></div>
-                <div className="flex justify-between"><span>Target Bone</span><span>{bodyAuthoring.activeBoneId ?? "auto"}</span></div>
-                <div className="flex justify-between"><span>Target Slot</span><span>{bodyAuthoring.activeSlotId ?? "none"}</span></div>
-                <div className="flex justify-between"><span>Head</span><span>{bodyMorphs.headSize.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Torso</span><span>{bodyMorphs.torsoHeight.toFixed(2)} / {bodyMorphs.torsoWidth.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Arms</span><span>{bodyMorphs.armLength.toFixed(2)} / {bodyMorphs.forearmLength.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Legs</span><span>{bodyMorphs.legLength.toFixed(2)} / {bodyMorphs.shinLength.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Overall</span><span>{bodyMorphs.overallHeightScale.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Профиль</span><span>{getBodyMorphPresetLabel(activeEntity?.bodyMorphPresetId)}</span></div>
+                <div className="flex justify-between"><span>Область</span><span>{BODY_REGION_LABELS[bodyAuthoring.focusRegion]}</span></div>
+                <div className="flex justify-between"><span>Задача</span><span>{BODY_AUTHORING_INTENT_LABELS[bodyAuthoring.intent ?? "morph"]}</span></div>
+                <div className="flex justify-between"><span>Область просмотра</span><span>{BODY_VIEWPORT_MODE_LABELS[bodyAuthoring.viewportMode ?? "focus_region"]}</span></div>
+                <div className="flex justify-between"><span>Целевая кость</span><span>{bodyAuthoring.activeBoneId ?? "auto"}</span></div>
+                <div className="flex justify-between"><span>Целевое крепление</span><span>{bodyAuthoring.activeSlotId ?? "none"}</span></div>
+                <div className="flex justify-between"><span>Голова</span><span>{bodyMorphs.headSize.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Туловище</span><span>{bodyMorphs.torsoHeight.toFixed(2)} / {bodyMorphs.torsoWidth.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Руки</span><span>{bodyMorphs.armLength.toFixed(2)} / {bodyMorphs.forearmLength.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Ноги</span><span>{bodyMorphs.legLength.toFixed(2)} / {bodyMorphs.shinLength.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Общее</span><span>{bodyMorphs.overallHeightScale.toFixed(2)}</span></div>
               </div>
             </div>
           </div>
@@ -3459,7 +3461,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
             <div className="p-3 space-y-3">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Morph Sliders · {BODY_REGION_LABELS[bodyAuthoring.focusRegion]}
+                  Пропорции · {BODY_REGION_LABELS[bodyAuthoring.focusRegion]}
                 </p>
               </div>
               {activeBodyRegionKeys.map(key => (
@@ -3495,16 +3497,16 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
           <div className="border-r border-border p-3">
             <div className="space-y-3">
               <div>
-                <p className="text-xs font-semibold text-foreground">Face Workspace</p>
+                <p className="text-xs font-semibold text-foreground">Работа с лицом</p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  Parametric face settings stay in the inspector, while custom overlays and draw-over parts live here.
+                  Основные параметры лица находятся во «Внешности». Здесь рисуются свои детали лица.
                 </p>
               </div>
 
               {faceCustomization && (
                 <div className="space-y-3">
                   <div className="space-y-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Face Feature</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Выбранная черта лица</p>
                     <div className="grid grid-cols-3 gap-2">
                       {(Object.keys(FACE_WORKSPACE_LABELS) as Array<keyof Omit<FaceCustomization, "overlays">>).map(key => (
                         <Button
@@ -3534,7 +3536,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                   <div className="rounded border border-border bg-background/50 p-2 space-y-2">
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Workflow</Label>
+                        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Задача</Label>
                         <NativeSelect
                           value={faceAuthoring.workflowMode ?? "feature"}
                           onValueChange={value => patchFaceWorkflow({ workflowMode: value as FaceAuthoringWorkflowMode })}
@@ -3546,7 +3548,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Draft Role</Label>
+                        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Назначение рисунка</Label>
                         <NativeSelect
                           value={faceAuthoring.draftOverlayRole ?? "detail"}
                           onValueChange={value => patchFaceWorkflow({ draftOverlayRole: value as FaceOverlayRole })}
@@ -3558,7 +3560,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Draft Paint</Label>
+                        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Оформление рисунка</Label>
                         <NativeSelect
                           value={faceAuthoring.draftPaintTarget ?? "both"}
                           onValueChange={value => {
@@ -3574,7 +3576,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Draft Symmetry</Label>
+                        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Симметрия рисунка</Label>
                         <NativeSelect
                           value={faceAuthoring.draftSymmetryMode ?? "none"}
                           onValueChange={value => patchFaceWorkflow({ draftSymmetryMode: value as SpriteEditorSymmetryMode })}
@@ -3587,11 +3589,11 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
-                      <div className="flex justify-between"><span>Target Bone</span><span className="text-foreground">{faceAuthoring.activeBoneId ?? "head"}</span></div>
-                      <div className="flex justify-between"><span>Target Slot</span><span className="text-foreground">{faceAuthoring.activeSlotId ?? "head-local"}</span></div>
+                      <div className="flex justify-between"><span>Целевая кость</span><span className="text-foreground">{faceAuthoring.activeBoneId ?? "head"}</span></div>
+                      <div className="flex justify-between"><span>Целевое крепление</span><span className="text-foreground">{faceAuthoring.activeSlotId ?? "head-local"}</span></div>
                     </div>
                   </div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Feature Controls</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Параметры черты лица</p>
                   {visibleFaceFeatures.map(key => {
                     const feature = faceCustomization[key];
                     return (
@@ -3608,7 +3610,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                                 setEntityFaceFeature(activeEntity.id, key, { visible: event.target.checked });
                               }}
                             />
-                            Visible
+                            Видимый
                           </label>
                         </div>
 
@@ -3658,7 +3660,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                             }} />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-[10px]">Rotation</Label>
+                            <Label className="text-[10px]">Поворот</Label>
                             <NumericInput value={feature.transform.rotation} onChange={value => {
                               if (!activeEntity) return;
                               setEntityFaceAuthoringState(activeEntity.id, { activeFeatureKey: key });
@@ -3666,7 +3668,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                             }} />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-[10px]">Scale</Label>
+                            <Label className="text-[10px]">Масштаб</Label>
                             <NumericInput value={feature.transform.scaleX} onChange={value => {
                               if (!activeEntity) return;
                               setEntityFaceAuthoringState(activeEntity.id, { activeFeatureKey: key });
@@ -3683,14 +3685,14 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                 {activeEntity && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Live Character Preview</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Предпросмотр в сцене</p>
                       <Button
                         size="sm"
                         variant={activeFaceCanvasFocusMode === "head" ? "default" : "outline"}
                         className="h-7 text-[11px]"
                         onClick={() => enterDrawOnHeadMode(activeFaceCanvasTool ?? "pencil")}
                       >
-                        Draw On Head
+                        Рисовать на голове
                       </Button>
                     </div>
                     <LiveAuthoringPreview
@@ -3700,8 +3702,8 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     />
                     <p className="text-[10px] text-muted-foreground">
                       {activeFaceCanvasFocusMode === "head"
-                        ? "Draw On Head keeps the face workflow locked to the head overlay context while you paint."
-                        : "Face presets, transforms and overlays update this preview through the same evaluated character pipeline."}
+                        ? "Режим рисования на голове сохраняет связь с выбранной деталью лица."
+                        : "Предпросмотр учитывает варианты лица, положение и свои рисунки."}
                     </p>
                   </div>
                 )}
@@ -3710,16 +3712,16 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Quick Overlay Actions</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Действия с рисунком лица</p>
                   <span className="text-[10px] text-muted-foreground">
-                    Focus: {activeFaceFeature === "generic" ? "Generic" : FACE_WORKSPACE_LABELS[activeFaceFeature]}
+                    Область: {activeFaceFeature === "generic" ? "Произвольный" : FACE_WORKSPACE_LABELS[activeFaceFeature]}
                   </span>
                 </div>
                 <div className="rounded border border-border bg-background/50 p-2 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <p className="text-[11px] text-foreground">
-                        {selectedFaceOverlay ? selectedFaceOverlay.name : "No overlay selected"}
+                        {selectedFaceOverlay ? selectedFaceOverlay.name : "Рисунок лица не выбран"}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
                         {selectedFaceOverlay
@@ -3734,7 +3736,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       onClick={() => applyFaceBrushPreset(selectedFaceOverlay?.featureTag ?? activeFaceFeature)}
                       disabled={!activeEntity}
                     >
-                      Apply Brush Preset
+                      Применить настройки кисти
                     </Button>
                   </div>
                   <div className="flex items-center gap-2">
@@ -3745,7 +3747,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       onClick={() => selectedFaceOverlay && openFaceOverlayDocument(selectedFaceOverlay)}
                       disabled={!selectedFaceOverlay}
                     >
-                      Open Selected
+                      Открыть выбранное
                     </Button>
                     <Button
                       size="sm"
@@ -3761,28 +3763,28 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       }}
                       disabled={!selectedFaceOverlay}
                     >
-                      Clear Selection
+                      Снять выделение
                     </Button>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <Button size="sm" variant="outline" className="h-8 text-[11px]" onClick={() => handleOpenOrCreateFaceOverlay("eyes")} disabled={!activeEntity}>
-                    Eyes Overlay
+                    Рисунок глаз
                   </Button>
                   <Button size="sm" variant="outline" className="h-8 text-[11px]" onClick={() => handleOpenOrCreateFaceOverlay("mouth")} disabled={!activeEntity}>
-                    Mouth Overlay
+                    Рисунок рта
                   </Button>
                   <Button size="sm" variant="outline" className="h-8 text-[11px]" onClick={() => handleOpenOrCreateFaceOverlay("brows")} disabled={!activeEntity}>
-                    Brows Overlay
+                    Рисунок бровей
                   </Button>
                   <Button size="sm" variant="outline" className="h-8 text-[11px]" onClick={() => handleOpenOrCreateFaceOverlay("beard")} disabled={!activeEntity}>
-                    Beard Overlay
+                    Рисунок бороды
                   </Button>
                   <Button size="sm" variant="outline" className="h-8 text-[11px]" onClick={() => handleOpenOrCreateFaceOverlay("hair")} disabled={!activeEntity}>
-                    Hair Overlay
+                    Рисунок волос
                   </Button>
                   <Button size="sm" variant="outline" className="h-8 text-[11px]" onClick={() => handleOpenOrCreateFaceOverlay("generic")} disabled={!activeEntity}>
-                    Generic Overlay
+                    Произвольный рисунок
                   </Button>
                 </div>
               </div>
@@ -3794,7 +3796,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                 disabled={!activeEntity}
               >
                 {activeFaceFeature === "generic"
-                  ? "Open Or Create Generic Overlay"
+                  ? "Открыть или создать рисунок лица"
                   : `Open Or Create ${FACE_WORKSPACE_LABELS[activeFaceFeature]} Overlay`}
               </Button>
             </div>
@@ -3804,11 +3806,11 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
             <div className="p-3 space-y-3">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Overlay Documents · {faceAuthoring.overlayFilter === "all" ? "all features" : getFaceFeatureLabel(faceAuthoring.overlayFilter)}
+                  Рисунки лица · {faceAuthoring.overlayFilter === "all" ? "все черты лица" : getFaceFeatureLabel(faceAuthoring.overlayFilter)}
                 </p>
               </div>
               {filteredFaceOverlays.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground">No face overlays yet. Create one to start drawing.</p>
+                <p className="text-[11px] text-muted-foreground">Создайте рисунок лица, чтобы начать рисовать.</p>
               ) : (
                 filteredFaceOverlays.map(overlay => (
                   <div
@@ -3822,7 +3824,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       <div>
                         <p className="text-xs text-foreground">{overlay.name}</p>
                         <p className="text-[10px] text-muted-foreground">
-                          {getFaceFeatureLabel(overlay.featureTag)} · pivot {overlay.pivot.x}, {overlay.pivot.y}
+                          {getFaceFeatureLabel(overlay.featureTag)} · опора {overlay.pivot.x}, {overlay.pivot.y}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -3836,7 +3838,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                             openFaceOverlayDocument(overlay);
                           }}
                         >
-                          Open In Editor
+                          Открыть рисунок
                         </Button>
                         <Button
                           size="sm"
@@ -3852,14 +3854,14 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                             }
                           }}
                         >
-                          Remove
+                          Убрать
                         </Button>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-[minmax(0,1fr)_140px] gap-2">
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Overlay Name</Label>
+                        <Label className="text-[10px] text-muted-foreground">Название рисунка</Label>
                         <Input
                           value={overlay.name}
                           onChange={event => handleOverlayNameChange(overlay, event.target.value)}
@@ -3867,18 +3869,18 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Feature Tag</Label>
+                        <Label className="text-[10px] text-muted-foreground">Метка черты лица</Label>
                         <NativeSelect
                           value={overlay.featureTag ?? "generic"}
                           onValueChange={value => handleOverlayFeatureTagChange(overlay, value as "eyes" | "mouth" | "brows" | "beard" | "hair" | "generic")}
                           className="h-8"
                           options={[
-                            { value: "generic", label: "Generic" },
-                            { value: "eyes", label: "Eyes" },
-                            { value: "mouth", label: "Mouth" },
-                            { value: "brows", label: "Brows" },
-                            { value: "beard", label: "Beard" },
-                            { value: "hair", label: "Hair" },
+                            { value: "generic", label: "Произвольный" },
+                            { value: "eyes", label: "Глаза" },
+                            { value: "mouth", label: "Рот" },
+                            { value: "brows", label: "Брови" },
+                            { value: "beard", label: "Борода" },
+                            { value: "hair", label: "Волосы" },
                           ]}
                         />
                       </div>
@@ -3903,7 +3905,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                           });
                         }}
                       >
-                        {faceAuthoring.selectedOverlayId === overlay.id ? "Selected" : "Select Overlay"}
+                        {faceAuthoring.selectedOverlayId === overlay.id ? "Выбрано" : "Выберите рисунок лица"}
                       </Button>
                       <Button
                         size="sm"
@@ -3915,10 +3917,10 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                           enterDrawOnHeadMode("pencil");
                         }}
                       >
-                        Draw On Head
+                        Рисовать на голове
                       </Button>
                       <span className="text-[10px] text-muted-foreground">
-                        {overlay.editorDocumentId ? "doc-linked overlay" : "overlay without saved doc link"}
+                        {overlay.editorDocumentId ? "рисунок связан с документом" : "рисунок без документа"}
                       </span>
                     </div>
                   </div>
@@ -3928,7 +3930,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
           </div>
         </div>
       ) : (
-      <div className={`flex-1 min-w-0 grid ${standalone ? "grid-cols-[minmax(0,1fr)_200px]" : "grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"}`}>
+      <div className={`flex-1 min-w-0 grid contour-main ${standalone ? "grid-cols-[minmax(0,1fr)_200px]" : "grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"}`}>
         <div className="border-r border-border p-3 overflow-hidden">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -3947,7 +3949,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       className="h-8 text-xs"
                       onClick={() => enterDrawOnHeadMode(activeFaceCanvasTool ?? "pencil")}
                     >
-                      Draw On Head
+                      Рисовать на голове
                     </Button>
                     <Button
                       size="sm"
@@ -3955,7 +3957,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       className="h-8 text-xs"
                       onClick={() => setFaceCanvasFocusMode("document")}
                     >
-                      Document View
+                      Вид документа
                     </Button>
                   </>
                 )}
@@ -3965,13 +3967,13 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     checked={autoPreviewEnabled}
                     onChange={event => setAutoPreviewEnabled(event.target.checked)}
                   />
-                  На персонаже
+                  Предпросмотр в сцене
                 </label>
                 <Button size="sm" variant="outline" className="h-8 text-xs" disabled={!activeDoc.referenceAsset} onClick={() => patchDocument(doc => ({ ...doc, referenceAsset: null }))}>
                   Убрать исходник
                 </Button>
                 <Button size="sm" className="h-8 text-xs" onClick={handleSaveToTarget}>
-                  Применить
+                  Обновить связанный рисунок
                 </Button>
               </div>
             )}
@@ -4027,7 +4029,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                   <>
                     <button
                       type="button"
-                      aria-label="Rotate shape"
+                      aria-label="Поворот фигуры"
                       onMouseDown={beginRotateSelectedShape}
                       className="absolute h-3 w-3 rounded-full border border-amber-300 bg-[#141622] shadow-sm"
                       style={{
@@ -4038,7 +4040,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     />
                     <button
                       type="button"
-                      aria-label="Resize shape"
+                      aria-label="Размер фигуры"
                       onMouseDown={beginResizeSelectedShape}
                       className="absolute h-3 w-3 rounded-sm border border-cyan-300 bg-[#141622] shadow-sm"
                       style={{
@@ -4070,7 +4072,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                 )}
                 {hoverPreviewShapeId && (spriteTool === "fill" || spriteTool === "eraser") && (
                   <div className="absolute left-2 top-2 rounded bg-black/45 px-2 py-1 text-[10px] text-foreground pointer-events-none">
-                    {spriteTool === "fill" ? `Paint Pass: ${getPaintTargetLabel(activeDocPaintTarget)}` : "Erase Pass"}
+                    {spriteTool === "fill" ? `Paint Pass: ${getPaintTargetLabel(activeDocPaintTarget)}` : "Стирание"}
                   </div>
                 )}
                 <div
@@ -4089,14 +4091,14 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                 </div>
                 <div className="sr-only">
                   {spriteTool === "pencil"
-                    ? "Pencil: drag to draw a smooth freehand stroke."
+                    ? "Перетащите указатель, чтобы нарисовать плавную линию."
                     : spriteTool === "closed-pencil"
-                      ? "Closed pencil: drag to draw a filled closed shape."
+                      ? "Перетащите указатель, чтобы нарисовать замкнутую фигуру с заливкой."
                       : spriteTool === "fill"
                         ? `Paint pass: click or sweep shapes to apply ${getPaintTargetLabel(activeDocPaintTarget).toLowerCase()} styling.`
                         : spriteTool === "eraser"
-                          ? "Eraser: click or drag across shapes to remove them."
-                          : "Drag shape to move. Click empty space to place pivot."}
+                          ? "Нажмите или проведите по фигурам, чтобы удалить их."
+                          : "Перетащите фигуру для перемещения. Нажмите на пустое место для установки точки опоры."}
                 </div>
               </div>
             ) : (
@@ -4112,29 +4114,29 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
             {activeDoc && (
               <>
                 <div className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Document</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Документ</p>
                   {activeDocumentContext && (
-                    <div className="rounded border border-border bg-background/50 px-2 py-2 text-[11px] text-muted-foreground">
+                    <details className="rounded border border-border bg-background/50 px-2 py-2 text-[11px] text-muted-foreground"><summary>Дополнительно: связь документа</summary>
                       <div className="flex items-center justify-between gap-2">
                         <span>{activeDocumentContext.kindLabel}</span>
                         <span className="font-mono text-[10px]">{activeDocumentContext.targetLabel}</span>
                       </div>
                       {activeDocumentContext.slotLabel && (
                         <div className="mt-1 flex items-center justify-between gap-2">
-                          <span>Slot</span>
+                          <span>Крепление</span>
                           <span className="font-mono text-[10px]">{activeDocumentContext.slotLabel}</span>
                         </div>
                       )}
                       {activeDocumentContext.boneLabel && (
                         <div className="mt-1 flex items-center justify-between gap-2">
-                          <span>Bone</span>
+                          <span>Кость</span>
                           <span className="font-mono text-[10px]">{activeDocumentContext.boneLabel}</span>
                         </div>
                       )}
-                    </div>
+                    </details>
                   )}
                   <div className="space-y-1">
-                    <Label className="text-[10px]">Name</Label>
+                    <Label className="text-[10px]">Название</Label>
                     <Input
                       value={activeDoc.name}
                       onChange={event => patchDocument(doc => ({ ...doc, name: event.target.value }))}
@@ -4143,11 +4145,11 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Width</Label>
+                      <Label className="text-[10px]">Ширина</Label>
                       <NumericInput value={activeDoc.width} onChange={value => patchDocument(doc => ({ ...doc, width: Math.max(1, value) }))} />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Height</Label>
+                      <Label className="text-[10px]">Высота</Label>
                       <NumericInput value={activeDoc.height} onChange={value => patchDocument(doc => ({ ...doc, height: Math.max(1, value) }))} />
                     </div>
                   </div>
@@ -4155,16 +4157,16 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Pivot</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Точка опоры</p>
                     <span className="text-[10px] text-muted-foreground">{activeDoc.pivot.preset}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Pivot X</Label>
+                      <Label className="text-[10px]">Опора X</Label>
                       <NumericInput value={activeDoc.pivot.x} onChange={value => patchDocument(doc => ({ ...doc, pivot: { ...doc.pivot, x: value, preset: "custom" } }))} />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Pivot Y</Label>
+                      <Label className="text-[10px]">Опора Y</Label>
                       <NumericInput value={activeDoc.pivot.y} onChange={value => patchDocument(doc => ({ ...doc, pivot: { ...doc.pivot, y: value, preset: "custom" } }))} />
                     </div>
                   </div>
@@ -4175,7 +4177,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       className="h-8 text-[11px]"
                       onClick={() => patchDocument(doc => ({ ...doc, pivot: { ...doc.pivot, x: doc.width / 2, y: doc.height / 2, preset: "center" } }))}
                     >
-                      Center Pivot
+                      Опора по центру
                     </Button>
                     <Button
                       size="sm"
@@ -4183,15 +4185,15 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       className="h-8 text-[11px]"
                       onClick={() => patchDocument(doc => ({ ...doc, pivot: { ...doc.pivot, x: doc.width / 2, y: doc.height, preset: "feet" } }))}
                     >
-                      Feet Pivot
+                      Опора у ног
                     </Button>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Content Bounds</p>
-                    <span className="text-[10px] text-muted-foreground">{contentBounds ? "visible" : "empty"}</span>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Границы рисунка</p>
+                    <span className="text-[10px] text-muted-foreground">{contentBounds ? "видимый" : "пусто"}</span>
                   </div>
                   {contentBounds ? (
                     <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
@@ -4201,7 +4203,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       <div className="flex justify-between rounded border border-border bg-background/50 px-2 py-1"><span>H</span><span>{contentBounds.height.toFixed(1)}</span></div>
                     </div>
                   ) : (
-                    <p className="text-[10px] text-muted-foreground">Draw at least one visible shape to compute bounds.</p>
+                    <p className="text-[10px] text-muted-foreground">Нарисуйте хотя бы одну видимую фигуру, чтобы вычислить границы.</p>
                   )}
                 </div>
 
@@ -4212,10 +4214,10 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
             {activeDoc && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Layers</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Слои</p>
                   <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleCreateLayer}>New</Button>
-                    <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleDeleteLayer} disabled={!currentLayer || activeDoc.layers.length <= 1}>Delete</Button>
+                    <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleCreateLayer}>Создать</Button>
+                    <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleDeleteLayer} disabled={!currentLayer || activeDoc.layers.length <= 1}>Удалить</Button>
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -4235,7 +4237,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                         className="w-full text-left"
                       >
                         <div className="text-xs font-medium text-foreground truncate">{layer.name}</div>
-                        <div className="text-[10px] text-muted-foreground">{layer.shapes.length} shapes</div>
+                        <div className="text-[10px] text-muted-foreground">{layer.shapes.length} фигуры</div>
                       </button>
                       <Input
                         value={layer.name}
@@ -4249,11 +4251,11 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                             checked={layer.visible}
                             onChange={event => handleLayerPatch(layer.id, { visible: event.target.checked })}
                           />
-                          Visible
+                          Видимый
                         </label>
                         <div className="flex items-center gap-2">
-                          <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => { setSelectedLayerId(layer.id); handleMoveLayer(-1); }}>Up</Button>
-                          <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => { setSelectedLayerId(layer.id); handleMoveLayer(1); }}>Down</Button>
+                          <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => { setSelectedLayerId(layer.id); handleMoveLayer(-1); }}>Выше</Button>
+                          <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => { setSelectedLayerId(layer.id); handleMoveLayer(1); }}>Ниже</Button>
                         </div>
                       </div>
                     </div>
@@ -4268,7 +4270,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                 <div className="rounded border border-border bg-background/50 p-2 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Face Brush Preset</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Настройки кисти для лица</p>
                       <p className="text-[11px] text-foreground">{getFaceFeatureLabel(activeDocFaceFeature)}</p>
                     </div>
                     <Button
@@ -4277,7 +4279,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       className="h-7 text-[11px]"
                       onClick={() => applyFaceBrushPreset(activeDocFaceFeature)}
                     >
-                      Apply
+                      Применить настройки кисти
                     </Button>
                   </div>
                   <p className="text-[10px] text-muted-foreground">{getFaceDrawingPreset(activeDocFaceFeature).description}</p>
@@ -4294,11 +4296,11 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       }))}
                       className="h-8"
                       options={[
-                        { value: "base", label: "Base" },
-                        { value: "line", label: "Line" },
-                        { value: "detail", label: "Detail" },
-                        { value: "shadow", label: "Shadow" },
-                        { value: "highlight", label: "Highlight" },
+                        { value: "base", label: "Основа" },
+                        { value: "line", label: "Линия" },
+                        { value: "detail", label: "Деталь" },
+                        { value: "shadow", label: "Тень" },
+                        { value: "highlight", label: "Блик" },
                       ]}
                     />
                     <NativeSelect
@@ -4312,9 +4314,9 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       }))}
                       className="h-8"
                       options={[
-                        { value: "fill", label: "Fill Pass" },
-                        { value: "stroke", label: "Line Pass" },
-                        { value: "both", label: "Both" },
+                        { value: "fill", label: "Заливка" },
+                        { value: "stroke", label: "Обводка" },
+                        { value: "both", label: "Оба" },
                       ]}
                     />
                     <NativeSelect
@@ -4328,8 +4330,8 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       }))}
                       className="h-8"
                       options={[
-                        { value: "none", label: "No Symmetry" },
-                        { value: "mirror_x", label: "Mirror X" },
+                        { value: "none", label: "Без симметрии" },
+                        { value: "mirror_x", label: "Отразить по X" },
                       ]}
                     />
                   </div>
@@ -4418,7 +4420,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                 </div>
               <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_92px] gap-2">
                 <div className="space-y-1">
-                  <Label className="text-[10px]">Stroke</Label>
+                  <Label className="text-[10px]">Обводка</Label>
                   <input
                     type="color"
                     value={toolStrokeColor}
@@ -4427,7 +4429,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px]">Fill</Label>
+                  <Label className="text-[10px]">Заливка</Label>
                   <input
                     type="color"
                     value={toolFillColor}
@@ -4436,7 +4438,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px]">Width</Label>
+                  <Label className="text-[10px]">Ширина</Label>
                   <Input
                     type="number"
                     min="0.5"
@@ -4482,10 +4484,10 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
 
             {currentLayer && (
               <div className="space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Shapes</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Фигуры</p>
                 <div className="space-y-1">
                   {currentLayer.shapes.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground">This layer is empty.</p>
+                    <p className="text-[11px] text-muted-foreground">Этот слой пуст. Нарисуйте фигуру или импортируйте изображение.</p>
                   )}
                   {currentLayer.shapes.map(shape => (
                     <button
@@ -4503,7 +4505,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     >
                       <div className="font-medium">{SHAPE_LABELS[shape.type]}</div>
                       <div className="text-[10px] opacity-80">
-                        {shape.type === "path" ? "Custom path" : `${shape.width} × ${shape.height}`}
+                        {shape.type === "path" ? "Свой контур" : `${shape.width} × ${shape.height}`}
                       </div>
                     </button>
                   ))}
@@ -4516,25 +4518,25 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                 <Separator className="bg-border" />
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Shape Properties</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Свойства фигуры</p>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleDuplicateShape}>Duplicate</Button>
-                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleDeleteShape}>Delete</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleDuplicateShape}>Дублировать</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleDeleteShape}>Удалить</Button>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleFlipSelectedShape("horizontal")}>
-                      Mirror H
+                      Отразить горизонтально
                     </Button>
                     <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleFlipSelectedShape("vertical")}>
-                      Mirror V
+                      Отразить вертикально
                     </Button>
                     <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleRotateSelectedShape(-90)}>
-                      Rotate -90
+                      Повернуть −90°
                     </Button>
                     <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleRotateSelectedShape(90)}>
-                      Rotate +90
+                      Повернуть +90°
                     </Button>
                   </div>
 
@@ -4543,17 +4545,17 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     <div className="space-y-1"><Label className="text-[10px]">Y</Label><NumericInput value={selectedShape.y} onChange={value => handleShapePatch({ y: value })} /></div>
                     {selectedShape.type !== "path" && (
                       <>
-                        <div className="space-y-1"><Label className="text-[10px]">Width</Label><NumericInput value={selectedShape.width} onChange={value => handleShapePatch({ width: value })} /></div>
-                        <div className="space-y-1"><Label className="text-[10px]">Height</Label><NumericInput value={selectedShape.height} onChange={value => handleShapePatch({ height: value })} /></div>
+                        <div className="space-y-1"><Label className="text-[10px]">Ширина</Label><NumericInput value={selectedShape.width} onChange={value => handleShapePatch({ width: value })} /></div>
+                        <div className="space-y-1"><Label className="text-[10px]">Высота</Label><NumericInput value={selectedShape.height} onChange={value => handleShapePatch({ height: value })} /></div>
                       </>
                     )}
-                    <div className="space-y-1"><Label className="text-[10px]">Rotation</Label><NumericInput value={selectedShape.rotation} onChange={value => handleShapePatch({ rotation: value })} /></div>
-                    <div className="space-y-1"><Label className="text-[10px]">Stroke Width</Label><NumericInput value={selectedShape.strokeWidth} onChange={value => handleShapePatch({ strokeWidth: value })} /></div>
+                    <div className="space-y-1"><Label className="text-[10px]">Поворот</Label><NumericInput value={selectedShape.rotation} onChange={value => handleShapePatch({ rotation: value })} /></div>
+                    <div className="space-y-1"><Label className="text-[10px]">Толщина обводки</Label><NumericInput value={selectedShape.strokeWidth} onChange={value => handleShapePatch({ strokeWidth: value })} /></div>
                   </div>
 
                   {selectedShape.type === "path" && (
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Path Data</Label>
+                      <Label className="text-[10px]">Данные контура</Label>
                       <textarea
                         value={selectedShape.pathData ?? ""}
                         onChange={event => handleShapePatch({ pathData: event.target.value })}
@@ -4564,7 +4566,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
 
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Fill</Label>
+                      <Label className="text-[10px]">Заливка</Label>
                       <input
                         type="color"
                         value={selectedShape.fill}
@@ -4573,7 +4575,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Stroke</Label>
+                      <Label className="text-[10px]">Обводка</Label>
                       <input
                         type="color"
                         value={selectedShape.stroke}
@@ -4593,9 +4595,9 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
     <Dialog open={isSpriteStudioOpen && !!activeDoc} onOpenChange={setIsSpriteStudioOpen}>
       <DialogContent data-document-history="true" className="h-[92vh] w-[96vw] max-w-[96vw] border-border bg-background p-0">
         <DialogHeader className="border-b border-border px-6 py-4">
-          <DialogTitle>{activeDoc?.name ?? "Sprite Studio"}</DialogTitle>
+          <DialogTitle>{activeDoc?.name ?? "Редактор рисунка"}</DialogTitle>
           <DialogDescription className="sr-only">
-            Large authoring workspace for editing item parts, entity visuals and face overlays without squeezing tools into the timeline panel.
+            Редактор контуров частей предметов, рисунков объекта и деталей лица.
           </DialogDescription>
         </DialogHeader>
 
@@ -4606,7 +4608,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                 <div>
                   <p className="text-sm font-semibold text-foreground">{activeDoc.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {activeDoc.width}x{activeDoc.height} document
+                    {activeDoc.width}x{activeDoc.height} документ
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -4620,7 +4622,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     }}
                     disabled={activeRelatedDocIndex <= 0}
                   >
-                    Prev Part
+                    Предыдущая часть
                   </Button>
                   <Button
                     size="sm"
@@ -4632,7 +4634,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     }}
                     disabled={activeRelatedDocIndex < 0 || activeRelatedDocIndex >= relatedDocuments.length - 1}
                   >
-                    Next Part
+                    Следующая часть
                   </Button>
                   <label className="flex items-center gap-1 text-xs text-muted-foreground">
                     <input
@@ -4640,13 +4642,13 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       checked={autoPreviewEnabled}
                       onChange={event => setAutoPreviewEnabled(event.target.checked)}
                     />
-                    На персонаже
+                    Предпросмотр в сцене
                   </label>
                   <Button size="sm" variant="outline" className="h-8 text-xs" disabled={!activeDoc.referenceAsset} onClick={() => patchDocument(doc => ({ ...doc, referenceAsset: null }))}>
                     Убрать исходник
                   </Button>
                   <Button size="sm" className="h-8 text-xs" onClick={handleSaveToTarget}>
-                    Применить
+                    Обновить связанный рисунок
                   </Button>
                 </div>
               </div>
@@ -4719,7 +4721,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     <>
                       <button
                         type="button"
-                        aria-label="Rotate shape"
+                        aria-label="Поворот фигуры"
                         onMouseDown={beginRotateSelectedShape}
                         className="absolute h-3 w-3 rounded-full border border-amber-300 bg-[#141622] shadow-sm"
                         style={{
@@ -4730,7 +4732,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       />
                       <button
                         type="button"
-                        aria-label="Resize shape"
+                        aria-label="Размер фигуры"
                         onMouseDown={beginResizeSelectedShape}
                         className="absolute h-3 w-3 rounded-sm border border-cyan-300 bg-[#141622] shadow-sm"
                         style={{
@@ -4784,7 +4786,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                   )}
                   {hoverPreviewShapeId && (spriteTool === "fill" || spriteTool === "eraser") && (
                     <div className="absolute left-2 top-2 rounded bg-black/45 px-2 py-1 text-[10px] text-foreground pointer-events-none">
-                      {spriteTool === "fill" ? `Paint Pass: ${getPaintTargetLabel(activeDocPaintTarget)}` : "Erase Pass"}
+                      {spriteTool === "fill" ? `Paint Pass: ${getPaintTargetLabel(activeDocPaintTarget)}` : "Стирание"}
                     </div>
                   )}
                   <div
@@ -4803,14 +4805,14 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                   </div>
                   <div className="sr-only">
                     {spriteTool === "pencil"
-                      ? "Pencil: drag to draw a smooth freehand stroke."
+                      ? "Перетащите указатель, чтобы нарисовать плавную линию."
                       : spriteTool === "closed-pencil"
-                        ? "Closed pencil: drag to draw a filled closed shape."
+                        ? "Перетащите указатель, чтобы нарисовать замкнутую фигуру с заливкой."
                       : spriteTool === "fill"
                           ? `Paint pass: click or sweep shapes to apply ${getPaintTargetLabel(activeDocPaintTarget).toLowerCase()} styling.`
                         : spriteTool === "eraser"
-                          ? "Eraser: click or drag across shapes to remove them."
-                          : "Drag shape to move. Use the handles to rotate and resize. Click empty space to place pivot."}
+                          ? "Нажмите или проведите по фигурам, чтобы удалить их."
+                          : "Перетащите фигуру. Используйте маркеры для поворота и размера. Нажмите на пустое место для установки точки опоры."}
                   </div>
                 </div>
               </div>
@@ -4853,8 +4855,8 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                 {studioPreviewEntity && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Live Character Preview</p>
-                      <span className="text-[10px] text-muted-foreground">runtime</span>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Предпросмотр в сцене</p>
+                      <span className="text-[10px] text-muted-foreground">воспроизведение</span>
                     </div>
                     <LiveAuthoringPreview
                       entityId={studioPreviewEntity.id}
@@ -4865,17 +4867,17 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     />
                     <p className="sr-only">
                       {activeDoc?.target.kind === "face-overlay" && activeFaceCanvasFocusMode === "head"
-                        ? "Head focus is active: keep painting while watching the face overlay in the same runtime stack."
-                        : "Uses the same evaluated scene path as canvas and export. When editing an item part, this preview isolates the current equipped slot."}
+                        ? "Рисуйте на голове и проверяйте результат в предпросмотре."
+                        : "Предпросмотр использует ту же сцену, что холст и экспорт. При редактировании части предмета показано только её крепление."}
                     </p>
                     <Separator className="bg-border" />
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Document</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Документ</p>
                   <div className="space-y-1">
-                    <Label className="text-[10px]">Name</Label>
+                    <Label className="text-[10px]">Название</Label>
                     <Input
                       value={activeDoc.name}
                       onChange={event => patchDocument(doc => ({ ...doc, name: event.target.value }))}
@@ -4884,11 +4886,11 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Width</Label>
+                      <Label className="text-[10px]">Ширина</Label>
                       <NumericInput value={activeDoc.width} onChange={value => patchDocument(doc => ({ ...doc, width: Math.max(1, value) }))} />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Height</Label>
+                      <Label className="text-[10px]">Высота</Label>
                       <NumericInput value={activeDoc.height} onChange={value => patchDocument(doc => ({ ...doc, height: Math.max(1, value) }))} />
                     </div>
                   </div>
@@ -4896,16 +4898,16 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Pivot</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Точка опоры</p>
                     <span className="text-[10px] text-muted-foreground">{activeDoc.pivot.preset}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Pivot X</Label>
+                      <Label className="text-[10px]">Опора X</Label>
                       <NumericInput value={activeDoc.pivot.x} onChange={value => patchDocument(doc => ({ ...doc, pivot: { ...doc.pivot, x: value, preset: "custom" } }))} />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Pivot Y</Label>
+                      <Label className="text-[10px]">Опора Y</Label>
                       <NumericInput value={activeDoc.pivot.y} onChange={value => patchDocument(doc => ({ ...doc, pivot: { ...doc.pivot, y: value, preset: "custom" } }))} />
                     </div>
                   </div>
@@ -4916,7 +4918,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       className="h-8 text-[11px]"
                       onClick={() => patchDocument(doc => ({ ...doc, pivot: { ...doc.pivot, x: doc.width / 2, y: doc.height / 2, preset: "center" } }))}
                     >
-                      Center Pivot
+                      Опора по центру
                     </Button>
                     <Button
                       size="sm"
@@ -4924,7 +4926,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       className="h-8 text-[11px]"
                       onClick={() => patchDocument(doc => ({ ...doc, pivot: { ...doc.pivot, x: doc.width / 2, y: doc.height, preset: "feet" } }))}
                     >
-                      Feet Pivot
+                      Опора у ног
                     </Button>
                   </div>
                 </div>
@@ -4934,7 +4936,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     <div className="rounded border border-border bg-background/50 p-2 space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Face Brush Preset</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Настройки кисти для лица</p>
                           <p className="text-[11px] text-foreground">{getFaceFeatureLabel(activeDocFaceFeature)}</p>
                         </div>
                         <Button
@@ -4943,7 +4945,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                           className="h-7 text-[11px]"
                           onClick={() => applyFaceBrushPreset(activeDocFaceFeature)}
                         >
-                          Apply
+                          Применить настройки кисти
                         </Button>
                       </div>
                       <p className="text-[10px] text-muted-foreground">{getFaceDrawingPreset(activeDocFaceFeature).description}</p>
@@ -4960,11 +4962,11 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                           }))}
                           className="h-8"
                           options={[
-                            { value: "base", label: "Base" },
-                            { value: "line", label: "Line" },
-                            { value: "detail", label: "Detail" },
-                            { value: "shadow", label: "Shadow" },
-                            { value: "highlight", label: "Highlight" },
+                            { value: "base", label: "Основа" },
+                            { value: "line", label: "Линия" },
+                            { value: "detail", label: "Деталь" },
+                            { value: "shadow", label: "Тень" },
+                            { value: "highlight", label: "Блик" },
                           ]}
                         />
                         <NativeSelect
@@ -4978,9 +4980,9 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                           }))}
                           className="h-8"
                           options={[
-                            { value: "fill", label: "Fill Pass" },
-                            { value: "stroke", label: "Line Pass" },
-                            { value: "both", label: "Both" },
+                            { value: "fill", label: "Заливка" },
+                            { value: "stroke", label: "Обводка" },
+                            { value: "both", label: "Оба" },
                           ]}
                         />
                         <NativeSelect
@@ -4994,8 +4996,8 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                           }))}
                           className="h-8"
                           options={[
-                            { value: "none", label: "No Symmetry" },
-                            { value: "mirror_x", label: "Mirror X" },
+                            { value: "none", label: "Без симметрии" },
+                            { value: "mirror_x", label: "Отразить по X" },
                           ]}
                         />
                       </div>
@@ -5038,7 +5040,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       onClick={() => selectSpriteTool("select")}
                       disabled={!activeDoc}
                     >
-                      Select
+                      Выделение
                     </Button>
                     <Button
                       size="sm"
@@ -5047,7 +5049,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       onClick={() => selectSpriteTool("pencil")}
                       disabled={!activeDoc || !currentLayer}
                     >
-                      Pencil
+                      Карандаш
                     </Button>
                     <Button
                       size="sm"
@@ -5056,7 +5058,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       onClick={() => selectSpriteTool("closed-pencil")}
                       disabled={!activeDoc || !currentLayer}
                     >
-                      Closed Pencil
+                      Замкнутый контур
                     </Button>
                     <Button
                       size="sm"
@@ -5065,7 +5067,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       onClick={() => selectSpriteTool("fill")}
                       disabled={!activeDoc}
                     >
-                      Fill Bucket
+                      Заливка области
                     </Button>
                     <Button
                       size="sm"
@@ -5074,12 +5076,12 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       onClick={() => selectSpriteTool("eraser")}
                       disabled={!activeDoc}
                     >
-                      Eraser
+                      Ластик
                     </Button>
                   </div>
                   <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_92px] gap-2">
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Stroke</Label>
+                      <Label className="text-[10px]">Обводка</Label>
                       <input
                         type="color"
                         value={toolStrokeColor}
@@ -5088,7 +5090,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Fill</Label>
+                      <Label className="text-[10px]">Заливка</Label>
                       <input
                         type="color"
                         value={toolFillColor}
@@ -5097,7 +5099,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px]">Width</Label>
+                      <Label className="text-[10px]">Ширина</Label>
                       <Input
                         type="number"
                         min="0.5"
@@ -5116,7 +5118,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       onClick={() => undoDocumentEdit()}
                       disabled={!canUndoDocument}
                     >
-                      Undo
+                      Отменить
                     </Button>
                     <Button
                       size="sm"
@@ -5125,16 +5127,16 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                       onClick={() => redoDocumentEdit()}
                       disabled={!canRedoDocument}
                     >
-                      Redo
+                      Повторить
                     </Button>
                     <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleAddShape("rect")} disabled={!activeDoc}>
-                      Add Rect
+                      Добавить прямоугольник
                     </Button>
                     <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleAddShape("ellipse")} disabled={!activeDoc}>
-                      Add Ellipse
+                      Добавить эллипс
                     </Button>
                     <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleAddShape("path")} disabled={!activeDoc}>
-                      Add Path
+                      Добавить контур
                     </Button>
                   </div>
                 </div>
@@ -5143,10 +5145,10 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Layers</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Слои</p>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleCreateLayer}>New</Button>
-                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleDeleteLayer} disabled={!currentLayer || activeDoc.layers.length <= 1}>Delete</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleCreateLayer}>Создать</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleDeleteLayer} disabled={!currentLayer || activeDoc.layers.length <= 1}>Удалить</Button>
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -5166,7 +5168,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                           className="w-full text-left"
                         >
                           <div className="text-xs font-medium text-foreground truncate">{layer.name}</div>
-                          <div className="text-[10px] text-muted-foreground">{layer.shapes.length} shapes</div>
+                          <div className="text-[10px] text-muted-foreground">{layer.shapes.length} фигуры</div>
                         </button>
                         <Input
                           value={layer.name}
@@ -5180,11 +5182,11 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                               checked={layer.visible}
                               onChange={event => handleLayerPatch(layer.id, { visible: event.target.checked })}
                             />
-                            Visible
+                            Видимый
                           </label>
                           <div className="flex items-center gap-2">
-                            <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => { setSelectedLayerId(layer.id); handleMoveLayer(-1); }}>Up</Button>
-                            <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => { setSelectedLayerId(layer.id); handleMoveLayer(1); }}>Down</Button>
+                            <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => { setSelectedLayerId(layer.id); handleMoveLayer(-1); }}>Выше</Button>
+                            <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => { setSelectedLayerId(layer.id); handleMoveLayer(1); }}>Ниже</Button>
                           </div>
                         </div>
                       </div>
@@ -5194,10 +5196,10 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
 
                 {currentLayer && (
                   <div className="space-y-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Shapes</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Фигуры</p>
                     <div className="space-y-1">
                       {currentLayer.shapes.length === 0 && (
-                        <p className="text-[11px] text-muted-foreground">This layer is empty.</p>
+                        <p className="text-[11px] text-muted-foreground">Этот слой пуст. Нарисуйте фигуру или импортируйте изображение.</p>
                       )}
                       {currentLayer.shapes.map(shape => (
                         <button
@@ -5215,7 +5217,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                         >
                           <div className="font-medium">{SHAPE_LABELS[shape.type]}</div>
                           <div className="text-[10px] opacity-80">
-                            {shape.type === "path" ? "Custom path" : `${shape.width} x ${shape.height}`}
+                            {shape.type === "path" ? "Свой контур" : `${shape.width} x ${shape.height}`}
                           </div>
                         </button>
                       ))}
@@ -5228,25 +5230,25 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                     <Separator className="bg-border" />
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Shape Properties</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Свойства фигуры</p>
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleDuplicateShape}>Duplicate</Button>
-                          <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleDeleteShape}>Delete</Button>
+                          <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleDuplicateShape}>Дублировать</Button>
+                          <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={handleDeleteShape}>Удалить</Button>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
                         <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleFlipSelectedShape("horizontal")}>
-                          Mirror H
+                          Отразить горизонтально
                         </Button>
                         <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleFlipSelectedShape("vertical")}>
-                          Mirror V
+                          Отразить вертикально
                         </Button>
                         <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleRotateSelectedShape(-90)}>
-                          Rotate -90
+                          Повернуть −90°
                         </Button>
                         <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleRotateSelectedShape(90)}>
-                          Rotate +90
+                          Повернуть +90°
                         </Button>
                       </div>
 
@@ -5255,17 +5257,17 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                         <div className="space-y-1"><Label className="text-[10px]">Y</Label><NumericInput value={selectedShape.y} onChange={value => handleShapePatch({ y: value })} /></div>
                         {selectedShape.type !== "path" && (
                           <>
-                            <div className="space-y-1"><Label className="text-[10px]">Width</Label><NumericInput value={selectedShape.width} onChange={value => handleShapePatch({ width: value })} /></div>
-                            <div className="space-y-1"><Label className="text-[10px]">Height</Label><NumericInput value={selectedShape.height} onChange={value => handleShapePatch({ height: value })} /></div>
+                            <div className="space-y-1"><Label className="text-[10px]">Ширина</Label><NumericInput value={selectedShape.width} onChange={value => handleShapePatch({ width: value })} /></div>
+                            <div className="space-y-1"><Label className="text-[10px]">Высота</Label><NumericInput value={selectedShape.height} onChange={value => handleShapePatch({ height: value })} /></div>
                           </>
                         )}
-                        <div className="space-y-1"><Label className="text-[10px]">Rotation</Label><NumericInput value={selectedShape.rotation} onChange={value => handleShapePatch({ rotation: value })} /></div>
-                        <div className="space-y-1"><Label className="text-[10px]">Stroke Width</Label><NumericInput value={selectedShape.strokeWidth} onChange={value => handleShapePatch({ strokeWidth: value })} /></div>
+                        <div className="space-y-1"><Label className="text-[10px]">Поворот</Label><NumericInput value={selectedShape.rotation} onChange={value => handleShapePatch({ rotation: value })} /></div>
+                        <div className="space-y-1"><Label className="text-[10px]">Толщина обводки</Label><NumericInput value={selectedShape.strokeWidth} onChange={value => handleShapePatch({ strokeWidth: value })} /></div>
                       </div>
 
                       {selectedShape.type === "path" && (
                         <div className="space-y-1">
-                          <Label className="text-[10px]">Path Data</Label>
+                          <Label className="text-[10px]">Данные контура</Label>
                           <textarea
                             value={selectedShape.pathData ?? ""}
                             onChange={event => handleShapePatch({ pathData: event.target.value })}
@@ -5276,7 +5278,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
 
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <Label className="text-[10px]">Fill</Label>
+                          <Label className="text-[10px]">Заливка</Label>
                           <input
                             type="color"
                             value={selectedShape.fill}
@@ -5285,7 +5287,7 @@ export function AuthoringPanel({ standalone = false }: { standalone?: boolean })
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px]">Stroke</Label>
+                          <Label className="text-[10px]">Обводка</Label>
                           <input
                             type="color"
                             value={selectedShape.stroke}

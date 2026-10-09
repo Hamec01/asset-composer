@@ -96,12 +96,12 @@ export function EquipmentDepthPanel() {
   return (
     <details className="border-b border-border px-2 py-1 shrink-0 text-[10px]">
       <summary className="cursor-pointer">
-        Equipment Depth · {resolved?.slot ?? "Setup / inherited"} ·{" "}
-        {Math.round(playback.timeMs)} ms
+        Глубина экипировки · {resolved?.slot ?? "Setup / inherited"} ·{" "}
+        {Math.round(playback.timeMs)} мс
       </summary>
       <div className="flex flex-wrap gap-2 items-center py-1">
         <select
-          aria-label="Equipment depth slot"
+          aria-label="Уровень глубины экипировки"
           className={control}
           value={slotId}
           onChange={(e) => {
@@ -116,12 +116,12 @@ export function EquipmentDepthPanel() {
           ))}
         </select>
         <select
-          aria-label="Equipment depth part"
+          aria-label="Часть экипировки"
           className={control}
           value={partId}
           onChange={(e) => setPart(e.target.value)}
         >
-          <option value="">All parts</option>
+          <option value="">Все части</option>
           {item.parts?.map((p) => (
             <option key={p.id} value={p.id}>
               {p.id}
@@ -129,12 +129,12 @@ export function EquipmentDepthPanel() {
           ))}
         </select>
         <select
-          aria-label="Equipment depth layer"
+          aria-label="Слой глубины экипировки"
           className={control}
           value={depth}
           onChange={(e) => setDepth(e.target.value as typeof depth)}
         >
-          <option value="inherit">Setup / inherited</option>
+          <option value="inherit">Исходное / наследуется</option>
           {Object.keys(DEPTH_SLOTS).map((d) => (
             <option key={d}>{d}</option>
           ))}
@@ -146,7 +146,7 @@ export function EquipmentDepthPanel() {
             checked={hands && !!handBones.length}
             onChange={(e) => setHands(e.target.checked)}
           />{" "}
-          Hands cover grip
+          Кисти закрывают рукоять
         </label>
         <label>
           <input
@@ -154,7 +154,7 @@ export function EquipmentDepthPanel() {
             checked={directionOnly}
             onChange={(e) => setDirectionOnly(e.target.checked)}
           />{" "}
-          Only {facing.toUpperCase()}
+          Только {facing.toUpperCase()}
         </label>
         <button
           className={control}
@@ -186,7 +186,7 @@ export function EquipmentDepthPanel() {
             })
           }
         >
-          Set depth key
+          Добавить ключ глубины
         </button>
       </div>
       {!!selectedParts.length && (
@@ -196,7 +196,7 @@ export function EquipmentDepthPanel() {
             <label>
               Ближняя сторона{" "}
               <select
-                aria-label="Setup equipment near layer"
+                aria-label="Ближний слой экипировки"
                 className={control}
                 value={setup.near}
                 onChange={(e) =>
@@ -211,7 +211,7 @@ export function EquipmentDepthPanel() {
             <label>
               Дальняя сторона{" "}
               <select
-                aria-label="Setup equipment far layer"
+                aria-label="Дальний слой экипировки"
                 className={control}
                 value={setup.far}
                 onChange={(e) =>
@@ -252,8 +252,7 @@ export function EquipmentDepthPanel() {
         </fieldset>
       )}
       <p className="text-muted-foreground">
-        Stepped layers, independent of the carrying wrist. Keys preserve the
-        rigid artwork and IK; hand silhouettes cover the grip.
+        Глубина переключается по ключам независимо от несущей кисти. Рисунок и IK сохраняются; кисти закрывают хват.
       </p>
       <div className="flex flex-wrap gap-2 py-1">
         {tracks.flatMap((track, ti) =>
@@ -269,7 +268,7 @@ export function EquipmentDepthPanel() {
                   setDirectionOnly(!!key.facing);
                 }}
               >
-                {key.timeMs} ms · {key.slot ?? "Setup"} · {key.facing ?? "L/R"}
+                {key.timeMs} мс · {key.slot ?? "Setup"} · {key.facing ?? "L/R"}
               </button>
               <button
                 aria-label={`Remove equipment depth key ${key.timeMs} ${key.facing ?? "both"}`}

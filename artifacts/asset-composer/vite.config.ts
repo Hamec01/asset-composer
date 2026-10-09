@@ -79,6 +79,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    watch: { ignored: ["**/public/asset-packs/**/sprites/**", "**/public/asset-packs/**/review/**", "**/public/asset-packs/**/*.zip", "**/public/asset-packs/**/preview.png", "**/public/asset-packs/**/asset-composer-project.json"] },
     port,
     strictPort: true,
     host: "0.0.0.0",

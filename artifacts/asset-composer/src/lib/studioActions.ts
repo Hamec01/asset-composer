@@ -78,10 +78,10 @@ export function newStudioLayer(
     name:
       name ??
       (kind === "raster"
-        ? "Raster Layer"
+        ? "Растровый слой"
         : kind === "group"
-          ? "Group"
-          : "Vector Layer"),
+          ? "Группа"
+          : "Векторный слой"),
     visible: true,
     opacity: 1,
     zIndex: 0,
@@ -95,7 +95,7 @@ export function newStudioDocument(
 ): SpriteEditorDocument {
   return {
     id: newId(),
-    name: "Untitled artwork",
+    name: "Новый рисунок",
     studioArtwork: true,
     width,
     height,
@@ -244,15 +244,15 @@ export function createStudioRig(
         ? {
             ...structuredClone(source),
             id: source.id + "_studio_" + newId(),
-            name: doc.name + " Rig",
+            name: doc.name + " · скелет",
             baseBodyLayers: [],
             boneParts: [],
             slots: [],
           }
         : {
             id: newId(),
-            name: doc.name + " Rig",
-            description: "Art Studio rig",
+            name: doc.name + " · скелет",
+            description: "Скелет рисунка",
             skeletonFamily: "custom_2d_v1",
             viewProfile: "static",
             entityTypes: ["static_object"],
@@ -262,7 +262,7 @@ export function createStudioRig(
                 : [
                     {
                       id: "root",
-                      name: "root",
+                      name: "Корень",
                       parentId: null,
                       length: 40,
                       restPose: {

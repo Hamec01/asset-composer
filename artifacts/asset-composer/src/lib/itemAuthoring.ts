@@ -403,6 +403,7 @@ export function createNewArtAsset(options: CreateAssetOptions): {
     height,
     pivot,
     dualGrip,
+    studioArtwork: true,
     referenceAsset: null,
     tracingAsset: options.initialTracingAssetUri ? {
       format: "png",
@@ -437,7 +438,7 @@ export function createNewArtAsset(options: CreateAssetOptions): {
   const defaultPart: ItemPart = {
     id: `${id}_part`,
     boneId: options.type === "weapon_1h" || options.type === "weapon_2h" ? "hand_r" : options.type === "head_cover" ? "head" : options.type === "torso" ? "chest" : options.type === "legs" ? "pelvis" : options.type === "feet" ? "foot_l" : "root",
-    svgData: initialSvg,
+    content: { kind: "document", documentId: document.id },
     metrics: { ...metrics, viewBoxWidth: width, viewBoxHeight: height },
     pivot,
     localTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
@@ -465,7 +466,7 @@ export function createNewArtAsset(options: CreateAssetOptions): {
     svgLayers: [{
       id: `${id}_layer`,
       styleSetId: null,
-      svgData: initialSvg,
+      content: { kind: "document", documentId: document.id },
       paletteChannels: [],
       zOffset: 0,
     }],

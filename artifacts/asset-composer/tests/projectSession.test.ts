@@ -43,9 +43,9 @@ describe("project session persistence", () => {
     window.localStorage.clear();
   });
 
-  it("saves and restores the last valid project snapshot", () => {
+  it("saves and restores the last valid project snapshot", async () => {
     const project = makeProject();
-    expect(saveLastProjectSnapshot(project)).toBe(true);
+    expect(await saveLastProjectSnapshot(project)).toBe(true);
 
     const restored = restoreLastProjectSnapshot() as Project | null;
     expect(restored).not.toBeNull();
@@ -53,9 +53,9 @@ describe("project session persistence", () => {
     expect(restored?.name).toBe(project.name);
   });
 
-  it("restores explicit rig/view template metadata from the last snapshot", () => {
+  it("restores explicit rig/view template metadata from the last snapshot", async () => {
     const project = makeProject();
-    expect(saveLastProjectSnapshot(project)).toBe(true);
+    expect(await saveLastProjectSnapshot(project)).toBe(true);
 
     const restored = restoreLastProjectSnapshot() as Project | null;
     const template = restored?.templates.find(candidate => candidate.id === "humanoid_topdown_v1");
@@ -65,17 +65,17 @@ describe("project session persistence", () => {
     expect(template?.views?.south_east?.viewProfile).toBe("topdown_45");
   });
 
-  it("returns null when local snapshot is invalid", () => {
+  it("returns null when local snapshot is invalid", async () => {
     window.localStorage.setItem("asset-composer:last-project:v1", "{not valid json");
     expect(restoreLastProjectSnapshot()).toBeNull();
   });
 
-  it("keeps a recent projects list and opens a stored project by id", () => {
+  it("keeps a recent projects list and opens a stored project by id", async () => {
     const first = makeProject();
     const second = { ...makeProject(), id: "project-session-test-2", name: "Second Session", updatedAt: 22 };
 
-    expect(saveLastProjectSnapshot(first, "D:/projects/first")).toBe(true);
-    expect(saveLastProjectSnapshot(second)).toBe(true);
+    expect(await saveLastProjectSnapshot(first, "D:/projects/first")).toBe(true);
+    expect(await saveLastProjectSnapshot(second)).toBe(true);
 
     const recent = getRecentProjectSessions();
     expect(recent).toHaveLength(2);
@@ -89,7 +89,7 @@ describe("project session persistence", () => {
     expect(restored?.name).toBe(first.name);
   });
 
-  it("sanitizes stale body-clone visuals from the restored last session", () => {
+  it("sanitizes stale body-clone visuals from the restored last session", async () => {
     const template = TEMPLATES.find(candidate => candidate.id === "humanoid_topdown_v1")!;
     const cloneVisuals = template.boneParts.slice(0, 4).map(part => ({
       id: `legacy_clone_${part.id}`,
@@ -150,14 +150,14 @@ describe("project session persistence", () => {
       activeEntityId: "entity-1",
     };
 
-    expect(saveLastProjectSnapshot(project)).toBe(true);
+    expect(await saveLastProjectSnapshot(project)).toBe(true);
 
     const restored = restoreLastProjectSnapshot() as Project | null;
     expect(restored).not.toBeNull();
     expect(restored?.entities[0]?.visuals).toHaveLength(0);
   });
 
-  it("resets suspicious multi-part attachment overrides during restore", () => {
+  it("resets suspicious multi-part attachment overrides during restore", async () => {
     const template = TEMPLATES.find(candidate => candidate.id === "humanoid_topdown_v1")!;
     const project: Project = {
       ...makeProject(),
@@ -202,7 +202,7 @@ describe("project session persistence", () => {
       activeEntityId: "entity-1",
     };
 
-    expect(saveLastProjectSnapshot(project)).toBe(true);
+    expect(await saveLastProjectSnapshot(project)).toBe(true);
     const restored = restoreLastProjectSnapshot() as Project | null;
     const override = restored?.entities[0]?.slots[0]?.attachmentOverride;
 
@@ -214,7 +214,7 @@ describe("project session persistence", () => {
     expect(override?.scaleY).toBe(1);
   });
 
-  it("persists normalized split limb slots into restored session snapshots", () => {
+  it("persists normalized split limb slots into restored session snapshots", async () => {
     const template = TEMPLATES.find(candidate => candidate.id === "humanoid_topdown_v1")!;
     const project: Project = {
       ...makeProject(),
@@ -251,13 +251,13 @@ describe("project session persistence", () => {
       activeEntityId: "entity-1",
     };
 
-    expect(saveLastProjectSnapshot(project)).toBe(true);
+    expect(await saveLastProjectSnapshot(project)).toBe(true);
     const restored = restoreLastProjectSnapshot() as Project | null;
     expect(restored?.entities[0]?.slots.map(slot => slot.slotId)).toEqual(["slot_hand_l", "slot_hand_r"]);
     expect(restored?.entities[0]?.slots.map(slot => slot.itemId)).toEqual(["glove_leather_l", "glove_leather_r"]);
   });
 
-  it("roundtrips body morphs and face customization through last-session storage", () => {
+  it("roundtrips body morphs and face customization through last-session storage", async () => {
     const template = TEMPLATES.find(candidate => candidate.id === "humanoid_topdown_v1")!;
     const project: Project = {
       ...makeProject(),
@@ -392,7 +392,7 @@ describe("project session persistence", () => {
       activeEntityId: "entity-face-morph",
     };
 
-    expect(saveLastProjectSnapshot(project)).toBe(true);
+    expect(await saveLastProjectSnapshot(project)).toBe(true);
     const restored = restoreLastProjectSnapshot() as Project | null;
     const entity = restored?.entities[0];
 
@@ -431,7 +431,7 @@ describe("project session persistence", () => {
     expect(entity?.faceAuthoring?.focusMode).toBe("head");
   });
 
-  it("roundtrips sprite editor documents and active authoring mode through last-session storage", () => {
+  it("roundtrips sprite editor documents and active authoring mode through last-session storage", async () => {
     const project: Project = {
       ...makeProject(),
       editorMeta: {
@@ -489,7 +489,7 @@ describe("project session persistence", () => {
       },
     };
 
-    expect(saveLastProjectSnapshot(project)).toBe(true);
+    expect(await saveLastProjectSnapshot(project)).toBe(true);
     const restored = restoreLastProjectSnapshot() as Project | null;
     const doc = restored?.editorMeta?.spriteEditorDocuments?.[0];
 
@@ -507,7 +507,7 @@ describe("project session persistence", () => {
     expect(restored?.editorMeta?.activeFaceCanvasFocusMode).toBe("head");
   });
 
-  it("strips partial limb-only body clone visuals on restore", () => {
+  it("strips partial limb-only body clone visuals on restore", async () => {
     const template = TEMPLATES.find(candidate => candidate.id === "humanoid_topdown_v1")!;
     const handPart = template.boneParts!.find(part => part.boneId === "hand_l")!;
     const footPart = template.boneParts!.find(part => part.boneId === "foot_l")!;
@@ -579,12 +579,12 @@ describe("project session persistence", () => {
       activeEntityId: "entity-1",
     };
 
-    expect(saveLastProjectSnapshot(project)).toBe(true);
+    expect(await saveLastProjectSnapshot(project)).toBe(true);
     const restored = restoreLastProjectSnapshot() as Project | null;
     expect(restored?.entities[0]?.visuals).toEqual([]);
   });
 
-  it("strips root-level full body clone visuals on restore", () => {
+  it("strips root-level full body clone visuals on restore", async () => {
     const template = TEMPLATES.find(candidate => candidate.id === "humanoid_topdown_v1")!;
     const baseLayer = template.baseBodyLayers[0]!;
 
@@ -635,7 +635,7 @@ describe("project session persistence", () => {
       activeEntityId: "entity-1",
     };
 
-    expect(saveLastProjectSnapshot(project)).toBe(true);
+    expect(await saveLastProjectSnapshot(project)).toBe(true);
     const restored = restoreLastProjectSnapshot() as Project | null;
     expect(restored?.entities[0]?.visuals).toEqual([]);
   });

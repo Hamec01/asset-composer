@@ -6,42 +6,42 @@ import {
 } from "@/lib/templateViewContract";
 
 const LEGACY_TEMPLATE_LABELS: Record<string, string> = {
-  humanoid_topdown_v1: "Humanoid (Top-down)",
-  humanoid_topdown_clean_body_v1: "Humanoid (Top-down Clean Body)",
-  humanoid_side_v1: "Humanoid (Side)",
-  quadruped_side_v1: "Quadruped",
-  bird_side_v1: "Bird",
-  humanoid_monster_v1: "Monster",
-  siege_static_v1: "Siege/Static",
+  humanoid_topdown_v1: "Человекоподобный (сверху)",
+  humanoid_topdown_clean_body_v1: "Человекоподобный (чистая основа сверху)",
+  humanoid_side_v1: "Человекоподобный (сбоку)",
+  quadruped_side_v1: "Четвероногий",
+  bird_side_v1: "Птица",
+  humanoid_monster_v1: "Существо",
+  siege_static_v1: "Осадный / неподвижный",
 };
 
 const RIG_FAMILY_LABELS: Record<string, string> = {
-  biped_profile_v1: "Biped Profile",
-  quadruped_profile_v1: "Quadruped Profile",
-  serpent_profile_v1: "Serpent Profile",
-  biped_directional_v1: "Biped Directional",
-  quadruped_directional_v1: "Quadruped Directional",
-  serpent_directional_v1: "Serpent Directional",
-  dragon_directional_v1: "Dragon Directional",
-  centaur_directional_v1: "Centaur Directional",
+  biped_profile_v1: "Двуногий в профиль",
+  quadruped_profile_v1: "Четвероногий в профиль",
+  serpent_profile_v1: "Змеевидный в профиль",
+  biped_directional_v1: "Двуногий по направлениям",
+  quadruped_directional_v1: "Четвероногий по направлениям",
+  serpent_directional_v1: "Змеевидный по направлениям",
+  dragon_directional_v1: "Дракон по направлениям",
+  centaur_directional_v1: "Кентавр по направлениям",
 };
 
 const FACING_POLICY_LABELS: Record<FacingPolicy, string> = {
-  profile_mirror: "Profile Mirror",
-  directional_4: "Directional 4",
-  directional_5: "Directional 5",
-  directional_8: "Directional 8",
+  profile_mirror: "Зеркальный профиль",
+  directional_4: "4 направления",
+  directional_5: "5 направлений",
+  directional_8: "8 направлений",
 };
 
 const VIEW_KEY_LABELS: Record<ViewKey, string> = {
-  south: "South",
-  south_east: "South-East",
-  east: "East",
-  north_east: "North-East",
-  north: "North",
-  north_west: "North-West",
-  west: "West",
-  south_west: "South-West",
+  south: "Юг",
+  south_east: "Юго-восток",
+  east: "Восток",
+  north_east: "Северо-восток",
+  north: "Север",
+  north_west: "Северо-запад",
+  west: "Запад",
+  south_west: "Юго-запад",
 };
 
 function titleCaseToken(value: string): string {

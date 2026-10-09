@@ -5,6 +5,7 @@ import { templateSupportsAnimationClip } from "./animationCompatibility";
 import { buildMultiClipPose, evaluateSkeleton } from "./evaluationPipeline";
 import { scaleSvgToFit, svgToDataUrl } from "./svgUtils";
 import { evaluatePresentedScene, xrayOverlaySvg, type AnimationXRayOptions } from "./animationXRay";
+import type { VisualResources } from "./visualContent";
 
 export interface ExportFrameSpec { key: string; clip: AnimationClip | null; frame: number; timeMs: number }
 
@@ -25,11 +26,11 @@ export function exportFramePlan(entity: Entity, template: Template, clips: Anima
 }
 
 /** Same pose and scene evaluation as the editor canvas, so skinning, attachments and draw order match. */
-export function evaluateExportScene(entity: Entity, template: Template, clips: AnimationClip[], items: Item[], fitProfiles: ItemFitProfile[], spec: ExportFrameSpec, options?: AnimationXRayOptions): EvaluatedScene {
+export function evaluateExportScene(entity: Entity, template: Template, clips: AnimationClip[], items: Item[], fitProfiles: ItemFitProfile[], spec: ExportFrameSpec, options?: AnimationXRayOptions, resources?: VisualResources): EvaluatedScene {
   const playing = { ...entity, activeAnimationClipId: spec.clip?.id ?? entity.activeAnimationClipId };
   const pose = spec.clip ? buildMultiClipPose(clips, spec.clip.id, null, null, 0, spec.timeMs, playing, items) : new Map();
   const skeleton = evaluateSkeleton(template.bones, pose, entity.bodyMorphs, entity.appearance);
-  return evaluatePresentedScene(playing, template, skeleton, items, fitProfiles, options);
+  return evaluatePresentedScene(playing, template, skeleton, items, fitProfiles, options, resources);
 }
 
 export interface ExportCamera { x: number; y: number; size: number }
